@@ -14,8 +14,12 @@ attribute vec4 mc_Entity;
 void main() {
     gl_Position = ftransform();
     texCoord = gl_MultiTexCoord0.xy;
+
+    material = 0.0;
     
     color = gl_Color;
+
+    if (mc_Entity.x == 10000) material = 1.0;
 
     /*
     Normal and Lightmap Source Code By saada2006:

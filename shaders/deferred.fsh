@@ -1,13 +1,12 @@
 #version 130
-#extension GL_ARB_shader_texture_lod : enable 
 
 #define shadowFiltering
-#define shadowResolution 2048 //[512 1024 2048 4096 8192]
+#define shadowResolution 4096 //[512 1024 2048 4096 8192]
 #define shadowFilterQuality 3 //[2 3 4 5 6 7 8 9 10 11 12 13 14 15 16]
 
 const int shadowMapResolution = shadowResolution;
 const float shadowMapBias = 0.85;
-const float shadowDistance = 128.0;
+const float shadowDistance = 160.0;
 const float sunPathRotation = 40.0;
 const float ambientOcclusionLevel = 0.25; // minecraft ambient occlusion level
 const float ambientStrength = 0.30;    // ambient strength and shadow darkness
@@ -22,9 +21,14 @@ in vec3 lightColor;
 in vec3 ambientColor;
 in vec3 lightVector;
 
+uniform float aspectRatio;                      
+uniform float viewWidth;                        
+uniform float viewHeight;                       
+uniform float near;                             
 uniform float far;
 uniform float rainStrength;
 uniform ivec2 eyeBrightness;
+uniform vec3 cameraPosition;
 uniform sampler2D colortex0;
 uniform sampler2D colortex1;
 uniform sampler2D colortex2;
@@ -41,6 +45,7 @@ uniform mat4 shadowModelView;
 uniform mat4 shadowProjection;
 
 float depth0 = texture2D(depthtex0, texCoord).r;
+vec3 material = texture2D(colortex4, texCoord).rgb;
 vec3 normal = normalize(texture2D(colortex1, texCoord).rgb * 2.0 - 1.0);
 vec3 lightmap = texture2D(colortex2, texCoord).rgb;
 vec3 clipSpace = vec3(texCoord, depth0) * 2.0 - 1.0;
@@ -85,6 +90,9 @@ vec3 getLightmap(vec3 l) {
 
 float lambert(vec3 n, vec3 l) {
     float NdotL = dot(n, l);
+    if (material.x > 0.9) {
+        return 1.0;
+    }
     return max(NdotL, 0.0);
 }
 
@@ -107,7 +115,8 @@ vec4 toShadowSpace() {
     vec4 worldPosition = getWorldPosition();
     vec4 shadowSpace = shadowProjection * shadowModelView * worldPosition;
     float centerDistance = length(shadowSpace.xy);
-	float distortFactor = (1.0 - shadowMapBias) + centerDistance * shadowMapBias;
+    float bias = max(0.005 * (1.0 - centerDistance / far), shadowMapBias);
+    float distortFactor = (1.0 - bias) + centerDistance * bias;
     shadowSpace.xy /= distortFactor;
     shadowSpace.xyz = shadowSpace.xyz * 0.5 + 0.5;
 
@@ -133,8 +142,8 @@ vec3 getShadow() {
             for(int y = 0; y < samples; y++){
                 vec2 offset = vec2(x, y) * (rotation / shadowMapResolution);
 
-                shading = step(worldPosition.z - 0.001, texture2D(shadowtex0, worldPosition.xy + offset).x);
-                shading1 = step(worldPosition.z - 0.001, texture2D(shadowtex1, worldPosition.xy + offset).x);
+                shading = step(worldPosition.z - 0.0005, texture2D(shadowtex0, worldPosition.xy + offset).x);
+                shading1 = step(worldPosition.z - 0.0005, texture2D(shadowtex1, worldPosition.xy + offset).x);
                 //shading = texture2D(shadowtex0, worldPosition.xy + offset).x;
                 //shading1 = texture2D(shadowtex1, worldPosition.xy + offset).x;
                 shading2 = texture2D(shadowcolor0, worldPosition.xy + offset);
@@ -156,8 +165,8 @@ vec3 getShadow() {
 
 void main(){
     vec3 color = texture2D(colortex0, texCoord).rgb;
+
     if (depth0 != 1) color = color * (getLightmap(lightmap) + lambert(normal, lightVector) * lightColor * getShadow() * (1.0 - (rainStrength * 0.75)) + ambientStrength);
     /* DRAWBUFFERS:0 */
     gl_FragData[0] = vec4(color, 1.0);
-    //gl_FragData[1] = vec4(lightmap, vec2(1.0));
 }

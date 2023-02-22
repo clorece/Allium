@@ -19,8 +19,9 @@ attribute vec4 mc_Entity;
 void main() {
     vec4 albedo = texture2D(texture, texCoord) * color;
     
-    /* DRAWBUFFERS:0123 */
+    /* DRAWBUFFERS:0124 */
     gl_FragData[0] = albedo;
     gl_FragData[1] = vec4(normal * 0.5 + 0.5, 1.0);
-    gl_FragData[2] = vec4(lightmapCoord, mix(material, 0.05, foliage), 1.0);
+    gl_FragData[2] = vec4(lightmapCoord, 0.0, 1.0);
+    gl_FragData[3] = vec4(material);
 }
