@@ -1,0 +1,26 @@
+#version 130
+
+/*
+Normal and Lightmap Source Code By saada2006:
+https://github.com/saada2006/MinecraftShaderProgramming
+*/
+
+in float material;
+in float foliage;
+in vec2 texCoord;
+in vec2 lightmapCoord;
+in vec3 normal;
+in vec4 color;
+
+uniform sampler2D texture; // gbuffers color channel 0
+
+attribute vec4 mc_Entity;
+
+void main() {
+    vec4 albedo = texture2D(texture, texCoord) * color;
+    
+    /* DRAWBUFFERS:0123 */
+    gl_FragData[0] = albedo;
+    gl_FragData[1] = vec4(normal * 0.5 + 0.5, 1.0);
+    gl_FragData[2] = vec4(lightmapCoord, mix(material, 0.05, foliage), 1.0);
+}
