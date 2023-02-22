@@ -1,3 +1,0 @@
-/* DRAWBUFFERS:NNNN */      saves the index of a FragData[N] and assigns it to the following index
-
-dot(x, y)                   takes all channels of x, and multiplies each channel by y 
