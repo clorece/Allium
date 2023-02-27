@@ -1,1 +1,0 @@
-vec2 texelSize = vec2(1.0) / vec2(viewWidth, viewHeight);
