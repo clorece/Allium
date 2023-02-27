@@ -1,5 +1,5 @@
 #define SHADOW_FILTER
-    #define DITHER_FILTER
+#define DITHER_FILTER
 
 #define SHADOW_RESOLUTION 6144 //[512 1024 1563 2048 3072 4096 6144 8192]
 #define SHADOW_FILTER_QUALITY 3 //[2 3 4 5 6]
@@ -7,14 +7,16 @@
 #define SHADOW_BIAS 0.01 //Increase this if you get shadow acne. Decrease this if you get peter panning. [0.000 0.001 0.002 0.003 0.004 0.005 0.006 0.007 0.008 0.009 0.010 0.012 0.014 0.016 0.018 0.020 0.022 0.024 0.026 0.028 0.030 0.035 0.040 0.045 0.050]
 
 #define FAKE_SSS  // WIP
-    #define SCATTER_AMOUNT 2.0; //[1.0 1.5 2.0 2.5 3.0 3.5 4.0 4.5 5.0]
+#define SCATTER_AMOUNT 2.0; // [1.0 1.5 2.0 2.5 3.0 3.5 4.0 4.5 5.0]
 
 
 #define TAA
-#define TAA_BLEND_WEIGHT 1.4 // [1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0]
+#define TAA_BLEND_WEIGHT 1.0 // [1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0]
+#define TAA_SHARPNESS 0.35 // [0.0 0.05 0.1 0.15 0.2 0.25 0.3 0.35 0.4 0.45 0.5]
+#define TAA_OFFSET_WEIGHT 1.0 // [0.5 0.55 0.6 0.65 0.7 0.75 0.8 0.85 0.9 1.0 1.5 2.0]
+#define TAA_NEIGHBORHOOD_RADIUS 0.075 // [0.01 0.02 0.03 0.04 0.05 0.06 0.07 0.08 0.09 0.1]
+#define TAA_NEIGHBORHOOD_THRESHOLD 1.0 // [0.01 0.05 0.1 0.5 1.0]
 
 #define BLOOM
-
-
 
 //#define WIND_MOVEMENT // WIP

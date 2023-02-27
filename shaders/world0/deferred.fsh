@@ -4,7 +4,7 @@
 
 const int shadowMapResolution = SHADOW_RESOLUTION;
 const float shadowDistance = 160.0;
-const float sunPathRotation = 40.0;
+const float sunPathRotation = 40.0; // [10.0 20.0 30.0 40.0 50.0 60.0]
 const float ambientOcclusionLevel = 0.5; // minecraft ambient occlusion level
 const float ambientStrength = 0.3;    // ambient strength and shadow darkness
 const vec3 torchColor = vec3(0.9922, 0.6471, 0.1922);

@@ -26,7 +26,7 @@ const float PI = 3.14159265359;
 void main() {
     vec3 color = texture2D(colortex0, texCoord).rgb;
 
-    #ifdef bloom
+    #ifdef BLOOM
         color = mix(color, getBloom(), 0.01);
     #endif
 

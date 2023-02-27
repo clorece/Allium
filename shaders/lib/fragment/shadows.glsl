@@ -3,6 +3,7 @@ vec3 getShadow(float nDotL) {
 
     float shading = 0.0;
     float shading1 = 0.0;
+    float scatterAmount = SCATTER_AMOUNT;
     vec3 finalShading = vec3(0.0);
     vec4 shading2 = vec4(0.0);
 
@@ -19,7 +20,7 @@ vec3 getShadow(float nDotL) {
                 
                 #ifdef FAKE_SSS
                     if (nDotL == 1.0) {
-                        offset *= 2.0 * SCATTER_AMOUNT;
+                        offset *= 2.0 * scatterAmount;
                     }
                 #endif
                 
