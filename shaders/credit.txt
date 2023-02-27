@@ -1,0 +1,1 @@
+Thanks to ShaderLabs Discord Server for sharing the ShadowTutorial shader in order for me to remake the shadows for the shaderpack!
