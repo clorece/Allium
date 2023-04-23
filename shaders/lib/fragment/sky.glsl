@@ -9,7 +9,7 @@ float mie(vec3 fragPosition){
 }
 
 float sun(vec3 fragPosition){
-    float size = 700.0;
+    float size = 7000.0;
 	return pow(dot(normalize(fragPosition), sunVector) * 0.5 + 0.5, 3.14 * size);
 }
 
@@ -23,10 +23,9 @@ vec3 getSky(vec3 fragPosition){
 
     color = max(color, 0.0);
 
-	color = max(mix(pow(color, 1.0 - color), color / (1.5 * color + 0.1 - color), clamp(dot(sunVector, upVector) * 0.5 + 0.5, 0.2, 1.0)),0.0);
-    color += lightColor * (sun(fragPosition) * 5.0);
-    color += lightColor * (mie(fragPosition) * 0.5);
+	color = max(mix(pow(color, 1.0 - color), color / (1.5 * color + 0.1 - color), clamp(dot(sunVector, upVector) * 0.5 + 0.5, 0.2, 1.0) + lightColor * 0.5),0.0);
     color /= 1.0 + pow(dot(normalizeFragPosition, upVector) * 0.5 + 0.5, 1.0);
+    color += lightColor * (mie(fragPosition) * 0.5);
 
 	float underscatter = distance(dot(sunVector, upVector) * 0.5 + 0.5, 1.0);
 	

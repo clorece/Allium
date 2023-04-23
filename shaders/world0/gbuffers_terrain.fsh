@@ -22,4 +22,5 @@ void main() {
     gl_FragData[1] = vec4(normal * 0.5 + 0.5, 1.0);
     gl_FragData[2] = vec4(lightmapCoord, 0.0, 1.0);
     gl_FragData[3] = vec4(material);
+    gl_FragData[6] = color;
 }

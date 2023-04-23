@@ -35,6 +35,7 @@ void main() {
     color = gl_Color;
 
     if (mc_Entity.x == 10000) material = 1.0;
+    if (mc_Entity.x == 10002) material = 0.5;
 
     #ifdef WIND_MOVEMENT
         if (mc_Entity.x == 10000) gl_Position.xyz = wind(gl_Position.xyz);

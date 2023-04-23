@@ -15,7 +15,7 @@ void main() {
     Normal and Lightmap Source Code By saada2006:
     https://github.com/saada2006/MinecraftShaderProgramming
     */
-    normal = gl_NormalMatrix * gl_Normal;
+    normal = normalize(gl_NormalMatrix * gl_Normal);
 
     // Use the texture matrix instead of dividing by 15 to maintain compatiblity for each version of Minecraft
     lightmapCoord = mat2(gl_TextureMatrix[1]) * gl_MultiTexCoord1.st;

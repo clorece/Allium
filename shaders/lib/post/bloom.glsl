@@ -9,6 +9,7 @@ vec3 getBloom() {
             blur += texture2D(colortex3, texCoord + vec2(i, -i) * rotation / quality).rgb;
             blur += texture2D(colortex3, texCoord + vec2(-i, -i) * rotation / quality).rgb;
     }
+    //blur *= 2.0;
     
     return max(vec3(0.0), blur - vec3(1.0));
 }

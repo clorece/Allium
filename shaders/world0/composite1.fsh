@@ -2,12 +2,8 @@
 
 #include "/lib/options.glsl"
 
-float blendWeight = TAA_BLEND_WEIGHT;
-
 in vec2 texCoord;
-
-uniform float viewWidth;                    
-uniform float viewHeight;       
+   
 uniform sampler2D colortex0;
 uniform sampler2D colortex5;
 
@@ -16,11 +12,15 @@ uniform sampler2D colortex5;
 
 void main() {
 
+    // Get the current pixel's position
+    vec2 currentPos = texCoord / texelSize;
+
     #ifdef TAA
-        vec4 finalColor = temporalAA(texelSize);
+        vec4 finalColor = taa(currentPos, vec2(viewWidth, viewHeight), colortex0, colortex5);
     #else
         vec4 finalColor = texture2D(colortex0, texCoord);
     #endif
-
+    
+    /* DRAWBUFFERS:0 */
     gl_FragData[0] = finalColor;
 }
