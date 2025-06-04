@@ -14,6 +14,7 @@ But here are some features I want to add throughout my journey:
 - Bloom
 - A proper implementation of TAA
 - PCSS
+- Ambient Occlusion
 - Screenspace Reflections
 
 The shader is currently getting rewritten so what is offered right now in the main, might not be in the rewrite.
