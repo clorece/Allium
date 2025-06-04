@@ -12,7 +12,7 @@ But here are some features I want to add throughout my journey:
 - HDR Tonemapping
 - Depth of Field
 - Bloom
-- TAA
+- A proper implementation of TAA
 - PCSS
 - Screenspace Reflections
 
