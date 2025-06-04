@@ -1,6 +1,7 @@
 # Allium Shaders
 
 A lightweight minecraft shader that focuses on beauty and aesthetics with the use of LUTs, Color Grading, Tonemapping and much more!
+Throughout my college journey, I will be using this shader as my main focus for learning graphics development.
 
 The shader is currently in its earliest stages, with not much to offer.
 But here are some features I want to add throughout my journey:
