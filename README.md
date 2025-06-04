@@ -12,3 +12,5 @@ But here are some features I want to add throughout my journey:
 - TAA
 - PCSS
 - Screenspace Reflections
+
+The shader is currently getting rewritten so what is offered right now in the main, might not be in the rewrite.
