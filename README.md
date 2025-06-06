@@ -21,8 +21,7 @@ But here are some features that I want to highlight
 # Credits
 - Query for their wonderful LUT code
 
-Here are some extra screenshots with some LUTs
-
+# Screenshots
 ![2025-06-06_13 12 58](https://github.com/user-attachments/assets/f6453533-c3ed-4080-899a-25a57a02a825)
 ![2025-06-06_13 19 00](https://github.com/user-attachments/assets/6477676a-7516-4c21-90a0-d90c79e0ce17)
 ![2025-06-06_13 20 35](https://github.com/user-attachments/assets/fe543f0b-97e9-4fb8-a124-a47b53e40966)
