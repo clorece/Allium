@@ -1,22 +1,28 @@
 # Allium Shaders
 
-![2025-06-04_11 31 58](https://github.com/user-attachments/assets/ef1ff521-ed9d-4c96-bab4-e47ea9ab5d52)
+![2025-06-06_13 08 01](https://github.com/user-attachments/assets/71891afb-505f-4df6-9c04-dc705b5a7ea5)
 
 A lightweight minecraft shader that focuses on beauty and aesthetics with the use of LUTs, Color Grading, Tonemapping and much more!
 Throughout my college journey, I will be using this shader as my main focus for learning graphics development.
 
+As for now the current build of Allium is not available for download, as I have not yet recieved permission from the base shader's creator.
+Once I have recieved permission, I will release a beta soon after :)
+
 The shader is currently in its earliest stages, with not much to offer.
-But here are some features I want to add throughout my journey:
+But here are some features that I want to highlight
 - LUTs
-- Color Grading
 - HDR Tonemapping
-- Depth of Field
-- Bloom
-- A proper implementation of TAA
-- PCSS
-- Ambient Occlusion
-- Screenspace Reflections
+- Color Grading
+- Volumetric Clouds
+- Volumetric Fog and Light Shafts
+- Atmospheric Scattering (def not physically accurate lol)
+- and so much more!
 
-![2025-06-04_11 29 53](https://github.com/user-attachments/assets/b5411692-0a17-497a-b5af-4a5ff541435f)
+# Credits
+- Query for their wonderful LUT code
 
-The shader is currently getting rewritten so what is offered right now in the main, might not be in the rewrite.
+Here are some extra screenshots with some LUTs
+
+![2025-06-06_13 12 58](https://github.com/user-attachments/assets/f6453533-c3ed-4080-899a-25a57a02a825)
+![2025-06-06_13 19 00](https://github.com/user-attachments/assets/6477676a-7516-4c21-90a0-d90c79e0ce17)
+![2025-06-06_13 20 35](https://github.com/user-attachments/assets/fe543f0b-97e9-4fb8-a124-a47b53e40966)
