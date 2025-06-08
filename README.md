@@ -5,9 +5,6 @@
 A lightweight minecraft shader that focuses on beauty and aesthetics with the use of LUTs, Color Grading, Tonemapping and much more!
 Throughout my college journey, I will be using this shader as my main focus for learning graphics development.
 
-As for now the current build of Allium is not available for download, as I have not yet recieved permission from the base shader's creator.
-Once I have recieved permission, I will release a beta soon after :)
-
 The shader is currently in its earliest stages, with not much to offer.
 But here are some features that I want to highlight
 - LUTs
@@ -19,6 +16,7 @@ But here are some features that I want to highlight
 - and so much more!
 
 # Credits
+- Emin for using Complementary as the base shader
 - Query for their wonderful LUT code
 
 # Screenshots
