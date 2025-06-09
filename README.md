@@ -19,6 +19,7 @@ Throughout my college journey, I will be using this shader as my main focus for 
 - Query for their wonderful LUT code
 
 # Screenshots
+All Screenshots are taken on Falcon's Rock Map by Studio Winthor.
 ![2025-06-06_13 12 58](https://github.com/user-attachments/assets/f6453533-c3ed-4080-899a-25a57a02a825)
 ![2025-06-09_11 56 50](https://github.com/user-attachments/assets/250d56f7-9159-4f87-bbaf-8be1487249d1)
 ![2025-06-09_11 55 51](https://github.com/user-attachments/assets/654144f2-564a-4e8d-a9c5-9d8a3c4cb561)
