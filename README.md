@@ -2,11 +2,10 @@
 
 ![2025-06-09_11 49 59](https://github.com/user-attachments/assets/5b147b5e-210f-4b3c-9f2d-3254bb527789)
 
-A lightweight minecraft shader that focuses on beauty and aesthetics with the use of LUTs, Color Grading, Tonemapping and much more!
+My take on the wonderful work of art, Complementary, that focuses on beauty and aesthetics with the use of LUTs and much more!
 Throughout my college journey, I will be using this shader as my main focus for learning graphics development.
 
-The shader is currently in its earliest stages, with not much to offer.
-But here are some features that I want to highlight
+# Features
 - LUTs
 - HDR Tonemapping
 - Color Grading
