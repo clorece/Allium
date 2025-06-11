@@ -26,7 +26,7 @@ Once downloaded, install the ZIP file as you would any shader pack—no need to 
 ### Release
 Releases are stable, polished versions that result from thorough testing and iteration during the in-development phase. These builds are intended for general use and offer the best balance of visuals, performance, and reliability.
 
-There are no official releases yet. Stay tuned!
+There are no official releases yet...
 
 
 
