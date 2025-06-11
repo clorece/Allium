@@ -10,13 +10,13 @@ Allium is a shader focused on bringing my creative vision to life. Emphasizing t
 - Emin for using Complementary as the base shader
 - Query for their wonderful LUT code
 
-## In-Development & Release Versions
-### In-Development
-In-development versions are the most recent builds and are released regularly for public testing. If you encounter any issues, please report them.
+## Beta & Release Versions
+### Beta
+Beta versions are the most recent builds and are released regularly for public testing. If you encounter any issues, please report them.
 
 Note: This shader is currently in its alpha phase, so there are no in-development builds available at the moment.
 
-How to Download the Latest In-Development Version (when available):
+### How to Download the Latest Beta Version (when available):
 Click the green "Code" button near the top right of this page.
 
 Select "Download ZIP".
