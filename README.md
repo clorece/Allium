@@ -1,30 +1,34 @@
 # Allium Shaders
 
-![2025-06-09_11 49 59](https://github.com/user-attachments/assets/5b147b5e-210f-4b3c-9f2d-3254bb527789)
+![2025-06-10_21 28 15](https://github.com/user-attachments/assets/082a024d-8ac7-459c-8988-0c303a6881df)
 
-My take on the wonderful work of art, Complementary, that focuses on beauty and aesthetics with the use of LUTs and much more!
-Throughout my college journey, I will be using this shader as my main focus for learning graphics development.
+Shader development has always been a huge interest of mine ever since I first laid eyes on Chocapic13's Shaders. I decided to drop that passion for a while since I wasn't really learning anything. After experiencing the wonderful work of art, Complementary, I wanted to try and challenge myself and create something I truly love while persevering through college.
 
-# Features
-- LUTs
-- HDR Tonemapping
-- Color Grading
-- Volumetric Clouds
-- Volumetric Fog and Light Shafts
-- Atmospheric Scattering (def not physically accurate lol)
-- and so much more!
+Allium is a shader focused on bringing my creative vision to life. Emphasizing the beauty in colors and effects, all while staying as performant as it can be. With Allium, I hope to deliver a unique style and aesthetic that pushes my creativity to it's limits.
 
-# Credits
+### Huge Thanks
 - Emin for using Complementary as the base shader
 - Query for their wonderful LUT code
 
-# Screenshots
-All Screenshots are taken on Falcon's Rock Map by Studio Winthor.
+##In-Development & Release Versions
+###In-Development
+In-development versions are the most recent builds and are released regularly for public testing. If you encounter any issues, please report them.
 
-![2025-06-06_13 12 58](https://github.com/user-attachments/assets/f6453533-c3ed-4080-899a-25a57a02a825)
-![2025-06-09_11 56 50](https://github.com/user-attachments/assets/250d56f7-9159-4f87-bbaf-8be1487249d1)
-![2025-06-09_11 55 51](https://github.com/user-attachments/assets/654144f2-564a-4e8d-a9c5-9d8a3c4cb561)
-![2025-06-06_13 20 35](https://github.com/user-attachments/assets/fe543f0b-97e9-4fb8-a124-a47b53e40966)
-![2025-06-07_11 00 59](https://github.com/user-attachments/assets/3c986220-0f83-4656-81f6-52631ed00f13)
-![2025-06-06_23 43 40](https://github.com/user-attachments/assets/63517929-f44f-4b96-91e9-3b2d6ccbdac9)
-![2025-06-06_23 43 22](https://github.com/user-attachments/assets/7df9c180-8b60-4dec-b63f-bdb1fbe4e7b5)
+Note: This shader is currently in its alpha phase, so there are no in-development builds available at the moment.
+
+How to Download the Latest In-Development Version (when available):
+Click the green "Code" button near the top right of this page.
+
+Select "Download ZIP".
+
+Once downloaded, install the ZIP file as you would any shader pack—no need to extract or decompress it.
+
+###Release
+Releases are stable, polished versions that result from thorough testing and iteration during the in-development phase. These builds are intended for general use and offer the best balance of visuals, performance, and reliability.
+
+There are no official releases yet. Stay tuned!
+
+
+
+## Screenshots
+All Screenshots are taken on the Minecraft Map by Elarion by Zhyrr.
