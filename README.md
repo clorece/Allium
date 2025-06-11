@@ -32,3 +32,13 @@ There are no official releases yet. Stay tuned!
 
 ## Screenshots
 All Screenshots are taken on the Minecraft Map by Elarion by Zhyrr.
+
+![2025-06-10_21 23 46](https://github.com/user-attachments/assets/1dd5a5a3-4a18-43c8-8c90-bb938f4b7671)
+![2025-06-10_21 52 55](https://github.com/user-attachments/assets/971265d6-f1f3-4021-88bc-5d43efdd77fc)
+![2025-06-10_21 56 04](https://github.com/user-attachments/assets/47f1a430-be44-467a-a575-a73b46d1aac8)
+![2025-06-10_22 01 18](https://github.com/user-attachments/assets/a8ae927d-56ba-411c-ba23-ea2a34bbdd06)
+![2025-06-10_22 03 56](https://github.com/user-attachments/assets/908e9e9c-4248-45a0-9384-837c1f849499)
+![2025-06-10_22 16 54](https://github.com/user-attachments/assets/67ab3082-948f-4648-b359-05c64717c918)
+![2025-06-10_22 20 16](https://github.com/user-attachments/assets/aef824fa-22b0-403e-8ce3-32178004ee6d)
+![2025-06-10_22 24 27](https://github.com/user-attachments/assets/95ed8994-6b8e-476a-b660-24c6bf0bacc5)
+![2025-06-10_22 08 38](https://github.com/user-attachments/assets/822371d4-397e-4985-8a25-2d279d93552e)
