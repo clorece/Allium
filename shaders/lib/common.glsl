@@ -9,7 +9,7 @@
   -> -> -> DO NOT CHANGE ANYTHING UNLESS YOU KNOW WHAT YOU ARE DOING
   -> -> -> DO NOT EXPECT SUPPORT AFTER MODIFYING SHADER FILES
 ---------------------------------------------------------------------*/
-error
+
 //User Settings//
     #define SHADER_STYLE 4 //[1 4]
 
