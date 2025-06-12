@@ -4,7 +4,7 @@
 
 Shader development has always been a huge interest of mine ever since I first laid eyes on Chocapic13's Shaders. I decided to drop that passion for a while since I wasn't really learning anything. After experiencing the wonderful work of art, Complementary, I wanted to try and challenge myself and create something I truly love while persevering through college.
 
-Allium is a shader focused on bringing my creative vision to life. Emphasizing the beauty in colors and effects, all while staying as performant as it can be. With Allium, I hope to deliver a unique style and aesthetic that pushes my creativity to it's limits.
+Allium is an edit of Complementary Unbound focused on bringing my creative vision to life. Emphasizing the beauty in colors and effects, all while staying as performant as it can be. With Allium, I hope to deliver a unique style and aesthetic that pushes my creativity to it's limits.
 
 ### Huge Thanks
 - Emin for using Complementary as the base shader
@@ -27,8 +27,6 @@ Once downloaded, install the ZIP file as you would any shader pack—no need to 
 Releases are stable, polished versions that result from thorough testing and iteration during the in-development phase. These builds are intended for general use and offer the best balance of visuals, performance, and reliability.
 
 There are no official releases yet...
-
-
 
 ## Screenshots
 All Screenshots are taken on the Minecraft Map by Elarion by Zhyrr.
