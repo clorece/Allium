@@ -1,0 +1,778 @@
+/////////////////////////////////////
+// Complementary Shaders by EminGT //
+/////////////////////////////////////
+
+//Common//
+#include "/lib/common.glsl"
+
+//////////Fragment Shader//////////Fragment Shader//////////Fragment Shader//////////
+#ifdef FRAGMENT_SHADER
+
+noperspective in vec2 texCoord;
+
+in vec3 normal;
+
+flat in vec3 upVec, sunVec;
+
+#if defined LIGHTSHAFTS_ACTIVE && (LIGHTSHAFT_BEHAVIOUR == 1 && SHADOW_QUALITY >= 1 || defined END)
+    flat in float vlFactor;
+#endif
+
+uniform vec2 pixel;
+
+//Pipeline Constants//
+const bool colortex0MipmapEnabled = true;
+
+//Common Variables//
+float SdotU = dot(sunVec, upVec);
+float sunFactor = SdotU < 0.0 ? clamp(SdotU + 0.375, 0.0, 0.75) / 0.75 : clamp(SdotU + 0.03125, 0.0, 0.0625) / 0.0625;
+float sunVisibility = clamp(SdotU + 0.0625, 0.0, 0.125) / 0.125;
+float sunVisibility2 = sunVisibility * sunVisibility;
+float shadowTimeVar1 = abs(sunVisibility - 0.5) * 2.0;
+float shadowTimeVar2 = shadowTimeVar1 * shadowTimeVar1;
+float shadowTime = shadowTimeVar2 * shadowTimeVar2;
+float farMinusNear = far - near;
+
+vec2 view = vec2(viewWidth, viewHeight);
+
+#ifdef OVERWORLD
+    vec3 lightVec = sunVec * ((timeAngle < 0.5325 || timeAngle > 0.9675) ? 1.0 : -1.0);
+#else
+    vec3 lightVec = sunVec;
+#endif
+
+#if defined LIGHTSHAFTS_ACTIVE && (LIGHTSHAFT_BEHAVIOUR == 1 && SHADOW_QUALITY >= 1 || defined END)
+#else
+    float vlFactor = 0.0;
+#endif
+
+//Common Functions//
+float GetLinearDepth(float depth) {
+    return (2.0 * near) / (far + near - depth * farMinusNear);
+}
+
+#if SSAO_QUALI == 2
+    vec2 OffsetDist(float x, int s) {
+        float n = fract(x * 1.414) * 3.1415;
+        return pow2(vec2(cos(n), sin(n)) * x / s);
+    }
+
+    float SSAO(float z0, float linearZ0, float dither) {
+        if (z0 < 0.56) return 1.0;
+        float ao = 0.0;
+
+        int samples = 4;
+        float scm = 0.4;
+        
+
+        #define SSAO_I_FACTOR 0.004
+
+        float sampleDepth = 0.0, angle = 0.0, dist = 0.0;
+        float fovScale = gbufferProjection[1][1];
+        float distScale = max(farMinusNear * linearZ0 + near, 3.0);
+        vec2 scale = vec2(scm / aspectRatio, scm) * fovScale / distScale;
+
+        for (int i = 1; i <= samples; i++) {
+            vec2 offset = OffsetDist(i + dither, samples) * scale;
+            if (i % 2 == 0) offset.y = -offset.y;
+
+            vec2 coord1 = texCoord + offset;
+            vec2 coord2 = texCoord - offset;
+
+            sampleDepth = GetLinearDepth(texture2D(depthtex0, coord1).r);
+            float aosample = farMinusNear * (linearZ0 - sampleDepth) * 2.0;
+            angle = clamp(0.5 - aosample, 0.0, 1.0);
+            dist = clamp(0.5 * aosample - 1.0, 0.0, 1.0);
+
+            sampleDepth = GetLinearDepth(texture2D(depthtex0, coord2).r);
+            aosample = farMinusNear * (linearZ0 - sampleDepth) * 2.0;
+            angle += clamp(0.5 - aosample, 0.0, 1.0);
+            dist += clamp(0.5 * aosample - 1.0, 0.0, 1.0);
+
+            ao += clamp(angle + dist, 0.0, 1.0);
+        }
+        ao /= samples;
+
+        #define SSAO_IM SSAO_I * SSAO_I_FACTOR
+        return pow(ao, SSAO_IM);
+    }
+#endif
+
+
+
+
+#ifdef TEMPORAL_FILTER
+    float GetApproxDistance(float depth) {
+        return near * far / (far - depth * far);
+    }
+
+    // Previous frame reprojection from Chocapic13
+    vec2 Reprojection(vec3 pos, vec3 cameraOffset) {
+        pos = pos * 2.0 - 1.0;
+
+        vec4 viewPosPrev = gbufferProjectionInverse * vec4(pos, 1.0);
+        viewPosPrev /= viewPosPrev.w;
+        viewPosPrev = gbufferModelViewInverse * viewPosPrev;
+
+        vec4 previousPosition = viewPosPrev + vec4(cameraOffset, 0.0);
+        previousPosition = gbufferPreviousModelView * previousPosition;
+        previousPosition = gbufferPreviousProjection * previousPosition;
+        return previousPosition.xy / previousPosition.w * 0.5 + 0.5;
+    }
+
+    vec3 FHalfReprojection(vec3 pos) {
+        pos = pos * 2.0 - 1.0;
+
+        vec4 viewPosPrev = gbufferProjectionInverse * vec4(pos, 1.0);
+        viewPosPrev /= viewPosPrev.w;
+        viewPosPrev = gbufferModelViewInverse * viewPosPrev;
+
+        return viewPosPrev.xyz;
+    }
+
+    vec2 SHalfReprojection(vec3 playerPos, vec3 cameraOffset) {
+        vec4 proPos = vec4(playerPos + cameraOffset, 1.0);
+        vec4 previousPosition = gbufferPreviousModelView * proPos;
+        previousPosition = gbufferPreviousProjection * previousPosition;
+        return previousPosition.xy / previousPosition.w * 0.5 + 0.5;
+    }
+#endif
+
+//Includes//
+#include "/lib/util/spaceConversion.glsl"
+#include "/lib/util/dither.glsl"
+#include "/lib/atmospherics/fog/mainFog.glsl"
+#include "/lib/colors/skyColors.glsl"
+
+#if AURORA_STYLE > 0
+    #include "/lib/atmospherics/auroraBorealis.glsl"
+#endif
+
+#ifdef NIGHT_NEBULA
+    #include "/lib/atmospherics/nightNebula.glsl"
+#endif
+
+#ifdef VL_CLOUDS_ACTIVE
+    #include "/lib/atmospherics/clouds/mainClouds.glsl"
+#endif
+
+#ifdef PBR_REFLECTIONS
+    #include "/lib/materials/materialMethods/reflections.glsl"
+#endif
+
+#ifdef END
+    #include "/lib/atmospherics/enderStars.glsl"
+#endif
+
+#ifdef WORLD_OUTLINE
+    #include "/lib/misc/worldOutline.glsl"
+#endif
+
+#ifdef DARK_OUTLINE
+    #include "/lib/misc/darkOutline.glsl"
+#endif
+
+#ifdef ATM_COLOR_MULTS
+    #include "/lib/colors/colorMultipliers.glsl"
+#endif
+#ifdef MOON_PHASE_INF_ATMOSPHERE
+    #include "/lib/colors/moonPhaseInfluence.glsl"
+#endif
+
+#ifdef DISTANT_LIGHT_BOKEH
+    #include "/lib/misc/distantLightBokeh.glsl"
+#endif
+
+/*
+vec4 GetReflection(vec3 normalM, vec3 viewPos, vec3 nViewPos, vec3 playerPos, float lViewPos, float z0,
+                   sampler2D depthtex, float dither, float skyLightFactor, float fresnel,
+                   float smoothness, vec3 geoNormal, vec3 color, vec3 shadowMult, float highlightMult) {
+    // ============================== Step 1: Prepare ============================== //
+    vec2 rEdge = vec2(0.6, 0.55);
+    vec3 normalMR = normalM;
+
+    #if defined GBUFFERS_WATER && WATER_STYLE == 1 && defined GENERATED_NORMALS
+        normalMR = normalize(mix(geoNormal, normalM, 0.05));
+    #endif
+
+    vec3 nViewPosR = normalize(reflect(nViewPos, normalMR));
+    float RVdotU = dot(nViewPosR, upVec);
+    float RVdotS = dot(nViewPosR, sunVec);
+
+    #if defined GBUFFERS_WATER && WATER_STYLE >= 2
+        normalMR = normalize(mix(geoNormal, normalM, 0.8));
+    #endif
+    // ============================== End of Step 1 ============================== //
+
+    // ============================== Step 2: Calculate Terrain Reflection and Alpha ============================== //
+    vec4 reflection = vec4(0.0);
+    #if defined DEFERRED1 || WATER_REFLECT_QUALITY >= 1
+        #if defined DEFERRED1 || WATER_REFLECT_QUALITY >= 2 && !defined DH_WATER
+            // Method 1: Ray Marched Reflection //
+
+            // Ray Marching
+            vec3 start = viewPos + normalMR * (lViewPos * 0.025 * (1.0 - fresnel) + 0.05);
+            #if defined GBUFFERS_WATER && WATER_STYLE >= 2
+                vec3 vector = normalize(reflect(nViewPos, normalMR)); // Not using nViewPosR because normalMR changed
+            #else
+                vec3 vector = nViewPosR;
+            #endif
+            //vector = normalize(vector - 0.5 * (1.0 - smoothness) * (1.0 - fresnel) * normalMR); // reflection anisotropy test
+            //vector = normalize(vector - 0.075 * dither * (1.0 - pow2(pow2(fresnel))) * normalMR);
+            vector *= 0.5;
+            vec3 viewPosRT = viewPos + vector;
+            vec3 tvector = vector;
+
+            int sr = 0;
+            float dist = 0.0;
+            vec3 rfragpos = vec3(0.0);
+            for (int i = 0; i < 30; i++) { //originally 30 itterations but cut in half to save fps
+                refPos = nvec3(gbufferProjection * vec4(viewPosRT, 1.0)) * 0.5 + 0.5;
+                if (abs(refPos.x - 0.5) > rEdge.x || abs(refPos.y - 0.5) > rEdge.y) break;
+
+                rfragpos = vec3(refPos.xy, texture2D(depthtex, refPos.xy).r);
+                rfragpos = nvec3(gbufferProjectionInverse * vec4(rfragpos * 2.0 - 1.0, 1.0));
+                dist = length(start - rfragpos);
+
+                float err = length(viewPosRT - rfragpos);
+
+                if (err < length(vector) * 3.0) {
+                    sr++;
+                    if (sr >= 6) break;
+                    tvector -= vector;
+                    vector *= 0.1;
+                }
+                vector *= 2.0;
+                tvector += vector * (0.95 + 0.1 * dither);
+                viewPosRT = start + tvector;
+            }
+
+            // Finalizing Terrain Reflection and Alpha 
+            if (refPos.z < 0.99997) {
+                vec2 absPos = abs(refPos.xy - 0.5);
+                vec2 cdist = absPos / rEdge;
+                float border = clamp(1.0 - pow(max(cdist.x, cdist.y), 50.0), 0.0, 1.0);
+                reflection.a = border;
+
+                float lViewPosRT = length(rfragpos);
+
+                if (reflection.a > 0.001) {
+                    vec2 edgeFactor = pow2(pow2(pow2(cdist)));
+                    refPos.y += (dither - 0.5) * (0.05 * (edgeFactor.x + edgeFactor.y));
+
+                    #ifdef DEFERRED1
+                        float smoothnessDM = pow2(smoothness);
+                        float lodFactor = 1.0 - exp(-0.125 * (1.0 - smoothnessDM) * dist);
+                        float lod = log2(viewHeight / 8.0 * (1.0 - smoothnessDM) * lodFactor) * 0.45;
+                        if (z0 <= 0.56) lod *= 2.22; // Using more lod to compensate for less roughness noise on held items
+                        lod = max(lod - 1.0, 0.0);
+
+                        reflection.rgb = texture2DLod(colortex0, refPos.xy, lod).rgb;
+                    #else
+                        reflection = texture2D(gaux2, refPos.xy);
+                        reflection.rgb = pow2(reflection.rgb + 1.0);
+                    #endif
+
+                    float skyFade = 0.0;
+                    DoFog(reflection.rgb, skyFade, lViewPosRT, ViewToPlayer(rfragpos.xyz), RVdotU, RVdotS, dither);
+
+                    edgeFactor.x = pow2(edgeFactor.x);
+                    edgeFactor = 1.0 - edgeFactor;
+                    reflection.a *= pow(edgeFactor.x * edgeFactor.y, 2.0 + 3.0 * GetLuminance(reflection.rgb));
+                }
+
+                float posDif = lViewPosRT - lViewPos;
+                reflection.a *= clamp(posDif + 3.0, 0.0, 1.0);
+            }
+            #if defined DEFERRED1 && defined TEMPORAL_FILTER
+                else refPos.z = 1.0;
+            #endif
+            #if !defined DEFERRED1 && defined DISTANT_HORIZONS
+                else
+            #endif
+        #endif
+        #if !defined DEFERRED1 && (WATER_REFLECT_QUALITY < 2 || defined DISTANT_HORIZONS) || defined DH_WATER
+        {   // Method 2: Mirorred Image Reflection //
+
+            #if WATER_REFLECT_QUALITY < 2
+                float verticalStretch = 0.013; // for potato quality reflections
+            #else
+                float verticalStretch = 0.0025; // for distant horizons reflections
+            #endif
+
+            vec4 clipPosR = gbufferProjection * vec4(nViewPosR + verticalStretch * viewPos, 1.0);
+            vec3 screenPosR = clipPosR.xyz / clipPosR.w * 0.5 + 0.5;
+            vec2 screenPosRM = abs(screenPosR.xy - 0.5);
+
+            if (screenPosRM.x < rEdge.x && screenPosRM.y < rEdge.y) {
+                vec2 edgeFactor = pow2(pow2(pow2(screenPosRM / rEdge)));
+                screenPosR.y += (dither - 0.5) * (0.03 * (edgeFactor.x + edgeFactor.y) + 0.004);
+
+                screenPosR.z = texture2D(depthtex1, screenPosR.xy).x;
+                vec3 viewPosR = ScreenToView(screenPosR);
+                if (lViewPos <= 2.0 + length(viewPosR)) {
+                    reflection = texture2D(gaux2, screenPosR.xy);
+                    reflection.rgb = pow2(reflection.rgb + 1.0);
+                }
+
+                edgeFactor.x = pow2(edgeFactor.x);
+                edgeFactor = 1.0 - edgeFactor;
+                reflection.a *= edgeFactor.x * edgeFactor.y;
+            }
+
+            reflection.a *= reflection.a;
+            reflection.a *= clamp01((dot(nViewPos, nViewPosR) - 0.45) * 10.0); // Fixes perpendicular ref
+        }
+        #endif
+    #endif
+    // ============================== End of Step 2 ============================== //
+
+    return reflection;
+}
+*/
+
+float SSRAO(vec3 normalM, vec3 viewPos, sampler2D depthtex, float dither) {
+    #define SSRAO_QUALITY 16 //[2 4 6 8 12 16 24 32 48 64 128]
+    #define SSRAO_STEPS 1 //[1 2 3 4 5 6 7 8 9 10 12 14 16 18 20]
+    #define SSRAO_RADIUS 1.0 //[0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0]
+
+    const int NUM_SAMPLES = SSRAO_QUALITY;
+    const int MAX_STEPS = SSRAO_STEPS;
+    const float AO_RADIUS = SSRAO_RADIUS;
+    const vec2 rEdge = vec2(0.6, 0.55);
+
+    float occlusion = 0.0;
+
+    // Tangent space basis for sampling
+    vec3 up = abs(normalM.y) < 0.999 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0);
+    vec3 tangent = normalize(cross(up, normalM));
+    vec3 bitangent = cross(normalM, tangent);
+
+    for (int i = 0; i < NUM_SAMPLES; i++) {
+        // Cosine-weighted hemisphere sample
+        float rand = fract(float(i) * 0.73 + dither);
+        float phi = 6.2831 * rand;
+        float cosTheta = sqrt(1.0 - float(i) / float(NUM_SAMPLES));
+        float sinTheta = sqrt(1.0 - cosTheta * cosTheta);
+
+        vec3 hemiDir = normalize(
+            sinTheta * cos(phi) * tangent +
+            sinTheta * sin(phi) * bitangent +
+            cosTheta * normalM
+        );
+
+        // Initial ray state
+        vec3 rayStart = viewPos + normalM * 0.01;
+        vec3 rayDir = hemiDir * (1.0 / float(1));
+        vec3 rayPos = rayStart;
+        
+        for (int j = 0; j < MAX_STEPS; j++) {
+            rayPos += rayDir;
+
+            vec3 screenPos = nvec3(gbufferProjection * vec4(rayPos, 1.0)) * 0.5 + 0.5;
+
+            if (abs(screenPos.x - 0.5) > rEdge.x || abs(screenPos.y - 0.5) > rEdge.y) break;
+
+            float sceneZ = texture2D(depthtex, screenPos.xy).r;
+            vec3 hitPos = nvec3(gbufferProjectionInverse * vec4(vec3(screenPos.xy, sceneZ) * 2.0 - 1.0, 1.0));
+
+            float distanceToHit = length(rayPos - hitPos);
+            float thickness = length(rayDir);
+            
+            
+            if (distanceToHit < thickness) {
+                float weight = 1.0 - smoothstep(0.0, AO_RADIUS, distanceToHit);
+                occlusion += weight;
+                break;
+            }
+        }
+    }
+    
+    //occlusion *= 0.5;
+
+    // Normalize occlusion
+    float ao = 1.0 - (occlusion / float(NUM_SAMPLES));
+
+    // Optional: fade near screen edge to prevent artifacts
+    vec2 edgeDist = abs(nvec3(gbufferProjection * vec4(viewPos, 1.0)).xy * 0.5 + 0.5 - 0.5) / rEdge;
+    float edgeFade = clamp(1.0 - pow(max(edgeDist.x, edgeDist.y), 8.0), 0.0, 1.0);
+
+    return clamp(ao, 0.2, 1.0);
+}
+
+//Program//
+void main() {
+    vec3 color = texelFetch(colortex0, texelCoord, 0).rgb;
+    float z0 = texelFetch(depthtex0, texelCoord, 0).r;
+
+    vec4 screenPos = vec4(texCoord, z0, 1.0);
+    vec4 viewPos = gbufferProjectionInverse * (screenPos * 2.0 - 1.0);
+    viewPos /= viewPos.w;
+    float lViewPos = length(viewPos);
+    vec3 nViewPos = normalize(viewPos.xyz);
+    vec3 playerPos = ViewToPlayer(viewPos.xyz);
+
+    float dither = texture2D(noisetex, texCoord * vec2(viewWidth, viewHeight) / 128.0).b;
+    #if defined TAA || defined TEMPORAL_FILTER
+        dither = fract(dither + goldenRatio * mod(float(frameCounter), 3600.0));
+    #endif
+
+    #ifdef ATM_COLOR_MULTS
+        atmColorMult = GetAtmColorMult();
+        sqrtAtmColorMult = sqrt(atmColorMult);
+    #endif
+
+    float VdotU = dot(nViewPos, upVec);
+    float VdotS = dot(nViewPos, sunVec);
+    float skyFade = 0.0;
+    vec3 waterRefColor = vec3(0.0);
+    vec3 auroraBorealis = vec3(0.0);
+    vec3 nightNebula = vec3(0.0);
+
+    #ifdef TEMPORAL_FILTER
+        vec4 refToWrite = vec4(0.0);
+    #endif
+
+    if (z0 < 1.0) {
+        #ifdef DISTANT_LIGHT_BOKEH
+            int dlbo = 1;
+            vec3 dlbColor = color;
+            dlbColor += texelFetch(colortex0, texelCoord + ivec2( 0, dlbo), 0).rgb;
+            dlbColor += texelFetch(colortex0, texelCoord + ivec2( 0,-dlbo), 0).rgb;
+            dlbColor += texelFetch(colortex0, texelCoord + ivec2( dlbo, 0), 0).rgb;
+            dlbColor += texelFetch(colortex0, texelCoord + ivec2(-dlbo, 0), 0).rgb;
+            dlbColor = max(color, dlbColor * 0.2);
+            float dlbMix = GetDistantLightBokehMix(lViewPos);
+            color = mix(color, dlbColor, dlbMix);
+        #endif
+
+        #if SSAO_QUALI > 0 || defined WORLD_OUTLINE || defined TEMPORAL_FILTER
+            float linearZ0 = GetLinearDepth(z0);
+        #endif
+
+        vec3 texture6 = texelFetch(colortex6, texelCoord, 0).rgb;
+        bool entityOrHand = z0 < 0.56;
+        int materialMaskInt = int(texture6.g * 255.1);
+        float intenseFresnel = 0.0;
+        float smoothnessD = texture6.r;
+        vec3 reflectColor = vec3(1.0);
+
+        float skyLightFactor = texture6.b;
+        vec3 texture5 = texelFetch(colortex5, texelCoord, 0).rgb;
+        vec3 normalM = mat3(gbufferModelView) * texture5;
+
+        #if SSAO_QUALI == 2
+            float ao = SSAO(z0, linearZ0, dither);
+        #elif SSAO_QUALI == 3
+            float ao = SSRAO(normalM, viewPos.xyz, depthtex0, dither);
+        #else
+            float ao = 1.0;
+        #endif
+
+        if (materialMaskInt <= 240) {
+            #ifdef IPBR
+                #include "/lib/materials/materialHandling/deferredMaterials.glsl"
+            #elif defined CUSTOM_PBR
+                #if RP_MODE == 2 // seuspbr
+                    float metalness = materialMaskInt / 240.0;
+
+                    intenseFresnel = metalness;
+                #elif RP_MODE == 3 // labPBR
+                    float metalness = float(materialMaskInt >= 230);
+
+                    intenseFresnel = materialMaskInt / 240.0;
+                #endif
+                reflectColor = mix(reflectColor, color.rgb / max(color.r + 0.00001, max(color.g, color.b)), metalness);
+            #endif
+        } else {
+            if (materialMaskInt == 254) { // No SSAO, No TAA
+                ao = 1.0;
+                entityOrHand = true;
+            }
+        }
+
+        color.rgb *= ao;
+
+        #ifdef PBR_REFLECTIONS
+
+            float fresnel = clamp(1.0 + dot(normalM, nViewPos), 0.0, 1.0);
+
+            float fresnelFactor = (1.0 - smoothnessD) * 0.7;
+            float fresnelM = max(fresnel - fresnelFactor, 0.0) / (1.0 - fresnelFactor);
+            #ifdef IPBR
+                fresnelM = mix(pow2(fresnelM), fresnelM * 0.75 + 0.25, intenseFresnel);
+            #else
+                fresnelM = mix(pow2(fresnelM), fresnelM * 0.5 + 0.5, intenseFresnel);
+            #endif
+            fresnelM = fresnelM * sqrt1(smoothnessD) - dither * 0.001;
+
+            if (fresnelM > 0.0) {
+                #ifdef TAA
+                    float noiseMult = 0.3;
+                #else
+                    float noiseMult = 0.1;
+                #endif
+                #ifdef TEMPORAL_FILTER
+                    float blendFactor = 1.0;
+                    float writeFactor = 1.0;
+                #endif
+                #if defined CUSTOM_PBR || defined IPBR && defined IS_IRIS
+                    if (entityOrHand) {
+                        noiseMult *= 0.1;
+                        #ifdef TEMPORAL_FILTER
+                            blendFactor = 0.0;
+                            writeFactor = 0.0;
+                        #endif
+                    }
+                #endif
+                noiseMult *= pow2(1.0 - smoothnessD);
+
+                vec2 roughCoord = gl_FragCoord.xy / 128.0;
+                vec3 roughNoise = vec3(
+                    texture2D(noisetex, roughCoord).r,
+                    texture2D(noisetex, roughCoord + 0.09375).r,
+                    texture2D(noisetex, roughCoord + 0.1875).r
+                );
+                roughNoise = fract(roughNoise + vec3(dither, dither * goldenRatio, dither * pow2(goldenRatio)));
+                roughNoise = noiseMult * (roughNoise - vec3(0.5));
+
+                normalM += roughNoise;
+
+                vec4 reflection = GetReflection(normalM, viewPos.xyz, nViewPos, playerPos, lViewPos, z0,
+                                                depthtex0, dither, skyLightFactor, fresnel,
+                                                smoothnessD, vec3(0.0), vec3(0.0), vec3(0.0), 0.0);
+
+                vec3 colorAdd = reflection.rgb * reflectColor;
+                //float colorMultInv = (0.75 - intenseFresnel * 0.5) * max(reflection.a, skyLightFactor);
+                //float colorMultInv = max(reflection.a, skyLightFactor);
+                float colorMultInv = 1.0;
+
+                vec3 colorP = color;
+
+                #ifdef TEMPORAL_FILTER
+                    vec3 cameraOffset = cameraPosition - previousCameraPosition;
+                    vec2 prvCoord = SHalfReprojection(playerPos, cameraOffset);
+                    #if defined IPBR && !defined GENERATED_NORMALS
+                        vec2 prvRefCoord = Reprojection(vec3(texCoord, max(refPos.z, z0)), cameraOffset);
+                        vec4 oldRef = texture2D(colortex7, prvRefCoord);
+                    #else
+                        vec2 prvRefCoord = Reprojection(vec3(texCoord, z0), cameraOffset);
+                        vec2 prvRefCoord2 = Reprojection(vec3(texCoord, max(refPos.z, z0)), cameraOffset);
+                        vec4 oldRef1 = texture2D(colortex7, prvRefCoord);
+                        vec4 oldRef2 = texture2D(colortex7, prvRefCoord2);
+                        vec3 dif1 = colorAdd - oldRef1.rgb;
+                        vec3 dif2 = colorAdd - oldRef2.rgb;
+                        float dotDif1 = dot(dif1, dif1);
+                        float dotDif2 = dot(dif2, dif2);
+
+                        float oldRefMixer = clamp01((dotDif1 - dotDif2) * 500.0);
+                        vec4 oldRef = mix(oldRef1, oldRef2, oldRefMixer);
+                    #endif
+
+                    vec4 newRef = vec4(colorAdd, colorMultInv);
+                    vec2 oppositePreCoord = texCoord - 2.0 * (prvCoord - texCoord);
+
+                    // Reduce blending at speed
+                    blendFactor *= float(prvCoord.x > 0.0 && prvCoord.x < 1.0 && prvCoord.y > 0.0 && prvCoord.y < 1.0);
+                    float velocity = length(cameraOffset) * max(16.0 - lViewPos / gbufferProjection[1][1], 3.0);
+                    blendFactor *= mix(1.0, exp(-velocity) * 0.5 + 0.5, smoothnessD);
+
+                    // Reduce blending if depth changed
+                    float linearZDif = abs(GetLinearDepth(texture2D(colortex1, oppositePreCoord).r) - linearZ0) * far;
+                    blendFactor *= max0(2.0 - linearZDif) * 0.5;
+                    //color = mix(vec3(1,1,0), color, max0(2.0 - linearZDif) * 0.5);
+
+                    // Reduce blending if normal changed
+                    vec3 texture5P = texture2D(colortex5, oppositePreCoord, 0).rgb;
+                    vec3 texture5Dif = abs(texture5 - texture5P);
+                    if (texture5Dif != clamp(texture5Dif, vec3(-0.004), vec3(0.004))) {
+                        blendFactor = 0.0;
+                        //color.rgb = vec3(1,0,1);
+                    }
+
+                    blendFactor = max0(blendFactor); // Prevent first frame NaN
+                    newRef = max(newRef, vec4(0.0)); // Prevent random NaNs from persisting
+                    refToWrite = mix(newRef, oldRef, blendFactor * 0.95);
+                    refToWrite = mix(max(refToWrite, newRef), refToWrite, pow2(pow2(pow2(refToWrite.a))));
+                    
+                    color.rgb *= 1.0 - refToWrite.a * fresnelM;
+                    color.rgb += refToWrite.rgb * fresnelM;
+                    refToWrite *= writeFactor;
+                #else
+                    color *= 1.0 - colorMultInv * fresnelM;
+                    color += colorAdd * fresnelM;
+                #endif
+
+                color = max(colorP, color); // Prevents reflections from making a surface darker
+
+                //if (gl_FragCoord.x > 960) color = vec3(5.25,0,5.25);
+            }
+        #endif
+
+        #ifdef WORLD_OUTLINE
+            #ifndef WORLD_OUTLINE_ON_ENTITIES
+                if (!entityOrHand)
+            #endif
+            DoWorldOutline(color, linearZ0);
+        #endif
+
+        #ifndef SKY_EFFECT_REFLECTION
+            waterRefColor = sqrt(color) - 1.0;
+        #else
+            waterRefColor = color;
+        #endif
+
+        DoFog(color, skyFade, lViewPos, playerPos, VdotU, VdotS, dither);
+    } else { // Sky
+        #ifdef DISTANT_HORIZONS
+            float z0DH = texelFetch(dhDepthTex, texelCoord, 0).r;
+            if (z0DH < 1.0) { // Distant Horizons Chunks
+                vec4 screenPosDH = vec4(texCoord, z0DH, 1.0);
+                vec4 viewPosDH = dhProjectionInverse * (screenPosDH * 2.0 - 1.0);
+                viewPosDH /= viewPosDH.w;
+                lViewPos = length(viewPosDH.xyz);
+                playerPos = ViewToPlayer(viewPosDH.xyz);
+                
+                #ifndef SKY_EFFECT_REFLECTION
+                    waterRefColor = sqrt(color) - 1.0;
+                #else
+                    waterRefColor = color;
+                #endif
+                
+                DoFog(color.rgb, skyFade, lViewPos, playerPos, VdotU, VdotS, dither);
+            } else { // Start of Actual Sky
+        #endif
+
+        skyFade = 1.0;
+
+        #ifdef OVERWORLD
+            #if AURORA_STYLE > 0
+                auroraBorealis = GetAuroraBorealis(viewPos.xyz, VdotU, dither);
+                color.rgb += auroraBorealis;
+            #endif
+            #ifdef NIGHT_NEBULA
+                nightNebula += GetNightNebula(viewPos.xyz, VdotU, VdotS);
+                color.rgb += nightNebula;
+            #endif
+        #endif
+        #ifdef NETHER
+            color.rgb = netherColor * (1.0 - maxBlindnessDarkness);
+
+            #ifdef ATM_COLOR_MULTS
+                color.rgb *= atmColorMult;
+            #endif
+        #endif
+        #ifdef END
+            color.rgb = endSkyColor;
+            color.rgb += GetEnderStars(viewPos.xyz, VdotU);
+            color.rgb *= 1.0 - maxBlindnessDarkness;
+
+            #ifdef ATM_COLOR_MULTS
+                color.rgb *= atmColorMult;
+            #endif
+        #endif
+
+        #ifdef DISTANT_HORIZONS
+        } // End of Actual Sky
+        #endif
+    }
+
+    float cloudLinearDepth = 1.0;
+    vec4 clouds = vec4(0.0);
+
+    #ifdef VL_CLOUDS_ACTIVE
+        float cloudZCheck = 0.56;
+
+        if (z0 > cloudZCheck) {
+            clouds = GetClouds(cloudLinearDepth, skyFade, cameraPosition, playerPos,
+                               lViewPos, VdotS, VdotU, dither, auroraBorealis, nightNebula);
+
+            color = mix(color, clouds.rgb, clouds.a);
+        }
+    #endif
+
+    #ifdef SKY_EFFECT_REFLECTION
+        waterRefColor = mix(waterRefColor, clouds.rgb, clouds.a);
+        waterRefColor = sqrt(waterRefColor) - 1.0;
+    #endif
+
+    #if defined LIGHTSHAFTS_ACTIVE && (LIGHTSHAFT_BEHAVIOUR == 1 && SHADOW_QUALITY >= 1 || defined END)
+        if (viewWidth + viewHeight - gl_FragCoord.x - gl_FragCoord.y < 1.5)
+            cloudLinearDepth = vlFactor;
+    #endif
+
+    #if defined OVERWORLD && defined ATMOSPHERIC_FOG && (defined SPECIAL_BIOME_WEATHER || RAIN_STYLE == 2)
+        float altitudeFactorRaw = GetAtmFogAltitudeFactor(playerPos.y + cameraPosition.y);
+        vec3 atmFogColor = GetAtmFogColor(altitudeFactorRaw, VdotS);
+
+        #if RAIN_STYLE == 2
+            float factor = 1.0;
+        #else
+            float factor = max(inSnowy, inDry);
+        #endif
+
+        color = mix(color, atmFogColor, 0.5 * rainFactor * factor * sqrt1(skyFade));
+    #endif
+
+    #ifdef DARK_OUTLINE
+        if (clouds.a < 0.5) DoDarkOutline(color, skyFade, z0, dither);
+    #endif
+
+    /*DRAWBUFFERS:054*/
+    gl_FragData[0] = vec4(color, 1.0);
+    gl_FragData[1] = vec4(waterRefColor, 1.0 - skyFade);
+    gl_FragData[2] = vec4(cloudLinearDepth, 0.0, 0.0, 1.0);
+    #ifdef TEMPORAL_FILTER
+        /*DRAWBUFFERS:0547*/
+        gl_FragData[3] = refToWrite;
+    #endif
+}
+
+#endif
+
+//////////Vertex Shader//////////Vertex Shader//////////Vertex Shader//////////
+#ifdef VERTEX_SHADER
+
+noperspective out vec2 texCoord;
+
+out vec3 normal;
+
+flat out vec3 upVec, sunVec;
+
+#if defined LIGHTSHAFTS_ACTIVE && (LIGHTSHAFT_BEHAVIOUR == 1 && SHADOW_QUALITY >= 1 || defined END)
+    flat out float vlFactor;
+#endif
+
+//Attributes//
+
+//Common Variables//
+
+//Common Functions//
+
+//Includes//
+
+//Program//
+void main() {
+    gl_Position = ftransform();
+    texCoord = (gl_TextureMatrix[0] * gl_MultiTexCoord0).xy;
+    normal = normalize(gl_NormalMatrix * gl_Normal);
+
+    upVec = normalize(gbufferModelView[1].xyz);
+    sunVec = GetSunVector();
+
+    #if defined LIGHTSHAFTS_ACTIVE && (LIGHTSHAFT_BEHAVIOUR == 1 && SHADOW_QUALITY >= 1 || defined END)
+        vlFactor = texelFetch(colortex4, ivec2(viewWidth-1, viewHeight-1), 0).r;
+
+        #ifdef END
+            if (frameCounter % int(0.06666 / frameTimeSmooth + 0.5) == 0) { // Change speed is not too different above 10 fps
+                vec2 absCamPosXZ = abs(cameraPosition.xz);
+                float maxCamPosXZ = max(absCamPosXZ.x, absCamPosXZ.y);
+
+                if (gl_Fog.start / far > 0.5 || maxCamPosXZ > 350.0) vlFactor = max(vlFactor - OSIEBCA*2, 0.0);
+                else                                                 vlFactor = min(vlFactor + OSIEBCA*2, 1.0);
+            }
+        #endif
+    #endif
+}
+
+#endif
