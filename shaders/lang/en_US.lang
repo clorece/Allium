@@ -261,7 +261,7 @@ value.FXAA_DEFINE.-1=§aOFF
 value.FXAA_DEFINE.1=§eON
 
 option.SSAO_QUALI_DEFINE=Ambient Occlusion Method
-option.SSAO_QUALI_DEFINE.comment=Changes the method of ambient occlusion between off, SSAO, and SSRAO
+option.SSAO_QUALI_DEFINE.comment=Changes the method of ambient occlusion between off, SSAO, and SSRAO. §e[*]§r SSRAO recommended for screenshots, not really for gameplay.
 value.SSAO_QUALI_DEFINE.0=§aOFF
 value.SSAO_QUALI_DEFINE.2=§eSSAO
 value.SSAO_QUALI_DEFINE.3=§cSSRAO

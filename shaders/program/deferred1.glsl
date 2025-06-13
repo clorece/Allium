@@ -362,8 +362,9 @@ float SSRAO(vec3 normalM, vec3 viewPos, sampler2D depthtex, float dither) {
         );
 
         // Initial ray state
+        //vec3 vector = normalize(reflect(viewPos, normalM));
         vec3 rayStart = viewPos + normalM * 0.01;
-        vec3 rayDir = hemiDir * (1.0 / float(1));
+        vec3 rayDir = hemiDir * 1.0;
         vec3 rayPos = rayStart;
         
         for (int j = 0; j < MAX_STEPS; j++) {
@@ -381,7 +382,7 @@ float SSRAO(vec3 normalM, vec3 viewPos, sampler2D depthtex, float dither) {
             
             
             if (distanceToHit < thickness) {
-                float weight = 1.0 - smoothstep(0.0, AO_RADIUS, distanceToHit);
+                float weight = 1.0 - smoothstep(0.0, SSRAO_RADIUS, distanceToHit);
                 occlusion += weight;
                 break;
             }
@@ -395,10 +396,11 @@ float SSRAO(vec3 normalM, vec3 viewPos, sampler2D depthtex, float dither) {
 
     // Optional: fade near screen edge to prevent artifacts
     vec2 edgeDist = abs(nvec3(gbufferProjection * vec4(viewPos, 1.0)).xy * 0.5 + 0.5 - 0.5) / rEdge;
-    float edgeFade = clamp(1.0 - pow(max(edgeDist.x, edgeDist.y), 8.0), 0.0, 1.0);
+    float edgeFade = clamp(1.0 - pow(max(edgeDist.x, edgeDist.y), 1.0), 0.0, 1.0);
 
     return clamp(ao, 0.2, 1.0);
 }
+
 
 //Program//
 void main() {
