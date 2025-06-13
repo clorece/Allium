@@ -51,53 +51,6 @@ float GetLinearDepth(float depth) {
     return (2.0 * near) / (far + near - depth * farMinusNear);
 }
 
-#if SSAO_QUALI == 2
-    vec2 OffsetDist(float x, int s) {
-        float n = fract(x * 1.414) * 3.1415;
-        return pow2(vec2(cos(n), sin(n)) * x / s);
-    }
-
-    float SSAO(float z0, float linearZ0, float dither) {
-        if (z0 < 0.56) return 1.0;
-        float ao = 0.0;
-
-        int samples = 4;
-        float scm = 0.4;
-        
-
-        #define SSAO_I_FACTOR 0.004
-
-        float sampleDepth = 0.0, angle = 0.0, dist = 0.0;
-        float fovScale = gbufferProjection[1][1];
-        float distScale = max(farMinusNear * linearZ0 + near, 3.0);
-        vec2 scale = vec2(scm / aspectRatio, scm) * fovScale / distScale;
-
-        for (int i = 1; i <= samples; i++) {
-            vec2 offset = OffsetDist(i + dither, samples) * scale;
-            if (i % 2 == 0) offset.y = -offset.y;
-
-            vec2 coord1 = texCoord + offset;
-            vec2 coord2 = texCoord - offset;
-
-            sampleDepth = GetLinearDepth(texture2D(depthtex0, coord1).r);
-            float aosample = farMinusNear * (linearZ0 - sampleDepth) * 2.0;
-            angle = clamp(0.5 - aosample, 0.0, 1.0);
-            dist = clamp(0.5 * aosample - 1.0, 0.0, 1.0);
-
-            sampleDepth = GetLinearDepth(texture2D(depthtex0, coord2).r);
-            aosample = farMinusNear * (linearZ0 - sampleDepth) * 2.0;
-            angle += clamp(0.5 - aosample, 0.0, 1.0);
-            dist += clamp(0.5 * aosample - 1.0, 0.0, 1.0);
-
-            ao += clamp(angle + dist, 0.0, 1.0);
-        }
-        ao /= samples;
-
-        #define SSAO_IM SSAO_I * SSAO_I_FACTOR
-        return pow(ao, SSAO_IM);
-    }
-#endif
-
 
 
 
@@ -183,154 +136,6 @@ float GetLinearDepth(float depth) {
     #include "/lib/misc/distantLightBokeh.glsl"
 #endif
 
-/*
-vec4 GetReflection(vec3 normalM, vec3 viewPos, vec3 nViewPos, vec3 playerPos, float lViewPos, float z0,
-                   sampler2D depthtex, float dither, float skyLightFactor, float fresnel,
-                   float smoothness, vec3 geoNormal, vec3 color, vec3 shadowMult, float highlightMult) {
-    // ============================== Step 1: Prepare ============================== //
-    vec2 rEdge = vec2(0.6, 0.55);
-    vec3 normalMR = normalM;
-
-    #if defined GBUFFERS_WATER && WATER_STYLE == 1 && defined GENERATED_NORMALS
-        normalMR = normalize(mix(geoNormal, normalM, 0.05));
-    #endif
-
-    vec3 nViewPosR = normalize(reflect(nViewPos, normalMR));
-    float RVdotU = dot(nViewPosR, upVec);
-    float RVdotS = dot(nViewPosR, sunVec);
-
-    #if defined GBUFFERS_WATER && WATER_STYLE >= 2
-        normalMR = normalize(mix(geoNormal, normalM, 0.8));
-    #endif
-    // ============================== End of Step 1 ============================== //
-
-    // ============================== Step 2: Calculate Terrain Reflection and Alpha ============================== //
-    vec4 reflection = vec4(0.0);
-    #if defined DEFERRED1 || WATER_REFLECT_QUALITY >= 1
-        #if defined DEFERRED1 || WATER_REFLECT_QUALITY >= 2 && !defined DH_WATER
-            // Method 1: Ray Marched Reflection //
-
-            // Ray Marching
-            vec3 start = viewPos + normalMR * (lViewPos * 0.025 * (1.0 - fresnel) + 0.05);
-            #if defined GBUFFERS_WATER && WATER_STYLE >= 2
-                vec3 vector = normalize(reflect(nViewPos, normalMR)); // Not using nViewPosR because normalMR changed
-            #else
-                vec3 vector = nViewPosR;
-            #endif
-            //vector = normalize(vector - 0.5 * (1.0 - smoothness) * (1.0 - fresnel) * normalMR); // reflection anisotropy test
-            //vector = normalize(vector - 0.075 * dither * (1.0 - pow2(pow2(fresnel))) * normalMR);
-            vector *= 0.5;
-            vec3 viewPosRT = viewPos + vector;
-            vec3 tvector = vector;
-
-            int sr = 0;
-            float dist = 0.0;
-            vec3 rfragpos = vec3(0.0);
-            for (int i = 0; i < 30; i++) { //originally 30 itterations but cut in half to save fps
-                refPos = nvec3(gbufferProjection * vec4(viewPosRT, 1.0)) * 0.5 + 0.5;
-                if (abs(refPos.x - 0.5) > rEdge.x || abs(refPos.y - 0.5) > rEdge.y) break;
-
-                rfragpos = vec3(refPos.xy, texture2D(depthtex, refPos.xy).r);
-                rfragpos = nvec3(gbufferProjectionInverse * vec4(rfragpos * 2.0 - 1.0, 1.0));
-                dist = length(start - rfragpos);
-
-                float err = length(viewPosRT - rfragpos);
-
-                if (err < length(vector) * 3.0) {
-                    sr++;
-                    if (sr >= 6) break;
-                    tvector -= vector;
-                    vector *= 0.1;
-                }
-                vector *= 2.0;
-                tvector += vector * (0.95 + 0.1 * dither);
-                viewPosRT = start + tvector;
-            }
-
-            // Finalizing Terrain Reflection and Alpha 
-            if (refPos.z < 0.99997) {
-                vec2 absPos = abs(refPos.xy - 0.5);
-                vec2 cdist = absPos / rEdge;
-                float border = clamp(1.0 - pow(max(cdist.x, cdist.y), 50.0), 0.0, 1.0);
-                reflection.a = border;
-
-                float lViewPosRT = length(rfragpos);
-
-                if (reflection.a > 0.001) {
-                    vec2 edgeFactor = pow2(pow2(pow2(cdist)));
-                    refPos.y += (dither - 0.5) * (0.05 * (edgeFactor.x + edgeFactor.y));
-
-                    #ifdef DEFERRED1
-                        float smoothnessDM = pow2(smoothness);
-                        float lodFactor = 1.0 - exp(-0.125 * (1.0 - smoothnessDM) * dist);
-                        float lod = log2(viewHeight / 8.0 * (1.0 - smoothnessDM) * lodFactor) * 0.45;
-                        if (z0 <= 0.56) lod *= 2.22; // Using more lod to compensate for less roughness noise on held items
-                        lod = max(lod - 1.0, 0.0);
-
-                        reflection.rgb = texture2DLod(colortex0, refPos.xy, lod).rgb;
-                    #else
-                        reflection = texture2D(gaux2, refPos.xy);
-                        reflection.rgb = pow2(reflection.rgb + 1.0);
-                    #endif
-
-                    float skyFade = 0.0;
-                    DoFog(reflection.rgb, skyFade, lViewPosRT, ViewToPlayer(rfragpos.xyz), RVdotU, RVdotS, dither);
-
-                    edgeFactor.x = pow2(edgeFactor.x);
-                    edgeFactor = 1.0 - edgeFactor;
-                    reflection.a *= pow(edgeFactor.x * edgeFactor.y, 2.0 + 3.0 * GetLuminance(reflection.rgb));
-                }
-
-                float posDif = lViewPosRT - lViewPos;
-                reflection.a *= clamp(posDif + 3.0, 0.0, 1.0);
-            }
-            #if defined DEFERRED1 && defined TEMPORAL_FILTER
-                else refPos.z = 1.0;
-            #endif
-            #if !defined DEFERRED1 && defined DISTANT_HORIZONS
-                else
-            #endif
-        #endif
-        #if !defined DEFERRED1 && (WATER_REFLECT_QUALITY < 2 || defined DISTANT_HORIZONS) || defined DH_WATER
-        {   // Method 2: Mirorred Image Reflection //
-
-            #if WATER_REFLECT_QUALITY < 2
-                float verticalStretch = 0.013; // for potato quality reflections
-            #else
-                float verticalStretch = 0.0025; // for distant horizons reflections
-            #endif
-
-            vec4 clipPosR = gbufferProjection * vec4(nViewPosR + verticalStretch * viewPos, 1.0);
-            vec3 screenPosR = clipPosR.xyz / clipPosR.w * 0.5 + 0.5;
-            vec2 screenPosRM = abs(screenPosR.xy - 0.5);
-
-            if (screenPosRM.x < rEdge.x && screenPosRM.y < rEdge.y) {
-                vec2 edgeFactor = pow2(pow2(pow2(screenPosRM / rEdge)));
-                screenPosR.y += (dither - 0.5) * (0.03 * (edgeFactor.x + edgeFactor.y) + 0.004);
-
-                screenPosR.z = texture2D(depthtex1, screenPosR.xy).x;
-                vec3 viewPosR = ScreenToView(screenPosR);
-                if (lViewPos <= 2.0 + length(viewPosR)) {
-                    reflection = texture2D(gaux2, screenPosR.xy);
-                    reflection.rgb = pow2(reflection.rgb + 1.0);
-                }
-
-                edgeFactor.x = pow2(edgeFactor.x);
-                edgeFactor = 1.0 - edgeFactor;
-                reflection.a *= edgeFactor.x * edgeFactor.y;
-            }
-
-            reflection.a *= reflection.a;
-            reflection.a *= clamp01((dot(nViewPos, nViewPosR) - 0.45) * 10.0); // Fixes perpendicular ref
-        }
-        #endif
-    #endif
-    // ============================== End of Step 2 ============================== //
-
-    return reflection;
-}
-*/
-
 #if SSAO_QUALI == 3
     float SSRAO(vec3 normalM, vec3 viewPos, sampler2D depthtex, float dither) {
         #define SSRAO_QUALITY 8 //[2 4 6 8 12 16 24 32 48 64 128]
@@ -403,6 +208,76 @@ vec4 GetReflection(vec3 normalM, vec3 viewPos, vec3 nViewPos, vec3 playerPos, fl
     }
 #endif
 
+#if SSAO_QUALI == 2
+    // global helper
+float hash1(float x) {
+    return fract(sin(x * 12.9898 + 78.233) * 43758.5453);
+}
+
+// ==============================
+// Ground-Truth Ambient Occlusion
+// ==============================
+float SSAO(vec3 normalM, vec3 viewPos, sampler2D depthtex, float dither) {
+    #define GTAO_SAMPLES 16
+    #define GTAO_STEPS   4
+    #define GTAO_RADIUS  1.0
+
+    const vec2 rEdge = vec2(0.6, 0.55);
+
+    // build tangent-space basis
+    vec3 upV = abs(normalM.y) < 0.999 ? vec3(0.0, 1.0, 0.0)
+                                      : vec3(1.0, 0.0, 0.0);
+    vec3 T = normalize(cross(upV, normalM));
+    vec3 B = cross(normalM, T);
+
+    float occlusion = 0.0;
+    for (int i = 0; i < GTAO_SAMPLES; i++) {
+        // cosine‐weighted hemisphere sample
+        float rnd      = hash1(float(i) + dither);
+        float phi      = 6.2831853 * rnd;
+        float cosTh    = sqrt(1.0 - rnd);
+        float sinTh    = sqrt(1.0 - cosTh * cosTh);
+        vec3 sampleDir = T * (cos(phi) * sinTh)
+                       + B * (sin(phi) * sinTh)
+                       + normalM * cosTh;
+
+        // march along the sample ray
+        for (int j = 1; j <= GTAO_STEPS; j++) {
+            float t       = float(j) / float(GTAO_STEPS) * GTAO_RADIUS;
+            vec3 sampPos  = viewPos + sampleDir * t;
+
+            // project back to screen
+            vec4 clip     = gbufferProjection * vec4(sampPos, 1.0);
+            vec2 uv       = clip.xy / clip.w * 0.5 + 0.5;
+            if (abs(uv.x - 0.5) > rEdge.x || abs(uv.y - 0.5) > rEdge.y)
+                break;
+
+            // fetch scene depth & reconstruct view-space
+            float sceneZ = texture(depthtex, uv).r;
+            vec3 sceneVS = nvec3(
+                gbufferProjectionInverse *
+                vec4(vec3(uv, sceneZ) * 2.0 - 1.0, 1.0)
+            );
+
+            // **fixed** occlusion test with bias
+            float bias = 0.005;
+            if (sceneVS.z > sampPos.z + bias) {
+                occlusion += 1.0;
+                break;
+            }
+        }
+    }
+
+    float ao = 1.0 - occlusion / float(GTAO_SAMPLES * GTAO_STEPS);
+
+    #undef GTAO_SAMPLES
+    #undef GTAO_STEPS
+    #undef GTAO_RADIUS
+
+    return clamp(ao, 0.0, 1.0);
+}
+#endif
+
 
 //Program//
 void main() {
@@ -466,7 +341,8 @@ void main() {
         vec3 normalM = mat3(gbufferModelView) * texture5;
         float ao = 1.0;
         #if SSAO_QUALI == 2
-            ao = SSAO(z0, linearZ0, dither);
+            ao = SSAO(normalM, viewPos.xyz, depthtex0, dither);
+            ao = clamp( 1.0 - (1.0 - ao) * SSAO_I, 0.0, 1.0 );
         #elif SSAO_QUALI == 3
             float aoDarkness = 5.0;
             ao = SSRAO(normalM, viewPos.xyz, depthtex0, dither);
