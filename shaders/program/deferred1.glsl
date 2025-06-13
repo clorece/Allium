@@ -331,75 +331,77 @@ vec4 GetReflection(vec3 normalM, vec3 viewPos, vec3 nViewPos, vec3 playerPos, fl
 }
 */
 
-float SSRAO(vec3 normalM, vec3 viewPos, sampler2D depthtex, float dither) {
-    #define SSRAO_QUALITY 16 //[2 4 6 8 12 16 24 32 48 64 128]
-    #define SSRAO_STEPS 1 //[1 2 3 4 5 6 7 8 9 10 12 14 16 18 20]
-    #define SSRAO_RADIUS 1.0 //[0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0]
+#if SSAO_QUALI == 3
+    float SSRAO(vec3 normalM, vec3 viewPos, sampler2D depthtex, float dither) {
+        #define SSRAO_QUALITY 8 //[2 4 6 8 12 16 24 32 48 64 128]
+        #define SSRAO_STEPS 4 //[1 2 3 4 5 6 7 8 9 10 12 14 16 18 20]
+        #define SSRAO_RADIUS 1.0 //[0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0]
 
-    const int NUM_SAMPLES = SSRAO_QUALITY;
-    const int MAX_STEPS = SSRAO_STEPS;
-    const float AO_RADIUS = SSRAO_RADIUS;
-    const vec2 rEdge = vec2(0.6, 0.55);
+        const int NUM_SAMPLES = SSRAO_QUALITY;
+        const int MAX_STEPS = SSRAO_STEPS;
+        const float AO_RADIUS = SSRAO_RADIUS;
+        const vec2 rEdge = vec2(0.6, 0.55);
 
-    float occlusion = 0.0;
+        float occlusion = 0.0;
 
-    // Tangent space basis for sampling
-    vec3 up = abs(normalM.y) < 0.999 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0);
-    vec3 tangent = normalize(cross(up, normalM));
-    vec3 bitangent = cross(normalM, tangent);
+        // Tangent space basis for sampling
+        vec3 up = abs(normalM.y) < 0.999 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0);
+        vec3 tangent = normalize(cross(up, normalM));
+        vec3 bitangent = cross(normalM, tangent);
 
-    for (int i = 0; i < NUM_SAMPLES; i++) {
-        // Cosine-weighted hemisphere sample
-        float rand = fract(float(i) * 0.73 + dither);
-        float phi = 6.2831 * rand;
-        float cosTheta = sqrt(1.0 - float(i) / float(NUM_SAMPLES));
-        float sinTheta = sqrt(1.0 - cosTheta * cosTheta);
+        for (int i = 0; i < NUM_SAMPLES; i++) {
+            // Cosine-weighted hemisphere sample
+            float rand = fract(float(i) * 0.73 + dither);
+            float phi = 6.2831 * rand;
+            float cosTheta = sqrt(1.0 - float(i) / float(NUM_SAMPLES));
+            float sinTheta = sqrt(1.0 - cosTheta * cosTheta);
 
-        vec3 hemiDir = normalize(
-            sinTheta * cos(phi) * tangent +
-            sinTheta * sin(phi) * bitangent +
-            cosTheta * normalM
-        );
+            vec3 hemiDir = normalize(
+                sinTheta * cos(phi) * tangent +
+                sinTheta * sin(phi) * bitangent +
+                cosTheta * normalM
+            );
 
-        // Initial ray state
-        //vec3 vector = normalize(reflect(viewPos, normalM));
-        vec3 rayStart = viewPos + normalM * 0.01;
-        vec3 rayDir = hemiDir * 1.0;
-        vec3 rayPos = rayStart;
-        
-        for (int j = 0; j < MAX_STEPS; j++) {
-            rayPos += rayDir;
-
-            vec3 screenPos = nvec3(gbufferProjection * vec4(rayPos, 1.0)) * 0.5 + 0.5;
-
-            if (abs(screenPos.x - 0.5) > rEdge.x || abs(screenPos.y - 0.5) > rEdge.y) break;
-
-            float sceneZ = texture2D(depthtex, screenPos.xy).r;
-            vec3 hitPos = nvec3(gbufferProjectionInverse * vec4(vec3(screenPos.xy, sceneZ) * 2.0 - 1.0, 1.0));
-
-            float distanceToHit = length(rayPos - hitPos);
-            float thickness = length(rayDir);
+            // Initial ray state
+            //vec3 vector = normalize(reflect(viewPos, normalM));
+            vec3 rayStart = viewPos + normalM * 0.01;
+            vec3 rayDir = hemiDir * 1.0;
+            vec3 rayPos = rayStart;
             
-            
-            if (distanceToHit < thickness) {
-                float weight = 1.0 - smoothstep(0.0, SSRAO_RADIUS, distanceToHit);
-                occlusion += weight;
-                break;
+            for (int j = 0; j < MAX_STEPS; j++) {
+                rayPos += rayDir;
+
+                vec3 screenPos = nvec3(gbufferProjection * vec4(rayPos, 1.0)) * 0.5 + 0.5;
+
+                if (abs(screenPos.x - 0.5) > rEdge.x || abs(screenPos.y - 0.5) > rEdge.y) break;
+
+                float sceneZ = texture2D(depthtex, screenPos.xy).r;
+                vec3 hitPos = nvec3(gbufferProjectionInverse * vec4(vec3(screenPos.xy, sceneZ) * 2.0 - 1.0, 1.0));
+
+                float distanceToHit = length(rayPos - hitPos);
+                float thickness = length(rayDir);
+                
+                
+                if (distanceToHit < thickness) {
+                    float weight = 1.0 - smoothstep(0.0, SSRAO_RADIUS, distanceToHit);
+                    occlusion += weight;
+                    break;
+                }
             }
         }
+        
+        //occlusion *= 0.5;
+
+        // Normalize occlusion
+        float ao = 1.0 - (occlusion / float(NUM_SAMPLES));
+
+        // Optional: fade near screen edge to prevent artifacts
+        vec2 edgeDist = abs(nvec3(gbufferProjection * vec4(viewPos, 1.0)).xy * 0.5 + 0.5 - 0.5) / rEdge;
+        float edgeFade = clamp(1.0 - pow(max(edgeDist.x, edgeDist.y), 1.0), 0.0, 1.0);
+
+        return clamp(ao, 0.2, 1.0);
     }
-    
-    //occlusion *= 0.5;
-
-    // Normalize occlusion
-    float ao = 1.0 - (occlusion / float(NUM_SAMPLES));
-
-    // Optional: fade near screen edge to prevent artifacts
-    vec2 edgeDist = abs(nvec3(gbufferProjection * vec4(viewPos, 1.0)).xy * 0.5 + 0.5 - 0.5) / rEdge;
-    float edgeFade = clamp(1.0 - pow(max(edgeDist.x, edgeDist.y), 1.0), 0.0, 1.0);
-
-    return clamp(ao, 0.2, 1.0);
-}
+#endif
 
 
 //Program//
@@ -462,13 +464,14 @@ void main() {
         float skyLightFactor = texture6.b;
         vec3 texture5 = texelFetch(colortex5, texelCoord, 0).rgb;
         vec3 normalM = mat3(gbufferModelView) * texture5;
-
+        float ao = 1.0;
         #if SSAO_QUALI == 2
-            float ao = SSAO(z0, linearZ0, dither);
+            ao = SSAO(z0, linearZ0, dither);
         #elif SSAO_QUALI == 3
-            float ao = SSRAO(normalM, viewPos.xyz, depthtex0, dither);
+            float aoDarkness = 5.0;
+            ao = SSRAO(normalM, viewPos.xyz, depthtex0, dither);
         #else
-            float ao = 1.0;
+            ao = 1.0;
         #endif
 
         if (materialMaskInt <= 240) {
@@ -492,7 +495,6 @@ void main() {
                 entityOrHand = true;
             }
         }
-
         color.rgb *= ao;
 
         #ifdef PBR_REFLECTIONS

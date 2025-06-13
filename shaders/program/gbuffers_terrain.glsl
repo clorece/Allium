@@ -349,6 +349,7 @@ void main() {
 
     /* DRAWBUFFERS:06 */
     gl_FragData[0] = color;
+    //gl_FragData[0] = vec4(1.0, 1.0, 1.0, 1.0);
     gl_FragData[1] = vec4(smoothnessD, materialMask, skyLightFactor, 1.0);
 
     #if BLOCK_REFLECT_QUALITY >= 2 && RP_MODE != 0
