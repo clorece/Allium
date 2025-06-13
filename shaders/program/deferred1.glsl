@@ -138,8 +138,8 @@ float GetLinearDepth(float depth) {
 
 #if SSAO_QUALI == 3
     float SSRAO(vec3 normalM, vec3 viewPos, sampler2D depthtex, float dither) {
-        #define SSRAO_QUALITY 8 //[2 4 6 8 12 16 24 32 48 64 128]
-        #define SSRAO_STEPS 4 //[1 2 3 4 5 6 7 8 9 10 12 14 16 18 20]
+        #define SSRAO_QUALITY 24 //[2 8 16 24 32]
+        #define SSRAO_STEPS 4 //[1 2 3 4]
         #define SSRAO_RADIUS 1.0 //[0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0]
 
         const int NUM_SAMPLES = SSRAO_QUALITY;

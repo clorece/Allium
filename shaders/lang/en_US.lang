@@ -1066,5 +1066,14 @@ screen.LUT.comment=Lookup tables (LUTs) are used to change the colors of an imag
 
 screen.AMBIENT_OCCLUSION=Ambient Occlusion
     option.SSRAO_QUALITY=SSRAO Quality
-    option.SSRAO_STEPS=SSRAO Trace Steps
+        value.SSRAO_QUALITY.2=Reflection View
+        value.SSRAO_QUALITY.8=§aLow
+        value.SSRAO_QUALITY.16=§eMedium
+        value.SSRAO_QUALITY.24=§cHigh
+        value.SSRAO_QUALITY.32=§4§lUltra
+    option.SSRAO_STEPS=SSRAO Trace Length
+        value.SSRAO_STEPS.1=§aLow
+        value.SSRAO_STEPS.2=§eMedium
+        value.SSRAO_STEPS.3=§cHigh
+        value.SSRAO_STEPS.4=§4§lUltra
     option.SSRAO_RADIUS=SSRAO Radius
