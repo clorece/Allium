@@ -145,7 +145,7 @@ float GetLinearDepth(float depth) {
         const int NUM_SAMPLES = SSRAO_QUALITY;
         const int MAX_STEPS = SSRAO_STEPS;
         const float AO_RADIUS = SSRAO_RADIUS;
-        const vec2 rEdge = vec2(0.6, 0.55);
+        //const vec2 rEdge = vec2(viewWidth, viewHeight);
 
         float occlusion = 0.0;
 
@@ -178,7 +178,7 @@ float GetLinearDepth(float depth) {
 
                 vec3 screenPos = nvec3(gbufferProjection * vec4(rayPos, 1.0)) * 0.5 + 0.5;
 
-                if (abs(screenPos.x - 0.5) > rEdge.x || abs(screenPos.y - 0.5) > rEdge.y) break;
+                if (abs(screenPos.x - 0.5) > view.x || abs(screenPos.y - 0.5) > view.y) break;
 
                 float sceneZ = texture2D(depthtex, screenPos.xy).r;
                 vec3 hitPos = nvec3(gbufferProjectionInverse * vec4(vec3(screenPos.xy, sceneZ) * 2.0 - 1.0, 1.0));
@@ -201,10 +201,10 @@ float GetLinearDepth(float depth) {
         float ao = 1.0 - (occlusion / float(NUM_SAMPLES));
 
         // Optional: fade near screen edge to prevent artifacts
-        vec2 edgeDist = abs(nvec3(gbufferProjection * vec4(viewPos, 1.0)).xy * 0.5 + 0.5 - 0.5) / rEdge;
-        float edgeFade = clamp(1.0 - pow(max(edgeDist.x, edgeDist.y), 1.0), 0.0, 1.0);
+        //vec2 edgeDist = abs(nvec3(gbufferProjection * vec4(viewPos, 1.0)).xy * 0.5 + 0.5 - 0.5) / rEdge;
+        //float edgeFade = clamp(1.0 - pow(max(edgeDist.x, edgeDist.y), 1.0), 0.0, 1.0);
 
-        return clamp(ao, 0.2, 1.0);
+        return clamp(ao, 0.0, 1.0);
     }
 #endif
 
@@ -218,7 +218,7 @@ float hash1(float x) {
 // Ground-Truth Ambient Occlusion
 // ==============================
 float SSAO(vec3 normalM, vec3 viewPos, sampler2D depthtex, float dither) {
-    #define GTAO_SAMPLES 16
+    #define GTAO_SAMPLES 8
     #define GTAO_STEPS   4
     #define GTAO_RADIUS  1.0
 
@@ -277,7 +277,6 @@ float SSAO(vec3 normalM, vec3 viewPos, sampler2D depthtex, float dither) {
     return clamp(ao, 0.0, 1.0);
 }
 #endif
-
 
 //Program//
 void main() {

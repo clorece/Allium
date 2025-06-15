@@ -64,7 +64,7 @@ float saturate(float x) {
     return clamp(x, 0.0, 1.0);
 }
 
-float perlin(vec3 pos, float frequency){
+float perlin(vec3 pos, float frequency, float straightness){
 
 	//Compute the sum for each octave.
 	float sum = 0.0;
@@ -74,6 +74,7 @@ float perlin(vec3 pos, float frequency){
 	for(int oct = 0; oct < 3; oct++){
 
         vec3 p = pos * frequency;
+        p.x *= straightness;
         float val = 0.5 + 0.5 * gradientNoise(p);
         sum += val * weight;
         weightSum += weight;
@@ -85,8 +86,9 @@ float perlin(vec3 pos, float frequency){
 	return saturate(sum / weightSum);
 }
 
-float worley(vec3 pos, float numCells){
+float worley(vec3 pos, float numCells, float straightness){
 	vec3 p = pos * numCells;
+    p.x *= straightness;
 	float d = 1.0e10;
 	for (int x = -1; x <= 1; x++){
 		for (int y = -1; y <= 1; y++){
@@ -119,7 +121,7 @@ float HybridNoise3D(vec3 p) {
 }
 */
 
-float GetCloudNoise(vec3 tracePos, int cloudAltitude, float lTracePosXZ, float cloudPlayerPosY) {
+float GetCloudNoise(vec3 tracePos, int cloudAltitude, float lTracePosXZ, float cloudPlayerPosY, float noisePersistance, float mult, float straightness, float size) {
     vec3 tracePosM = tracePos.xyz * 0.00016;
     float wind = 0.0006;
     float noise = 0.0;
@@ -133,13 +135,13 @@ float GetCloudNoise(vec3 tracePos, int cloudAltitude, float lTracePosXZ, float c
         #define CLOUD_SPEED_MULT_M CLOUD_SPEED_MULT * 0.01
         wind *= frameTimeCounter * CLOUD_SPEED_MULT_M;
     #endif
-    #if CLOUD_UNBOUND_SIZE_MULT != 100
-        tracePosM *= CLOUD_UNBOUND_SIZE_MULT_M;
-        wind *= CLOUD_UNBOUND_SIZE_MULT_M;
-    #endif
+    
+    tracePosM *= size;
+    wind *= size;
+
 
     int sampleCount = 5;
-    float persistance = 0.5;
+    float persistance = noisePersistance;
         persistance += (rainFactor * 0.1);
     float noiseMult = 1.0;
 
@@ -147,9 +149,11 @@ float GetCloudNoise(vec3 tracePos, int cloudAltitude, float lTracePosXZ, float c
         noiseMult *= 1.2;
     #endif
 
+    //tracePos.y *= straightness;
+
     for (int i = 0; i < sampleCount; i++) {
         #if CLOUD_QUALITY >= 2
-            noise += worley(tracePosM * 1.5 + 0.1 + vec3(wind, 0.0, 0.0), float(sampleCount)) * currentPersist;
+            noise += worley(tracePosM * 1.5 + 0.1 + vec3(wind, 0.0, 0.0), float(sampleCount), straightness) * currentPersist;
             //noise += worley(tracePosM * 1.5 + vec3(wind, 0.0, 0.0), float(sampleCount)) * 0.1;
             //noise += worley(tracePosM * 2.0 + vec3(wind, 0.0, 0.0), float(sampleCount)) * 0.01;
         #else
@@ -160,6 +164,7 @@ float GetCloudNoise(vec3 tracePos, int cloudAltitude, float lTracePosXZ, float c
         tracePosM *= 3.0;
         wind *= 0.5;
         currentPersist *= persistance;
+        straightness *= straightness;
     }
     noise = pow2(noise / total);
 
@@ -178,7 +183,7 @@ float GetCloudNoise(vec3 tracePos, int cloudAltitude, float lTracePosXZ, float c
                 + CLOUD_FAR_ADD * sqrt(lTracePosXZ + 10.0) // more/less clouds far away
                 + CLOUD_ABOVE_ADD * clamp01(-cloudPlayerPosY / cloudHeight) // more clouds when camera is above them
                 + CLOUD_UNBOUND_RAIN_ADD * (rainFactor * 2.5); // more clouds during rain
-    noise *= noiseMult * CLOUD_UNBOUND_AMOUNT;
+    noise *= noiseMult * mult;
 
     // Original vertical thresholding for cloud edges
     float threshold = clamp(abs(cloudAltitude - tracePos.y) / cloudStretch, 0.001, 0.999);
@@ -192,7 +197,7 @@ float PhaseHG(float cosTheta, float g) {
     return (1.0 - g * g) / (4.0 * 3.14159 * pow(denom, 1.5));
 }
 
-vec4 GetVolumetricClouds(int cloudAltitude, float distanceThreshold, inout float cloudLinearDepth, float skyFade, float skyMult0, vec3 cameraPos, vec3 nPlayerPos, float lViewPosM, float VdotS, float VdotU, float dither) {
+vec4 GetVolumetricClouds(int cloudAltitude, float distanceThreshold, inout float cloudLinearDepth, float skyFade, float skyMult0, vec3 cameraPos, vec3 nPlayerPos, float lViewPosM, float VdotS, float VdotU, float dither, float noisePersistance, float mult, float straightness, float size) {
     vec4 volumetricClouds = vec4(0.0);
 
     #if CLOUD_QUALITY <= 1
@@ -219,9 +224,9 @@ vec4 GetVolumetricClouds(int cloudAltitude, float distanceThreshold, inout float
             float stepMult = 16.0;
         #endif
 
-        #if CLOUD_UNBOUND_SIZE_MULT > 100
-            stepMult = stepMult / sqrt(float(CLOUD_UNBOUND_SIZE_MULT_M));
-        #endif
+        // > 100
+        stepMult = stepMult / sqrt(float(size));
+        //#endif
 
         int sampleCount = int(planeDistanceDif / stepMult + dither + 1);
         vec3 traceAdd = nPlayerPos * stepMult;
@@ -254,7 +259,7 @@ vec4 GetVolumetricClouds(int cloudAltitude, float distanceThreshold, inout float
                 else cloudMult = skyMult0;
             }
 
-            float cloudNoise = GetCloudNoise(tracePos, cloudAltitude, lTracePosXZ, cloudPlayerPos.y);
+            float cloudNoise = GetCloudNoise(tracePos, cloudAltitude, lTracePosXZ, cloudPlayerPos.y, noisePersistance, mult, straightness, size);
 
             if (cloudNoise > 0.00001) {
                 #if defined CLOUD_CLOSED_AREA_CHECK && SHADOW_QUALITY > -1

@@ -439,26 +439,14 @@
             const float sunPathRotation = -60.0;
         #endif
     #endif
-    
-    /*
-    #if SHADOW_QUALITY >= 1
-        #if SHADOW_QUALITY > 4 || SHADOW_SMOOTHING < 3
-            const int shadowMapResolution = 4096;
-        #else
-            const int shadowMapResolution = 2048;
-        #endif
-    #else
-        const int shadowMapResolution = 1024;
-    #endif
-    */ 
 
     #if SHADOW_QUALITY >= 1
         #if SHADOW_QUALITY == 5
-            const int shadowMapResolution = 8192;
-        #elif SHADOW_QUALITY == 4
             const int shadowMapResolution = 6144;
-        #elif SHADOW_QUALITY == 2 || SHADOW_QUALITY == 3
+        #elif SHADOW_QUALITY == 4
             const int shadowMapResolution = 4096;
+        #elif SHADOW_QUALITY == 2 || SHADOW_QUALITY == 3
+            const int shadowMapResolution = 3072;
         #endif
     #else
         const int shadowMapResolution = 2048;
