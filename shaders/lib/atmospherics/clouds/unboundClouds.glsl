@@ -152,13 +152,8 @@ float GetCloudNoise(vec3 tracePos, int cloudAltitude, float lTracePosXZ, float c
     //tracePos.y *= straightness;
 
     for (int i = 0; i < sampleCount; i++) {
-        #if CLOUD_QUALITY >= 2
-            noise += worley(tracePosM * 1.5 + 0.1 + vec3(wind, 0.0, 0.0), float(sampleCount), straightness) * currentPersist;
-            //noise += worley(tracePosM * 1.5 + vec3(wind, 0.0, 0.0), float(sampleCount)) * 0.1;
-            //noise += worley(tracePosM * 2.0 + vec3(wind, 0.0, 0.0), float(sampleCount)) * 0.01;
-        #else
-            noise += worley(tracePosM * 1.0 + vec3(wind, 0.0, 0.0), float(sampleCount)) * currentPersist;
-        #endif
+        noise += worley(tracePosM * 1.5 + vec3(wind, 0.0, 0.0), float(sampleCount), straightness) * currentPersist;
+
         total += currentPersist;
 
         tracePosM *= 3.0;
@@ -185,11 +180,11 @@ float GetCloudNoise(vec3 tracePos, int cloudAltitude, float lTracePosXZ, float c
                 + CLOUD_UNBOUND_RAIN_ADD * (rainFactor * 2.5); // more clouds during rain
     noise *= noiseMult * mult;
 
-    // Original vertical thresholding for cloud edges
     float threshold = clamp(abs(cloudAltitude - tracePos.y) / cloudStretch, 0.001, 0.999);
     threshold = pow2(pow2(pow2(threshold)));
 
-    return noise - (threshold * 0.0001 + 0.25);
+    return noise - (threshold * 0.01 + 0.25);
+
 }
 
 float PhaseHG(float cosTheta, float g) {
@@ -252,7 +247,7 @@ vec4 GetVolumetricClouds(int cloudAltitude, float distanceThreshold, inout float
             vec3 cloudPlayerPos = tracePos - cameraPos;
             float lTracePos = length(cloudPlayerPos);
             float lTracePosXZ = length(cloudPlayerPos.xz);
-            float cloudMult = 1.0;
+            float cloudMult = 2.0;
             if (lTracePosXZ > distanceThreshold) break;
             if (lTracePos > lViewPosM) {
                 if (skyFade < 0.7) continue;
@@ -287,7 +282,7 @@ vec4 GetVolumetricClouds(int cloudAltitude, float distanceThreshold, inout float
                 cloudShading += sss;
 
                 vec3 colorSample = cloudAmbientColor * (0.7 + 0.2 * cloudShading) + cloudLightColor * cloudShading;
-                //vec3 colorSample = 2.5 * cloudLightColor * pow2(cloudShading); // <-- Used this to take the Unbound logo
+                //vec3 colorSample = 1.5 * cloudLightColor * pow2(cloudShading); // <-- Used this to take the Unbound logo
                 vec3 cloudSkyColor = GetSky(VdotU, VdotS, dither, true, false);
                 #ifdef ATM_COLOR_MULTS
                     cloudSkyColor *= sqrtAtmColorMult; // C72380KD - Reduced atmColorMult impact on some things

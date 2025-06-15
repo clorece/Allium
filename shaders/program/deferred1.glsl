@@ -194,15 +194,9 @@ float GetLinearDepth(float depth) {
                 }
             }
         }
-        
-        //occlusion *= 0.5;
 
         // Normalize occlusion
         float ao = 1.0 - (occlusion / float(NUM_SAMPLES));
-
-        // Optional: fade near screen edge to prevent artifacts
-        //vec2 edgeDist = abs(nvec3(gbufferProjection * vec4(viewPos, 1.0)).xy * 0.5 + 0.5 - 0.5) / rEdge;
-        //float edgeFade = clamp(1.0 - pow(max(edgeDist.x, edgeDist.y), 1.0), 0.0, 1.0);
 
         return clamp(ao, 0.0, 1.0);
     }
@@ -213,6 +207,14 @@ float GetLinearDepth(float depth) {
 float hash1(float x) {
     return fract(sin(x * 12.9898 + 78.233) * 43758.5453);
 }
+
+
+// for some reason medium and low preset has a bug where it cant find the previous nvec3 function so i just pasted a new one for a fix
+#if CLOUD_QUALITY < 3
+    vec3 nvec3(vec4 pos) {
+        return pos.xyz/pos.w;
+    }
+#endif
 
 // ==============================
 // Ground-Truth Ambient Occlusion
