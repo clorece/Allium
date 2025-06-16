@@ -10,7 +10,12 @@
 // Query's AWESOME LUTs
 // LUT DEFAULT SHOULD BE 2
 #define Lut_Set                     1           //[1] // technically there should be a 2 for raspberry but ill keep it off for now :3
-#define Selected_LUT                5          //[0 1 2 3 4 5 6 7 8 9]
+
+
+#define Overworld_Lut                5          //[0 1 2 3 4 5 6 7 8 9]
+#define Nether_Lut                8          //[0 1 2 3 4 5 6 7 8 9]
+#define End_Lut                 1          //[0 1 2 3 4 5 6 7 8 9]
+
 #define GBPreset 18 // [1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32]
 
 //////////Fragment Shader//////////Fragment Shader//////////Fragment Shader//////////
@@ -96,13 +101,78 @@ vec3 AcesTonemap(vec3 color) {
 #define clamp01(x) clamp(x, 0.0, 1.0)
 
 // thanks to Query's for their AWESOME LUTs
-void lookup(inout vec3 color) {
-    const vec2 inverseSize = vec2(1.0 / 512, 1.0 / 5120);
-    const mat2 correctGrid = mat2(
-        vec2(1.0, inverseSize.y * 512),
-        vec2(0.0, Selected_LUT * inverseSize.y * 512)
-    );
 
+void OverworldLookup(inout vec3 color) {
+    const vec2 inverseSize = vec2(1.0 / 512, 1.0 / 5120);
+
+    const mat2 correctGrid = mat2(
+            vec2(1.0, inverseSize.y * 512), vec2(0.0, Overworld_Lut * inverseSize.y * 512)
+    );
+    
+    color = clamp01(color);
+
+    float blueColor = color.b * 63.0;
+
+    vec4 quad = vec4(0.0);
+    quad.y = floor(floor(blueColor) * 0.125);
+    quad.x = floor(blueColor) - (quad.y * 8.0);
+    quad.w = floor(ceil(blueColor) * 0.125);
+    quad.z = ceil(blueColor) - (quad.w * 8.0);
+
+    vec4 texPos = (quad * 0.125) + (0.123046875 * color.rg).xyxy + 0.0009765625;
+
+    vec3 newColor1, newColor2;
+    
+    #if Lut_Set == 1
+    newColor1 = texture2D(colortex7, texPos.xy * correctGrid[0] + correctGrid[1]).rgb;
+    newColor2 = texture2D(colortex7, texPos.zw * correctGrid[0] + correctGrid[1]).rgb;
+    #elif Lut_Set == 2
+    newColor1 = texture2D(colortex8, texPos.xy * correctGrid[0] + correctGrid[1]).rgb;
+    newColor2 = texture2D(colortex8, texPos.zw * correctGrid[0] + correctGrid[1]).rgb;
+    #endif
+    
+    color = mix(newColor1, newColor2, fract(blueColor));
+}
+
+void NetherLookup(inout vec3 color) {
+    const vec2 inverseSize = vec2(1.0 / 512, 1.0 / 5120);
+
+    const mat2 correctGrid = mat2(
+            vec2(1.0, inverseSize.y * 512), vec2(0.0, Nether_Lut * inverseSize.y * 512)
+    );
+    
+    color = clamp01(color);
+
+    float blueColor = color.b * 63.0;
+
+    vec4 quad = vec4(0.0);
+    quad.y = floor(floor(blueColor) * 0.125);
+    quad.x = floor(blueColor) - (quad.y * 8.0);
+    quad.w = floor(ceil(blueColor) * 0.125);
+    quad.z = ceil(blueColor) - (quad.w * 8.0);
+
+    vec4 texPos = (quad * 0.125) + (0.123046875 * color.rg).xyxy + 0.0009765625;
+
+    vec3 newColor1, newColor2;
+    
+    #if Lut_Set == 1
+    newColor1 = texture2D(colortex7, texPos.xy * correctGrid[0] + correctGrid[1]).rgb;
+    newColor2 = texture2D(colortex7, texPos.zw * correctGrid[0] + correctGrid[1]).rgb;
+    #elif Lut_Set == 2
+    newColor1 = texture2D(colortex8, texPos.xy * correctGrid[0] + correctGrid[1]).rgb;
+    newColor2 = texture2D(colortex8, texPos.zw * correctGrid[0] + correctGrid[1]).rgb;
+    #endif
+    
+    color = mix(newColor1, newColor2, fract(blueColor));
+}
+
+void EndLookup(inout vec3 color) {
+    const vec2 inverseSize = vec2(1.0 / 512, 1.0 / 5120);
+
+    const mat2 correctGrid = mat2(
+            vec2(1.0, inverseSize.y * 512), vec2(0.0, End_Lut * inverseSize.y * 512)
+    );
+    
     color = clamp01(color);
 
     float blueColor = color.b * 63.0;
@@ -255,7 +325,17 @@ void main() {
         DoLensFlare(color, viewPos.xyz, dither);
     #endif
 
-    lookup(color);
+    #ifdef OVERWORLD
+        OverworldLookup(color);
+    #endif
+
+    #ifdef NETHER
+        NetherLookup(color);
+    #endif
+
+    #ifdef END
+        EndLookup(color);
+    #endif
     //DoBSLColorSaturation(color);
 
     float filmGrain = dither;

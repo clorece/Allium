@@ -8,10 +8,10 @@ vec3 GetEnderStars(vec3 viewPos, float VdotU) {
     vec3 starCoord = 0.65 * wpos / (abs(wpos.y) + length(wpos.xz));
     vec2 starCoord2 = starCoord.xz * 0.5;
     if (VdotU < 0.0) starCoord2 += 100.0;
-    float starFactor = 1024.0;
+    float starFactor = 2046.0;
     starCoord2 = floor(starCoord2 * starFactor) / starFactor;
 
-    float star = 1.0;
+    float star = 0.9;
     star *= GetEnderStarNoise(starCoord2.xy);
     star *= GetEnderStarNoise(starCoord2.xy+0.1);
     star *= GetEnderStarNoise(starCoord2.xy+0.23);

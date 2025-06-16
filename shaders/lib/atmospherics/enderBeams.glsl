@@ -32,7 +32,7 @@
                 noise = max(0.75 - 1.0 / abs(noise - (4.0 + VdotUM * 2.0)), 0.0) * 3.0;
 
             if (noise > 0.0) {
-                noise *= 0.65;
+                noise *= 0.5;
                 float fireNoise = texture2D(noisetex, abs(planeCoord * 0.2) - wind).b;
                 noise *= 0.5 * fireNoise + 0.75;
                 noise = noise * noise * 3.0 / sampleCount;

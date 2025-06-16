@@ -113,7 +113,11 @@ void main() {
     #endif
 
     /* DRAWBUFFERS:0 */
+    #ifdef END
+    gl_FragData[0] = texture2D(colortex9, texCoord);
+    #else
     gl_FragData[0] = color;
+    #endif
 }
 
 #endif

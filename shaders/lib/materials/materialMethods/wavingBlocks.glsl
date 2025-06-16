@@ -82,13 +82,13 @@ void DoWave_Water(inout vec3 playerPos, vec3 worldPos) {
 
 void DoWave_Lava(inout vec3 playerPos, vec3 worldPos) {
     if (fract(worldPos.y + 0.005) > 0.06) {
-        float lavaWaveTime = frameTimeCounter * 3.0 * WAVING_SPEED;
-        worldPos.xz *= 14.0;
+        float lavaWaveTime = frameTimeCounter * 3.0 * 0.3;
+        worldPos.xz *= 3.0;
 
         float wave  = sin(lavaWaveTime * 0.7 + worldPos.x * 0.14 + worldPos.z * 0.07);
-              wave += sin(lavaWaveTime * 0.5 + worldPos.x * 0.05 + worldPos.z * 0.10);
+              wave -= sin(lavaWaveTime * 0.5 + worldPos.x * 0.05 + worldPos.z * 0.10);
 
-        playerPos.y += wave * 0.0125;
+        playerPos.y += wave * 0.1;
     }
 }
 

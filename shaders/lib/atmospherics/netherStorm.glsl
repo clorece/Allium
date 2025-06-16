@@ -45,7 +45,7 @@ vec4 GetNetherStorm(vec3 color, vec3 translucentMult, vec3 nPlayerPos, vec3 play
 
         vec3 wind = vec3(frameTimeCounter * 0.002);
 
-        vec3 tracePosM = tracePos * 0.001;
+        vec3 tracePosM = tracePos * 0.0005;
         tracePosM.y += tracePosM.x;
         tracePosM += Noise3D(tracePosM - wind) * 0.01;
         tracePosM = tracePosM * vec3(2.0, 0.5, 2.0);
@@ -54,7 +54,7 @@ vec4 GetNetherStorm(vec3 color, vec3 translucentMult, vec3 nPlayerPos, vec3 play
         if (tracePos.y < NETHER_STORM_LOWER_ALT) traceAltitudeM *= 10.0;
         traceAltitudeM = 1.0 - min1(abs(traceAltitudeM) / NETHER_STORM_HEIGHT);
 
-        for (int h = 0; h < 4; h++) {
+        for (int h = 0; h < 6; h++) {
             float stormSample = pow2(Noise3D(tracePosM + wind));
             stormSample *= traceAltitudeM;
             stormSample = pow2(pow2(stormSample));
@@ -74,7 +74,7 @@ vec4 GetNetherStorm(vec3 color, vec3 translucentMult, vec3 nPlayerPos, vec3 play
 
     netherStorm.a = min1(netherStorm.a * NETHER_STORM_I);
 
-    netherStorm.rgb *= netherColor * 3.0 * (1.0 - maxBlindnessDarkness);
+    netherStorm.rgb *= lavaLightColor * 14.0 * (1.0 - maxBlindnessDarkness);
 
     //if (netherStorm.a > 0.98) netherStorm.rgb = vec3(1,0,1);
     //netherStorm.a *= 1.0 - max0(netherStorm.a - 0.98) * 50.0;

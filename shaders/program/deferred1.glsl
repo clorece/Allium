@@ -114,7 +114,7 @@ float GetLinearDepth(float depth) {
 #endif
 
 #ifdef END
-    #include "/lib/atmospherics/enderStars.glsl"
+    #include "/lib/atmospherics/enderStars.glsl"   
 #endif
 
 #ifdef WORLD_OUTLINE
@@ -539,8 +539,11 @@ void main() {
             #endif
         #endif
         #ifdef END
-            color.rgb = endSkyColor;
+            //color
+            //color.rgb = endSkyColor;
+
             color.rgb += GetEnderStars(viewPos.xyz, VdotU);
+            color.rgb = mix(endSkyColor, color, VdotU) * 0.8;
             color.rgb *= 1.0 - maxBlindnessDarkness;
 
             #ifdef ATM_COLOR_MULTS

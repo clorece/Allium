@@ -67,7 +67,6 @@ float fbmCloud2(vec2 inCoord, float minimum){
 vec3 GetNightNebula(vec3 viewPos, float VdotU, float VdotS) {
     float nebulaFactor = pow2(max0(VdotU) * min1(nightFactor * 2.0)) * invRainFactor - maxBlindnessDarkness;
     if (nebulaFactor < 0.001) return vec3(0.0);
-
     vec2 UV = GetStarCoord(viewPos, 0.75);
     float TIME = syncedTime * 0.003 + 15.0;
 
@@ -78,19 +77,18 @@ vec3 GetNightNebula(vec3 viewPos, float VdotU, float VdotS) {
     = vec2(zoomScale * UV.x + 0.027 * timescaled * sinM(0.07 * timescaled), zoomScale * UV.y + 0.025 * timescaled * cosM(0.06 * timescaled));
     vec2 zoomUV4
     = vec2(zoomScale * UV.x + 0.021 * timescaled * sinM(0.07 * timescaled), zoomScale * UV.y + 0.021 * timescaled * cosM(0.07 * timescaled));
-    float tide = 0.05 * sinM(TIME);
-    float tide2 = 0.06 * cosM(0.3 * TIME);
+    float tide = 0.25 * sinM(TIME);
+    float tide2 = 0.26 * cosM(0.3 * TIME);
 
     vec4 nebulaTexture = vec4(vec3(0.0), 0.5 + 0.2 * sinM(0.23 * TIME + UV.x - UV.y));
-    nebulaTexture += fbmCloud2(zoomUV3, 0.24 + tide) * CLOUD1_COL;
-    nebulaTexture += fbmCloud(zoomUV2 * 0.9, 0.33 - tide) * CLOUD2_COL;
+    nebulaTexture += fbmCloud2(zoomUV3 * 2.0, 0.24 + tide) * CLOUD1_COL;
+    nebulaTexture += fbmCloud(zoomUV2 * 2.0, 0.33 - tide) * CLOUD2_COL;
     nebulaTexture = mix(nebulaTexture, CLOUD3_COL, fbmCloud(vec2(0.9 * zoomUV4.x, 0.9 * zoomUV4.y), 0.25 + tide2));
 
     nebulaFactor *= 1.0 - pow2(pow2(pow2(abs(VdotS))));
     nebulaTexture.a *= min1(pow2(pow2(nebulaTexture.a))) * nebulaFactor;
-
     float starFactor = 1024.0;
-    vec2 starCoord = floor(UV * 0.25 * starFactor) / starFactor;
+    vec2 starCoord = floor(UV * 0.75 * starFactor) / starFactor;
     nebulaTexture.rgb *= 1.5 + 10.0 * pow2(max0(GetStarNoise(starCoord) * GetStarNoise(starCoord + 0.1) - 0.6));
 
     #if NIGHT_NEBULA_I != 100

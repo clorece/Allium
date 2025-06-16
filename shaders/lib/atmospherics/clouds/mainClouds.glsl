@@ -87,13 +87,11 @@ vec4 GetClouds(inout float cloudLinearDepth, float skyFade, vec3 cameraPos, vec3
             clouds = GetVolumetricClouds(minCloudAlt, thresholdF, cloudLinearDepth, skyFade, skyMult0,
                                             cameraPos, nPlayerPos, lViewPosM, VdotS, VdotU, dither, CUMULUS_GRANULARITY, CUMULUS_MULT, CUMUMLUS_SHAPING, CUMULUS_SIZE_MULT_M);
             if (clouds.a == 0.0) {
-                cloudAmbientColor *= 1.5;
-                //cloudLightColor *= 1.5;
-                clouds = GetVolumetricClouds(maxCloudAlt, thresholdF, cloudLinearDepth, skyFade, skyMult0,
+                clouds = GetVolumetricClouds(maxCloudAlt, thresholdF * 2.0, cloudLinearDepth, skyFade, skyMult0,
                                                 cameraPos, nPlayerPos, lViewPosM, VdotS, VdotU, dither, ALTOCUMULUS_GRANULARITY, ALTOCUMULUS_MULT, ALTOCUMULUS_SHAPING, ALTOCUMULUS_SIZE_MULT_M);
             }
         } else {
-            clouds = GetVolumetricClouds(maxCloudAlt, thresholdF, cloudLinearDepth, skyFade, skyMult0,
+            clouds = GetVolumetricClouds(maxCloudAlt, thresholdF * 2.0, cloudLinearDepth, skyFade, skyMult0,
                                             cameraPos, nPlayerPos, lViewPosM, VdotS, VdotU, dither, ALTOCUMULUS_GRANULARITY, ALTOCUMULUS_MULT, ALTOCUMULUS_SHAPING, ALTOCUMULUS_SIZE_MULT_M);
             if (clouds.a == 0.0) {
                 clouds = GetVolumetricClouds(minCloudAlt, thresholdF, cloudLinearDepth, skyFade, skyMult0,
