@@ -313,9 +313,10 @@ void main() {
 
     #ifdef LIGHTSHAFTS_ACTIVE
         #ifdef END
-            volumetricEffect.rgb *= volumetricEffect.rgb;
+            volumetricEffect.rgb *= 0.05;
         #endif
 
+        
         color += volumetricEffect.rgb;
     #endif
 
