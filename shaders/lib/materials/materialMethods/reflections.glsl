@@ -12,10 +12,6 @@
     #include "/lib/colors/moonPhaseInfluence.glsl"
 #endif
 
-vec3 nvec3(vec4 pos) {
-    return pos.xyz/pos.w;
-}
-
 vec3 refPos = vec3(0.0);
 
 vec4 GetReflection(vec3 normalM, vec3 viewPos, vec3 nViewPos, vec3 playerPos, float lViewPos, float z0,
@@ -215,6 +211,7 @@ vec4 GetReflection(vec3 normalM, vec3 viewPos, vec3 nViewPos, vec3 playerPos, fl
                                                     RlViewPos, RVdotS, RVdotU, dither, auroraBorealis, nightNebula);
 
                             skyReflection = mix(skyReflection, clouds.rgb, clouds.a);
+                            //skyReflection += clouds.rgb;
                         #endif
                     #endif
 

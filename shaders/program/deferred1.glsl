@@ -210,11 +210,6 @@ float hash1(float x) {
 
 
 // for some reason medium and low preset has a bug where it cant find the previous nvec3 function so i just pasted a new one for a fix
-#if CLOUD_QUALITY < 3
-    vec3 nvec3(vec4 pos) {
-        return pos.xyz/pos.w;
-    }
-#endif
 
 // ==============================
 // Ground-Truth Ambient Occlusion

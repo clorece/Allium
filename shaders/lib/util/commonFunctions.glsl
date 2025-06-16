@@ -18,6 +18,10 @@
     }
 #endif
 
+vec3 nvec3(vec4 pos) {
+    return pos.xyz/pos.w;
+}
+
 float GetLuminance(vec3 color) {
     return dot(color, vec3(0.299, 0.587, 0.114));
 }
