@@ -29,6 +29,19 @@ Releases are stable, polished versions that result from thorough testing and ite
 
 There are no official releases yet...
 
+## Bug Reporting
+If you happen to find any bugs, please report them on the [Github Page](https://github.com/clorece/Allium) by:
+### 1. Create a New Issue
+- Go to the Issues section and click on "New Issue".
+
+### 2. Provide a Clear Title and Description
+- Summarize the problem in the title.
+- In the description, include as much detail as possible.
+
+### 3. Attach Relevant Media and Logs
+- Include screenshots or, if applicable, videos to illustrate the issue.
+- Upload log files if applicable.
+
 ## Screenshots
 All Screenshots are taken on the Minecraft Map by Elarion by Zhyrr.
 
