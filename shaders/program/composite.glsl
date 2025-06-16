@@ -316,7 +316,7 @@ void main() {
             volumetricEffect.rgb *= volumetricEffect.rgb;
         #endif
 
-        //color += volumetricEffect.rgb;
+        color += volumetricEffect.rgb;
     #endif
 
     #ifdef BLOOM_FOG_COMPOSITE

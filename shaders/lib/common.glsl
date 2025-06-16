@@ -15,7 +15,7 @@
 
     #define RP_MODE 1 //[1 0 3 2]
 
-    #define SHADOW_QUALITY 2 //[-1 0 1 2 3 4 5]
+    #define SHADOW_QUALITY 3 //[-1 0 1 2 3 4 5]
     const float shadowDistance = 256.0; //[64.0 80.0 96.0 112.0 128.0 160.0 192.0 224.0 256.0 320.0 384.0 512.0 768.0 1024.0]
     #define ENTITY_SHADOWS_DEFINE 1 //[-1 1]
     #define SSAO_QUALI_DEFINE 2 //[0 2 3]
