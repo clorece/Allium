@@ -1,6 +1,7 @@
 # Allium Shaders
 
-![2025-06-10_21 28 15](https://github.com/user-attachments/assets/082a024d-8ac7-459c-8988-0c303a6881df)
+![2025-06-15_13 27 04](https://github.com/user-attachments/assets/749f16d9-bddd-4576-9905-ee302f729e8e)
+
 
 Shader development has always been a huge interest of mine ever since I first laid eyes on Chocapic13's Shaders. I decided to drop that passion for a while since I wasn't really learning anything. After experiencing the wonderful work of art, Complementary, I wanted to try and challenge myself and create something I truly love while persevering through college.
 
