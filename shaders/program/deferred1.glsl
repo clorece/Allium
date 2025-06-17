@@ -5,6 +5,12 @@
 //Common//
 #include "/lib/common.glsl"
 
+#if DETAIL_QUALITY > 2
+    #define SKY_ILLUMINATION
+#endif
+
+//#define SKY_ILLUMINATION_VIEW
+
 //////////Fragment Shader//////////Fragment Shader//////////Fragment Shader//////////
 #ifdef FRAGMENT_SHADER
 
@@ -154,7 +160,7 @@ float GetLinearDepth(float depth) {
     #define SSRAO_QUALITY 15 //[2 5 10 15 20]
     #define SSRAO_I 1.5 //[0.5 0.6 0.7 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0]
     #define SSRAO_STEP 3
-    #define SSRAO_RADIUS 0.5 //[0.5 0.6 0.7 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0]
+    #define SSRAO_RADIUS 1.0 //[0.5 0.6 0.7 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0]
     #define DEPTH_TOLERANCE 12.0 //[1.0 2.0 8.0 12.0 16.0 24.0 32.0]
 
     float SSRAO(vec3 color, vec3 normalM, vec3 viewPos, sampler2D depthtex, float dither) {
@@ -196,7 +202,7 @@ float GetLinearDepth(float depth) {
                 vec2 screenUV = projected.xy / projected.w * 0.5 + 0.5;
                 if (abs(screenUV.x - 0.5) > view.x || abs(screenUV.y - 0.5) > view.y) break;
 
-                float sceneZ = texture(depthtex, screenUV).r;
+                float sceneZ = texture(depthtex0, screenUV).r;
                 vec4 hitClip = vec4(screenUV * 2.0 - 1.0, sceneZ * 2.0 - 1.0, 1.0);
                 vec4 hitPos4 = gbufferProjectionInverse * hitClip;
                 vec3 hitPos = hitPos4.xyz / hitPos4.w;
@@ -285,6 +291,110 @@ float SSAO(vec3 normalM, vec3 viewPos, sampler2D depthtex, float dither) {
     #undef GTAO_STEPS
     #undef GTAO_RADIUS
 }
+#endif
+
+#ifdef OVERWORLD
+    #ifdef SKY_ILLUMINATION
+        // -------------------------------------------------------------
+        // Honestly really overglorified but it works lol
+        // -------------------------------------------------------------
+        #define GI_STEPS        0.1     // how many steps to march across that 32 m
+        #define GI_SAMPLES      2      // hemisphere rays per pixel
+
+        vec3 CosineSampleHemisphere(float u1, float u2, vec3 n) {
+            float r     = sqrt(u1);
+            float theta = 6.2831853 * u2;
+            vec3 tangent   = normalize(cross(n, vec3(0,1,0)));
+            vec3 bitangent = cross(n, tangent);
+            return normalize(
+                r*cos(theta)*tangent +
+                r*sin(theta)*bitangent +
+                sqrt(1.0 - u1)*n
+            );
+        }
+
+        vec3 GetSkyIllumination(vec3 normalM, vec3 viewPos, vec3 nViewPos, float dither, float skyLightFactor, vec3 shadowMult) {
+            vec3 nrm     = normalM;
+            #if defined(GBUFFERS_WATER) && WATER_STYLE==1 && defined(GENERATED_NORMALS)
+                nrm = normalize(mix(geoNormal, normalM, 0.05));
+            #endif
+
+            float stepLen = 0.0 / float(GI_STEPS);
+            float invGI   = 1.0 / float(GI_SAMPLES);
+
+            vec3 giAccum = vec3(0.0);
+
+            for (int i = 0; i < GI_SAMPLES; ++i) {
+                // generate two low-discrepancy numbers
+                float u1 = fract(sin(dot(viewPos.xy, vec2(12.9898,78.233)))*43758.5453 + float(i));
+                float u2 = fract(dither + float(i)*0.61803398875);
+
+                vec3 dir   = CosineSampleHemisphere(u1, u2, nrm);
+                vec3 start = viewPos + nrm*0.05;
+                vec3 pos   = start;
+
+                bool hit   = false;
+                vec2 uvHit = vec2(0.0);
+
+                #define OFFSET 1
+
+                // march along dir
+                for (int j = 0; j < GI_STEPS; ++j) {
+                    pos += dir * stepLen;
+
+                    // project into clip, convert to UV
+                    vec4 cp = gbufferProjection * vec4(pos, 1.0);
+                    vec2 uv = cp.xy/cp.w*0.5 + 0.5;
+                    if (uv.x < 0.0 || uv.x > 1.0 || uv.y < 0.0 || uv.y > 1.0) break;
+
+                    // —— begin 3×3 blur of depth —— 
+                    float dSum = 0.0;
+                    for (int dx = -OFFSET; dx <= OFFSET; ++dx) {
+                        for (int dy = -OFFSET; dy <= OFFSET; ++dy) {
+                            dSum += texture2D(depthtex0, uv + view*vec2(dx,dy)).r;
+                        }
+                    }
+                    float d = dSum / 9.0;
+                    // —— end blur —— 
+
+                    // reconstruct world-pos at that depth
+                    vec3 wpos = (gbufferProjectionInverse *
+                                vec4(vec3(uv, d)*2.0 - 1.0, 1.0)).xyz;
+
+                    // if we've crossed geometry
+                    if (length(wpos - start) < length(pos - start)) {
+                        hit   = true;
+                        uvHit = uv;
+                        break;
+                    }
+                }
+
+                if (hit) {
+                    // 3×3 blur of albedo at hit
+                    vec3 sumAlb = vec3(0.0);
+                    for (int dx = -OFFSET; dx <= OFFSET; ++dx) {
+                        for (int dy = -OFFSET; dy <= OFFSET; ++dy) {
+                            sumAlb += texture2D(colortex0, uvHit + view*vec2(dx,dy)).rgb;
+                        }
+                    }
+                    vec3 alb = sumAlb / 9.0;
+
+                    vec3 worldN = normalize(mat3(gbufferModelViewInverse)*nrm);
+                    float NdotL = max(dot(worldN, lightVec), 0.0);
+                    giAccum += alb * NdotL * shadowMult;
+                } else {
+                    // sky fallback
+                    float U = dot(dir, upVec), S = dot(dir, sunVec);
+                    //#ifdef DEFERRED1
+                    #ifdef OVERWORLD
+                        giAccum += GetSky(U,S,dither,true,true) * skyLightFactor * 1.0;
+                    #endif
+                }
+            }
+
+            return giAccum * invGI;
+        }
+    #endif
 #endif
 
 //Program//
@@ -379,8 +489,25 @@ void main() {
                 entityOrHand = true;
             }
         }
-
         color.rgb *= ao;
+
+        #ifdef OVERWORLD
+        #ifdef SKY_ILLUMINATION
+                vec3 indirect = GetSkyIllumination(normalM, viewPos.xyz, nViewPos, dither, skyLightFactor, vec3(0.0));
+                //vec3 gi = SSGI(normalM, viewPos.xyz, depthtex0, colortex0, dither) * 0.8;
+
+                // Compute how dark the pixel is (0 = black, 1 = white)
+                float darkness = 0.75 - dot(color.rgb, vec3(0.2126, 0.7152, 0.0722));
+
+                // Use that to softly blend GI into dark areas only
+                #ifdef SKY_ILLUMINATION_VIEW
+                    color.rgb = mix(color.rgb, indirect, 1.0);
+                #else
+                    color.rgb = mix(color.rgb, min(color.rgb, indirect), darkness);
+                    //color.rgb = pow(color.rgb, vec3(1.0 / 1.2));
+                #endif
+            #endif
+        #endif
 
         #ifdef PBR_REFLECTIONS
 

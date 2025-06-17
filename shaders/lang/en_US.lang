@@ -1122,3 +1122,8 @@ option.CLOUD_RENDER_DISTANCE=Cloud Render Distance
 
 option.WHITE_WORLD=White World
     option.WHITE_WORLD.comment=Ambient Occlusion Debug View
+
+option.SKY_ILLUMINATION=Skylight Illumination
+    option.SKY_ILLUMINATION.comment=Skylight only global illumination. Detail Quality must be set to 3 or more to enable
+option.SKY_ILLUMINATION_VIEW=SI Debug
+    option.SKY_ILLUMINATION_VIEW.comment=Debug View for Skylight Illumination

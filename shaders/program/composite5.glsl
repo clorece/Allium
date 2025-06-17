@@ -13,10 +13,12 @@
 
 
 #define Overworld_Lut                5          //[0 1 2 3 4 5 6 7 8 9]
-#define Nether_Lut                9          //[0 1 2 3 4 5 6 7 8 9]
+#define Nether_Lut                1          //[0 1 2 3 4 5 6 7 8 9]
 #define End_Lut                 1          //[0 1 2 3 4 5 6 7 8 9]
 
 #define GBPreset 18 // [1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32]
+
+const float eyeBrightnessHalflife = 1.0f;
 
 //////////Fragment Shader//////////Fragment Shader//////////Fragment Shader//////////
 #ifdef FRAGMENT_SHADER
@@ -63,6 +65,7 @@ void DoBSLColorSaturation(inout vec3 color) {
     color = mix(color, lightness, (1.0 - lightness) * (2.0 - T_VIBRANCE) / 2.0 * abs(T_VIBRANCE - 1.0));
     color = color * T_SATURATION - graySaturation * (T_SATURATION - 1.0);
 }
+
 
 vec3 AcesTonemap(vec3 color) {
     // === Adjustable parameters ===

@@ -28,6 +28,7 @@
 
 vec3 highlightColor = normalize(pow(lightColor, vec3(0.37))) * (0.3 + 1.5 * sunVisibility2) * (1.0 - 0.85 * rainFactor);
 
+
 //Lighting//
 void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 viewPos, float lViewPos, vec3 geoNormal, vec3 normalM, float dither,
                 vec3 worldGeoNormal, vec2 lightmap, bool noSmoothLighting, bool noDirectionalShading, bool noVanillaAO,
@@ -421,6 +422,7 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
         //if (heldItemId != 40000 || heldItemId2 == 40000) // Hold spider eye to see vanilla lighting
         blockLighting = mix(specialLighting, blockLighting, blocklightDecider);
         //if (heldItemId2 == 40000 && heldItemId != 40000) blockLighting = lightVolume.rgb; // Hold spider eye to see light volume
+
     #endif
 
     #if HELD_LIGHTING_MODE >= 1
@@ -576,7 +578,11 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
         blockLighting = sqrt(pow2(blockLighting) + heldLighting);
     #endif
 
-    blockLighting *= XLIGHT_I;
+    #ifdef SKY_ILLUMINATION
+    blockLighting *= XLIGHT_I * 2.0;
+    #else
+    blockLighting *= XLIGHT_I * 2.0;
+    #endif
 
     #ifdef LIGHT_COLOR_MULTS
         sceneLighting *= lightColorMult;
@@ -645,7 +651,11 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
     */
 
     // Mix Colors
-    vec3 finalDiffuse = pow2(directionShade * vanillaAO) * (blockLighting + pow2(sceneLighting) + minLighting) + pow2(emission);
+    #ifndef SKY_ILLUMINATION
+        vec3 finalDiffuse = pow2(directionShade * vanillaAO) * (blockLighting + pow2(sceneLighting) + minLighting) + pow2(emission * 0.25);
+    #else
+        vec3 finalDiffuse = pow2(directionShade * vanillaAO) * (blockLighting + pow2(sceneLighting) + minLighting) + pow2(emission);
+    #endif
     finalDiffuse = sqrt(max(finalDiffuse, vec3(0.0))); // sqrt() for a bit more realistic light mix, max() to prevent NaNs
 
     // Apply Lighting

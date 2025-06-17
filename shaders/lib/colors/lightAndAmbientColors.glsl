@@ -86,7 +86,7 @@
         vec3 rainLightColor   = mix(nightRainLightColor, dayRainLightColor, sunVisibility2) * 2.5;
         vec3 rainAmbientColor = mix(nightRainAmbientColor, dayRainAmbientColor, sunVisibility2);
 
-        vec3 lightColor   = mix(clearLightColor, rainLightColor, rainFactor);
+        vec3 lightColor   = mix(clearLightColor, rainLightColor, rainFactor) * 1.2;
         vec3 ambientColor = mix(clearAmbientColor, rainAmbientColor, rainFactor);
     #elif defined NETHER
         vec3 lightColor   = vec3(0.0);
