@@ -37,6 +37,9 @@ float shadowTime = shadowTimeVar2 * shadowTimeVar2;
 
 //Common Functions//
 
+vec2 view = vec2(viewWidth, viewHeight);
+
+
 //Includes//
 #include "/lib/util/spaceConversion.glsl"
 #include "/lib/lighting/mainLighting.glsl"

@@ -14,7 +14,7 @@
 
 //#ifdef NETHER
     vec3 worldPos = playerPos + cameraPosition;
-    vec2 lavaPos = (floor(worldPos.xz * 16.0) + worldPos.y * 32.0) * 0.000666;
+    vec2 lavaPos = (floor(worldPos.xz * 16.0) + worldPos.y * 12.0) * 0.000666;
     vec2 wind = vec2(frameTimeCounter * 0.012, 0.0);
 
     float noiseSample = texture2D(noisetex, lavaPos + wind).g;

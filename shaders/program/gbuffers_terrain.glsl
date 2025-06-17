@@ -2,6 +2,8 @@
 // Complementary Shaders by EminGT //
 /////////////////////////////////////
 
+//#define WHITE_WORLD
+
 //Common//
 #include "/lib/common.glsl"
 
@@ -51,6 +53,7 @@ float sunVisibility2 = sunVisibility * sunVisibility;
 float shadowTimeVar1 = abs(sunVisibility - 0.5) * 2.0;
 float shadowTimeVar2 = shadowTimeVar1 * shadowTimeVar1;
 float shadowTime = shadowTimeVar2 * shadowTimeVar2;
+vec2 view = vec2(viewWidth, viewHeight);
 
 vec4 glColor = glColorRaw;
 
@@ -125,8 +128,8 @@ void DoOceanBlockTweaks(inout float smoothnessD) {
 
 //Includes//
 #include "/lib/util/spaceConversion.glsl"
-#include "/lib/lighting/mainLighting.glsl"
 #include "/lib/util/dither.glsl"
+#include "/lib/lighting/mainLighting.glsl"
 
 #ifdef TAA
     #include "/lib/antialiasing/jitter.glsl"
@@ -349,7 +352,9 @@ void main() {
 
     /* DRAWBUFFERS:06 */
     gl_FragData[0] = color;
-    //gl_FragData[0] = vec4(1.0, 1.0, 1.0, 1.0);    // white world debug
+    #ifdef WHITE_WORLD
+        gl_FragData[0] = vec4(1.0, 1.0, 1.0, 1.0);    // white world debug
+    #endif 
     gl_FragData[1] = vec4(smoothnessD, materialMask, skyLightFactor, 1.0);
 
     #if BLOCK_REFLECT_QUALITY >= 2 && RP_MODE != 0

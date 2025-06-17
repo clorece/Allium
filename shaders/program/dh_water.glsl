@@ -21,6 +21,8 @@ in vec4 glColor;
 
 //Pipeline Constants//
 
+vec2 view = vec2(viewWidth, viewHeight);
+
 //Common Variables//
 float NdotU = dot(normal, upVec);
 float NdotUmax0 = max(NdotU, 0.0);
