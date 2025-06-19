@@ -13,6 +13,7 @@ flat in int mat;
 in vec2 texCoord;
 
 flat in vec3 sunVec, upVec;
+in vec3 normal;
 
 in vec4 position;
 flat in vec4 glColor;
@@ -39,6 +40,8 @@ void DoNaturalShadowCalculation(inout vec4 color1, inout vec4 color2) {
 }
 
 //Includes//
+#include "/lib/util/spaceConversion.glsl"
+
 #ifdef CONNECTED_GLASS_EFFECT
     #include "/lib/materials/materialMethods/connectedGlass.glsl"
 #endif
@@ -46,6 +49,8 @@ void DoNaturalShadowCalculation(inout vec4 color1, inout vec4 color2) {
 //Program//
 void main() {
     vec4 color1 = texture2DLod(tex, texCoord, 0); // Shadow Color
+    vec3 normalM = normal, geoNormal = normal, shadowMult = vec3(1.0);
+    vec3 worldGeoNormal = normalize((gbufferModelViewInverse * vec4(normalM, 0.0)).xyz );
 
     #if SHADOW_QUALITY >= 1
         vec4 color2 = color1; // Light Shaft Color
@@ -184,6 +189,9 @@ void main() {
         }
     #endif
 
+    // New RT2 for RSM flux:
+    //color1.rgb *= NdotL;
+
     gl_FragData[0] = color1; // Shadow Color
 
     #if SHADOW_QUALITY >= 1
@@ -205,6 +213,7 @@ flat out int mat;
 out vec2 texCoord;
 
 flat out vec3 sunVec, upVec;
+out vec3 normal;
 
 out vec4 position;
 flat out vec4 glColor;
@@ -263,6 +272,7 @@ void main() {
     texCoord = gl_MultiTexCoord0.xy;
     lmCoord = GetLightMapCoordinates();
     glColor = gl_Color;
+    normal = normalize(gl_NormalMatrix * gl_Normal);
     sunVec = GetSunVector();
     upVec = normalize(gbufferModelView[1].xyz);
     mat = int(mc_Entity.x + 0.5);

@@ -260,6 +260,17 @@ void EndLookup(inout vec3 color) {
 void main() {
     vec3 color = texture2D(colortex0, texCoord).rgb;
 
+    // Normalized pixel coordinates (from 0 to 1)
+    vec2 uv = texCoord * view;
+
+    // Calculate noise and sample texture
+    float noise = (fract(sin(dot(texCoord * sin(frameTimeCounter) + 1.0, vec2(12.9898,78.233) * 2.0)) * 43758.5453));
+
+    #define FILM_GRAIN_I 2  // [0 1 2 3 4 5 6 7 8 9 10]
+    
+    color.rgb *= max(noise, 1.0 - (float(FILM_GRAIN_I) / 10));
+    color *= 1.3;
+
     #if defined BLOOM_FOG || LENSFLARE_MODE > 0 && defined OVERWORLD
         float z0 = texture2D(depthtex0, texCoord).r;
 
@@ -300,6 +311,9 @@ void main() {
         color *= 0.01;
     #endif
 
+    //float filmGrain = dither;
+    //color += vec3((filmGrain - 0.25) / 128.0);
+
     //DoBSLTonemap(color);
     float ignored = dot(color * vec3(0.15, 0.50, 0.35), vec3(0.1, 0.65, 0.6));
     float desaturated = dot(color, vec3(0.15, 0.50, 0.35));
@@ -339,10 +353,6 @@ void main() {
     #ifdef END
         EndLookup(color);
     #endif
-    //DoBSLColorSaturation(color);
-
-    float filmGrain = dither;
-    color += vec3((filmGrain - 0.25) / 128.0);
 
     /* DRAWBUFFERS:3 */
     gl_FragData[0] = vec4(color, 1.0);

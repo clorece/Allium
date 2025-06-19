@@ -93,10 +93,10 @@ void main() {
         color.rgb += GetStars(starCoord, VdotU, VdotS);
 
         #if SUN_MOON_STYLE >= 2
-            float absVdotS = abs(VdotS);
+            float absVdotS = abs(VdotS) * 0.9985;
             #if SUN_MOON_STYLE == 2
                 float sunSizeFactor1 = 0.9975;
-                float sunSizeFactor2 = 400.0;
+                float sunSizeFactor2 = 1000.0;
                 float moonCrescentOffset = 0.0055;
                 float moonPhaseFactor1 = 2.45;
                 float moonPhaseFactor2 = 750.0;
@@ -123,7 +123,8 @@ void main() {
                         sunMoonMixer *= 1.0 - 0.65 * GetCaveFactor();
                     #endif
 
-                    color.rgb = mix(color.rgb, vec3(0.9, 0.5, 0.3) * 10.0, sunMoonMixer);
+                    color.rgb = mix(color.rgb, lightColor * 32.0, sunMoonMixer);
+                    //color.rgb = pow(color.rgb, vec3(2.2)) * 0.3;
                 } else {
                     float horizonFactor = GetHorizonFactor(-SdotU);
                     sunMoonMixer = max0(sunMoonMixer - 0.25) * 1.33333 * horizonFactor;
@@ -133,7 +134,7 @@ void main() {
                                     + texture2D(noisetex, starCoord * 2.5).g * 0.7
                                     + texture2D(noisetex, starCoord * 5.0).g * 0.5;
                     moonNoise = max0(moonNoise - 0.75) * 1.7;
-                    vec3 moonColor = vec3(0.38, 0.4, 0.5) * (1.2 - (0.2 + 0.2 * sqrt1(nightFactor)) * moonNoise);
+                    vec3 moonColor = vec3(0.38, 0.4, 0.5) * (1.2 - (0.2 + 0.2 * sqrt1(nightFactor)) * moonNoise) * 0.75;
 
                     if (moonPhase >= 1) {
                         float moonPhaseOffset = 0.0;

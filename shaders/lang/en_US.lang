@@ -1085,13 +1085,13 @@ screen.LUT.comment=Lookup tables (LUTs) are used to change the colors of an imag
         value.End_Lut.7=Autumn 2.0
         value.End_Lut.8=Faded Rustic
         value.End_Lut.9=Esther Default
-
+ 
 screen.AMBIENT_OCCLUSION=Ambient Occlusion
     option.SSRAO_QUALITY=SSRAO Quality
         value.SSRAO_QUALITY.2=Reflection View
-        value.SSRAO_QUALITY.5=§aLow
-        value.SSRAO_QUALITY.10=§eMedium
-        value.SSRAO_QUALITY.15=§cHigh
+        value.SSRAO_QUALITY.8=§aLow
+        value.SSRAO_QUALITY.12=§eMedium
+        value.SSRAO_QUALITY.16=§cHigh
         value.SSRAO_QUALITY.20=§4§lUltra
     option.SSRAO_I=SSRAO Intensity
     option.SSRAO_RADIUS=SSRAO Radius
@@ -1127,3 +1127,7 @@ option.SKY_ILLUMINATION=Skylight Illumination
     option.SKY_ILLUMINATION.comment=Skylight only global illumination. Detail Quality must be set to 3 or more to enable
 option.SKY_ILLUMINATION_VIEW=SI Debug
     option.SKY_ILLUMINATION_VIEW.comment=Debug View for Skylight Illumination
+
+option.FILM_GRAIN_I=Film Grain Strength
+    option.FILM_GRAIN_I.comment=Adds or changes the intensity of camera noise throughout the image. Set slider to 0 to turn off.
+    value.FILM_GRAIN_I.0=Off

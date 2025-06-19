@@ -100,6 +100,7 @@ uniform vec3 previousCameraPositionFract;
 #if SHADOW_QUALITY > -1 || defined LIGHTSHAFTS_ACTIVE || defined FF_BLOCKLIGHT
     uniform sampler2D shadowcolor0;
     uniform sampler2D shadowcolor1;
+    uniform sampler2D shadowcolor2;  // RSM flux from RT2
 
     uniform sampler2DShadow shadowtex1;
 
