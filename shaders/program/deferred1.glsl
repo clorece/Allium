@@ -142,6 +142,9 @@ float GetLinearDepth(float depth) {
     #include "/lib/misc/distantLightBokeh.glsl"
 #endif
 
+#define FAKE_GLOBAL_ILLUMINATION 0 //[0 1]
+#define GI_MULT 1.0 //[1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0]
+
 #if SSAO_QUALI == 3
     float geometryAwareOcclusion(vec3 surfaceNormal, vec3 viewDir, vec3 hitPos, vec3 viewPos) {
         // Estimate normal of the hit position using screen-space derivatives
@@ -159,7 +162,7 @@ float GetLinearDepth(float depth) {
 
     #define SSRAO_QUALITY 12 //[2 8 12 16 20]
     #define SSRAO_I 1.5 //[0.5 0.6 0.7 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0]
-    #define SSRAO_STEP 2
+    #define SSRAO_STEP 6
     #define SSRAO_RADIUS 1.0 //[0.5 0.6 0.7 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0]
     #define DEPTH_TOLERANCE 12.0 //[1.0 2.0 8.0 12.0 16.0 24.0 32.0]
 
@@ -235,7 +238,7 @@ float hash1(float x) {
 float SSAO(vec3 normalM, vec3 viewPos, sampler2D depthtex, float dither) {
     #define SSAO_SAMPLES 5
     #define SSAO_STEPS   4
-    #define SSAO_RADIUS  30.0
+    #define SSAO_RADIUS  1.0
 
     const vec2 rEdge = vec2(0.6, 0.55);
 
@@ -338,62 +341,57 @@ vec3 CosineSampleHemisphere(float u1, float u2, vec3 n) {
     #endif
 #endif
 
+#if FAKE_GLOBAL_ILLUMINATION == 1
+    vec3 fakeGI(vec3 viewPos, vec3 normal, vec3 viewDir, float linearZ0, float dither) {
+        const int   SAMPLES   = 4;
+        const int   STEPS     = 2;
+        const float RADIUS    = 10.0;
+        const float STEP_SIZE = RADIUS / float(STEPS);
+        const float INV_SMP   = 1.0 / float(SAMPLES);
 
-vec3 calculateScreenSpaceGI(
-    vec3 viewPos,     // view-space position
-    vec3 normal,      // view-space normal
-    vec3 viewDir,     // = normalize(viewPos)
-    float linearZ0,   // = GetLinearDepth(depth0)
-    float dither      // per-pixel noise
-) {
-    const int   SAMPLES   = 6;
-    const int   STEPS     = 6;
-    const float RADIUS    = 10.0;
-    const float STEP_SIZE = RADIUS / float(STEPS);
-    const float INV_SMP   = 1.0 / float(SAMPLES);
+        vec3 gi = vec3(0.0);
 
-    vec3 gi = vec3(0.0);
+        // Precompute depth->viewZ factor
+        // (GetLinearDepth returns [0..1] linearized, where 1=near, 0=far)
+        // so viewZ = -linearZ * far;
+        float farPlane = far;
+        
+        for (int i = 0; i < SAMPLES; ++i) {
+            // two low-discrepancy seeds
+            float u1 = fract(dither + float(i) * 0.618);
+            float u2 = fract(dither + float(i) * 0.326);
 
-    // Precompute depth->viewZ factor
-    // (GetLinearDepth returns [0..1] linearized, where 1=near, 0=far)
-    // so viewZ = -linearZ * far;
-    float farPlane = far;
-    
-    for (int i = 0; i < SAMPLES; ++i) {
-        // two low-discrepancy seeds
-        float u1 = fract(dither + float(i) * 0.618);
-        float u2 = fract(dither + float(i) * 0.326);
+            // cosine hemisphere direction
+            vec3 dir = CosineSampleHemisphere(u1, u2, normal);
+            vec3 marchPos = viewPos + normal * 0.01;
 
-        // cosine hemisphere direction
-        vec3 dir = CosineSampleHemisphere(u1, u2, normal);
-        vec3 marchPos = viewPos + normal * 0.01;
+            for (int s = 0; s < STEPS; ++s) {
+                marchPos += dir * STEP_SIZE;
 
-        for (int s = 0; s < STEPS; ++s) {
-            marchPos += dir * STEP_SIZE;
+                // project once per step
+                vec4 clip  = gbufferProjection * vec4(marchPos, 1.0);
+                if (clip.w <= 0.0) break;
+                vec2 uv    = clip.xy * (0.5 / clip.w) + 0.5;
+                if (any(lessThan(uv, vec2(0.0))) || any(greaterThan(uv, vec2(1.0)))) break;
 
-            // project once per step
-            vec4 clip  = gbufferProjection * vec4(marchPos, 1.0);
-            if (clip.w <= 0.0) break;
-            vec2 uv    = clip.xy * (0.5 / clip.w) + 0.5;
-            if (any(lessThan(uv, vec2(0.0))) || any(greaterThan(uv, vec2(1.0)))) break;
+                // fetch linear depth and reconstruct view-Z
+                float linD = GetLinearDepth(texture(depthtex0, uv).r);
+                float hitZ = -linD * farPlane;
+                if (hitZ < marchPos.z - 0.001) {
+                    // sample color
+                    vec3 col = texture(colortex0, uv).rgb;
 
-            // fetch linear depth and reconstruct view-Z
-            float linD = GetLinearDepth(texture(depthtex0, uv).r);
-            float hitZ = -linD * farPlane;
-            if (hitZ > marchPos.z + 0.001) {
-                // sample color
-                vec3 col = texture(colortex0, uv).rgb;
-
-                // simple distance fade
-                float fade = 1.0 - clamp((hitZ - viewPos.z) / RADIUS, 0.0, 1.0);
-                gi += col * fade;
-                break;
+                    // simple distance fade
+                    float fade = 1.0 - clamp((hitZ - viewPos.z) / RADIUS, 0.0, 1.0);
+                    gi += col * fade;
+                    break;
+                }
             }
         }
-    }
 
-    return gi * INV_SMP * 1.3;
-}
+        return gi * INV_SMP * 1.3;
+    }
+#endif
 
 
 //Program//
@@ -488,16 +486,10 @@ void main() {
                 entityOrHand = true;
             }
         }
-                float darkness = 0.75 - dot(color.rgb, vec3(0.2126, 0.7152, 0.0722));
-             
-        vec3 gi = calculateScreenSpaceGI(viewPos.xyz, normalM, nViewPos, linearZ0, dither);
-        //color.rgb = min(gi,color.rgb);
-        color.rgb = mix(color.rgb, gi, vec3(0.4)) * 1.4; // debug view
-        //color.rgb = gi;
-        color.rgb *= ao;
+                float darkness = 0.5 - dot(color.rgb, vec3(0.2126, 0.7152, 0.0722));
 
         #ifdef OVERWORLD
-        #ifdef SKY_ILLUMINATION
+            #ifdef SKY_ILLUMINATION
                 vec3 indirect = GetSkyIllumination(normalM, viewPos.xyz, nViewPos, dither, skyLightFactor, vec3(0.0), VdotU, VdotS);
                 // Compute how dark the pixel is (0 = black, 1 = white)
 
@@ -510,13 +502,16 @@ void main() {
                 //color.rgb += indirect;
             #endif
         #endif
-        //color = mix(color, min(color.rgb, gi), darkness);
 
-        //float fresnel = clamp(1.0 + dot(normalM, nViewPos), 0.0, 1.0);
+        color.rgb *= ao;
 
-        /*color.rgb = SSGI(normalM, viewPos.xyz, nViewPos, playerPos, lViewPos, z0,
-                                                depthtex0, dither, skyLightFactor, 1.0,
-                                                0.0, vec3(0.0), vec3(0.0), vec3(0.0), 0.0).rgb;*/
+        #if FAKE_GLOBAL_ILLUMINATION == 1
+            vec3 gi = fakeGI(viewPos.xyz, normalM, nViewPos, linearZ0, dither);
+            float lightAmt = clamp(-dot(normalM, lightVec) * length(lightColor) + 0.1, 0.7, 1.0);
+            float giWeight = 0.2 * GI_MULT * lightAmt;
+
+            color.rgb = mix(color.rgb, gi, vec3(giWeight));
+        #endif
 
         #ifdef PBR_REFLECTIONS
 

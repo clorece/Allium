@@ -18,7 +18,7 @@
     #define SHADOW_QUALITY 3 //[-1 0 1 2 3 4 5]
     const float shadowDistance = 256.0; //[64.0 80.0 96.0 112.0 128.0 160.0 192.0 224.0 256.0 320.0 384.0 512.0 768.0 1024.0]
     #define ENTITY_SHADOWS_DEFINE 1 //[-1 1]
-    #define SSAO_QUALI_DEFINE 3 //[0 2 3]
+    #define SSAO_QUALI_DEFINE 2 //[0 2 3]
     #define FXAA_DEFINE 1 //[-1 1]
     #define DETAIL_QUALITY 3 //[0 2 3]
     #define CLOUD_QUALITY 3 //[0 1 2 3]
@@ -69,7 +69,7 @@
 
     #define SHADOW_SMOOTHING 2 //[1 2 3 4]
     #define RAIN_PUDDLES 1 //[0 1 2 3 4]
-    #define SSAO_I 1.0 //[0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0]
+    #define SSAO_I 1.5 //[0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0]
     #define VANILLAAO_I 0 //[0 25 30 35 40 45 50 55 60 65 70 75 80 85 90 95 100 110 120 130 140 150 160 170 180 190 200 220 240 260 280 300]
 
     #define AURORA_STYLE_DEFINE 0 //[-1 0 1 2]

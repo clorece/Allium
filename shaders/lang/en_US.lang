@@ -1086,7 +1086,7 @@ screen.LUT.comment=Lookup tables (LUTs) are used to change the colors of an imag
         value.End_Lut.8=Faded Rustic
         value.End_Lut.9=Esther Default
  
-screen.AMBIENT_OCCLUSION=Ambient Occlusion
+screen.INDIRECT_LIGHTING=Indirect Lighting
     option.SSRAO_QUALITY=SSRAO Quality
         value.SSRAO_QUALITY.2=Reflection View
         value.SSRAO_QUALITY.8=§aLow
@@ -1096,7 +1096,12 @@ screen.AMBIENT_OCCLUSION=Ambient Occlusion
     option.SSRAO_I=SSRAO Intensity
     option.SSRAO_RADIUS=SSRAO Radius
     option.DEPTH_TOLERANCE=SSRAO Gap Threshold
-        option.DEPTH_TOLERANCE.comment=Determines how wide much occlusioning needs to be done depending on the gap. Lower values will make smaller gaps (e.g. gaps in fences) less occluded, higher values will make them more occluded in the gaps
+        option.DEPTH_TOLERANCE.comment=Determines how wide much occlusioning needs to be done depending on the gap. Lower values will make smaller gaps (e.g. gaps in fences) less occluded, higher values will make them more occluded in the gaps.
+    option.FAKE_GLOBAL_ILLUMINATION=Global Illumination
+        option.FAKE_GLOBAL_ILLUMINATION.comment=Only an approximation of Global Illumination, not physically accurate.
+        value.FAKE_GLOBAL_ILLUMINATION.0=§aOff
+        value.FAKE_GLOBAL_ILLUMINATION.1=§cOn
+    option.GI_MULT=GI Intensity
 
 screen.CUMULUS_SETTINGS=Cumulus Clouds
     screen.CUMULUS_SETTINGS.comment=Cumulus cloud settings (Lower level of clouds).
