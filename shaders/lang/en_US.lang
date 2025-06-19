@@ -1102,6 +1102,8 @@ screen.INDIRECT_LIGHTING=Indirect Lighting
         value.FAKE_GLOBAL_ILLUMINATION.0=§aOff
         value.FAKE_GLOBAL_ILLUMINATION.1=§cOn
     option.GI_MULT=GI Intensity
+    option.GLOBAL_ILLUMINATION_VIEW=GI View
+        option.GLOBAL_ILLUMINATION_VIEW.comment=Debug View for Global Illumination
 
 screen.CUMULUS_SETTINGS=Cumulus Clouds
     screen.CUMULUS_SETTINGS.comment=Cumulus cloud settings (Lower level of clouds).

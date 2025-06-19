@@ -345,7 +345,7 @@ vec3 CosineSampleHemisphere(float u1, float u2, vec3 n) {
     vec3 fakeGI(vec3 viewPos, vec3 normal, vec3 viewDir, float linearZ0, float dither) {
         const int   SAMPLES   = 4;
         const int   STEPS     = 2;
-        const float RADIUS    = 10.0;
+        const float RADIUS    = 2.0;
         const float STEP_SIZE = RADIUS / float(STEPS);
         const float INV_SMP   = 1.0 / float(SAMPLES);
 
@@ -499,11 +499,12 @@ void main() {
                 #else
                     color.rgb = mix(color.rgb, min(color.rgb, indirect), darkness);
                 #endif
-                //color.rgb += indirect;
             #endif
         #endif
 
         color.rgb *= ao;
+
+        //#define GLOBAL_ILLUMINATION_VIEW
 
         #if FAKE_GLOBAL_ILLUMINATION == 1
             vec3 gi = fakeGI(viewPos.xyz, normalM, nViewPos, linearZ0, dither);
@@ -511,6 +512,10 @@ void main() {
             float giWeight = 0.2 * GI_MULT * lightAmt;
 
             color.rgb = mix(color.rgb, gi, vec3(giWeight));
+
+            #ifdef GLOBAL_ILLUMINATION_VIEW
+                color.rgb = gi;
+            #endif
         #endif
 
         #ifdef PBR_REFLECTIONS
