@@ -32,6 +32,14 @@ float InterleavedGradientNoiseForClouds() {
 
         return false;
     }
+
+    float shadowOnCloud(vec3 tracePos, vec3 cameraPos, int cloudAltitude, float lowerPlaneAltitude, float higherPlaneAltitude) {
+        const float cloudShadowOffset = 0.01;
+
+        vec3 shadowPosition0 = GetShadowOnCloudPosition(tracePos, cameraPos);
+        return shadow2D(shadowtex0, shadowPosition0).z;
+    }
+
 #endif
 
 #ifdef CLOUDS_REIMAGINED
@@ -67,40 +75,40 @@ vec4 GetClouds(inout float cloudLinearDepth, float skyFade, vec3 cameraPos, vec3
         cloudColorMult *= vec3(CLOUD_R, CLOUD_G, CLOUD_B) * 0.01;
     #endif
     cloudAmbientColor *= cloudColorMult;
-    cloudLightColor *= cloudColorMult;
+    cloudLightColor *= cloudColorMult * 0.5;
 
     int maxCloudAlt = max(cloudAlt1i, cloudAlt2i) * 2;
     int minCloudAlt = min(cloudAlt1i, cloudAlt2i);
     #define CUMULUS_MULT 0.5 //[0.4 0.45 0.5 0.55 0.6 0.65 0.7]
-    #define CUMULUS_SIZE_MULT 600.0 //[100.0 200.0 300.0 400.0 500.0 600.0 700.0 800.0 900.0]
+    #define CUMULUS_SIZE_MULT 800.0 //[100.0 200.0 300.0 400.0 500.0 600.0 700.0 800.0 900.0]
         #define CUMULUS_SIZE_MULT_M CUMULUS_SIZE_MULT * 0.01
     #define CUMULUS_GRANULARITY 0.5 //[0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0]
     #define CUMUMLUS_SHAPING 1.0 //[1.0 1.1 1.2 1.3]
     #define ALTOCUMULUS_MULT 0.45 //[0.4 0.45 0.5 0.55 0.6 0.65 0.7]
         #define ALTOCUMULUS_SIZE_MULT_M ALTOCUMULUS_SIZE_MULT * 0.01
-    #define ALTOCUMULUS_SIZE_MULT 300.0 //[100.0 200.0 300.0 400.0 500.0 600.0 700.0 800.0 900.0]
+    #define ALTOCUMULUS_SIZE_MULT 400.0 //[100.0 200.0 300.0 400.0 500.0 600.0 700.0 800.0 900.0]
     #define ALTOCUMULUS_GRANULARITY 0.55 //[0.1 0.2 0.3 0.4 0.5 0.55 0.6 0.7 0.8 0.9 1.0]
     #define ALTOCUMULUS_SHAPING 1.0 //[1.0 1.005 1.01 1.015 1.02 1.025 1.03 1.035]
 
     #if CLOUD_QUALITY == 3
         if (abs(cameraPos.y - minCloudAlt) < abs(cameraPos.y - maxCloudAlt)) {
             clouds = GetVolumetricClouds(minCloudAlt, thresholdF, cloudLinearDepth, skyFade, skyMult0,
-                                            cameraPos, nPlayerPos, lViewPosM, VdotS, VdotU, dither, CUMULUS_GRANULARITY, CUMULUS_MULT, CUMUMLUS_SHAPING, CUMULUS_SIZE_MULT_M);
+                                            cameraPos, nPlayerPos, lViewPosM, VdotS, VdotU, dither, CUMULUS_GRANULARITY, CUMULUS_MULT, CUMUMLUS_SHAPING, CUMULUS_SIZE_MULT_M, false);
             if (clouds.a == 0.0) {
                 clouds = GetVolumetricClouds(maxCloudAlt, thresholdF * 2.0, cloudLinearDepth, skyFade, skyMult0,
-                                                cameraPos, nPlayerPos, lViewPosM, VdotS, VdotU, dither, ALTOCUMULUS_GRANULARITY, ALTOCUMULUS_MULT, ALTOCUMULUS_SHAPING, ALTOCUMULUS_SIZE_MULT_M);
+                                                cameraPos, nPlayerPos, lViewPosM, VdotS, VdotU, dither, ALTOCUMULUS_GRANULARITY, ALTOCUMULUS_MULT, ALTOCUMULUS_SHAPING, ALTOCUMULUS_SIZE_MULT_M, true);
             }
-        } else {
+        } /*else {
             clouds = GetVolumetricClouds(maxCloudAlt, thresholdF * 2.0, cloudLinearDepth, skyFade, skyMult0,
-                                            cameraPos, nPlayerPos, lViewPosM, VdotS, VdotU, dither, ALTOCUMULUS_GRANULARITY, ALTOCUMULUS_MULT, ALTOCUMULUS_SHAPING, ALTOCUMULUS_SIZE_MULT_M);
+                                            cameraPos, nPlayerPos, lViewPosM, VdotS, VdotU, dither, ALTOCUMULUS_GRANULARITY, ALTOCUMULUS_MULT, ALTOCUMULUS_SHAPING, ALTOCUMULUS_SIZE_MULT_M, true);
             if (clouds.a == 0.0) {
                 clouds = GetVolumetricClouds(minCloudAlt, thresholdF, cloudLinearDepth, skyFade, skyMult0,
-                                                cameraPos, nPlayerPos, lViewPosM, VdotS, VdotU, dither, CUMULUS_GRANULARITY, CUMULUS_MULT, CUMUMLUS_SHAPING, CUMULUS_SIZE_MULT_M);
+                                                cameraPos, nPlayerPos, lViewPosM, VdotS, VdotU, dither, CUMULUS_GRANULARITY, CUMULUS_MULT, CUMUMLUS_SHAPING, CUMULUS_SIZE_MULT_M, false);
             }
-        }
+        }*/
     #else
         clouds = GetVolumetricClouds(minCloudAlt, thresholdF, cloudLinearDepth, skyFade, skyMult0,
-                                        cameraPos, nPlayerPos, lViewPosM, VdotS, VdotU, dither, CUMULUS_GRANULARITY, CUMULUS_MULT, CUMUMLUS_SHAPING, CUMULUS_SIZE_MULT_M);
+                                        cameraPos, nPlayerPos, lViewPosM, VdotS, VdotU, dither, CUMULUS_GRANULARITY, CUMULUS_MULT, CUMUMLUS_SHAPING, CUMULUS_SIZE_MULT_M, false);
     #endif
 
     #ifdef ATM_COLOR_MULTS

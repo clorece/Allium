@@ -93,7 +93,7 @@ void main() {
         color.rgb += GetStars(starCoord, VdotU, VdotS);
 
         #if SUN_MOON_STYLE >= 2
-            float absVdotS = abs(VdotS) * 0.9985;
+            float absVdotS = abs(VdotS) * 0.9980;
             #if SUN_MOON_STYLE == 2
                 float sunSizeFactor1 = 0.9975;
                 float sunSizeFactor2 = 1000.0;
@@ -123,7 +123,7 @@ void main() {
                         sunMoonMixer *= 1.0 - 0.65 * GetCaveFactor();
                     #endif
 
-                    color.rgb = mix(color.rgb, lightColor * 32.0, sunMoonMixer);
+                    color.rgb = mix(color.rgb, lightColor * 64.0, sunMoonMixer);
                     //color.rgb = pow(color.rgb, vec3(2.2)) * 0.3;
                 } else {
                     float horizonFactor = GetHorizonFactor(-SdotU);

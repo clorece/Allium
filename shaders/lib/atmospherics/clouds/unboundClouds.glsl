@@ -1,8 +1,10 @@
+#define SCREENSHOT 0 //[0 1]
+
 #if CLOUD_UNBOUND_SIZE_MULT != 100
     #define CLOUD_UNBOUND_SIZE_MULT_M CLOUD_UNBOUND_SIZE_MULT * 0.01
 #endif
 
-float cloudStretch = 12.0;
+float cloudStretch = 8.0;
 float cloudHeight = cloudStretch * 2.0;
 
 
@@ -102,25 +104,6 @@ float worley(vec3 pos, float numCells, float straightness){
 	return 1.0 - saturate(d);
 }
 
-/*
-float HybridNoise3D(vec3 p) {
-    // Internal constants - tweak these to taste:
-    float perlinFreq = 1.5;
-    float worleyCells = 4.0;
-
-    // Compute Perlin noise part:
-    float perlinValue = getPerlinNoise(p, perlinFreq);
-
-    // Compute Worley noise part:
-    float worleyValue = worley(p, worleyCells);
-
-    // Combine the noises - blend weights can be changed:
-    float combined = mix(perlinValue, worleyValue, 0.5);
-
-    return combined;
-}
-*/
-
 float GetCloudNoise(vec3 tracePos, int cloudAltitude, float lTracePosXZ, float cloudPlayerPosY, float noisePersistance, float mult, float straightness, float size) {
     vec3 tracePosM = tracePos.xyz * 0.00016;
     float wind = 0.0006;
@@ -152,8 +135,8 @@ float GetCloudNoise(vec3 tracePos, int cloudAltitude, float lTracePosXZ, float c
     //tracePos.y *= straightness;
 
     for (int i = 0; i < sampleCount; i++) {
-        noise += worley(tracePosM * 1.5 + vec3(wind, 0.0, 0.0), float(sampleCount), straightness) * currentPersist;
-
+        vec3 offset = vec3(wind, 0.0, 0.0);
+        noise += worley(tracePosM * 1.5 + offset, float(sampleCount), straightness) * currentPersist;
         total += currentPersist;
 
         tracePosM *= 3.0;
@@ -187,12 +170,30 @@ float GetCloudNoise(vec3 tracePos, int cloudAltitude, float lTracePosXZ, float c
 
 }
 
+
 float PhaseHG(float cosTheta, float g) {
-    float denom = 1.0 + g * g - 2.0 * g * cosTheta;
-    return (1.0 - g * g) / (4.0 * 3.14159 * pow(denom, 1.5));
+    float g2 = g * g;
+    float denom = 1.0 + g2 - 2.0 * g * cosTheta;
+    return (1.0 - g2) / (4.0 * 3.14159 * pow(denom, 1.5));
 }
 
-vec4 GetVolumetricClouds(int cloudAltitude, float distanceThreshold, inout float cloudLinearDepth, float skyFade, float skyMult0, vec3 cameraPos, vec3 nPlayerPos, float lViewPosM, float VdotS, float VdotU, float dither, float noisePersistance, float mult, float straightness, float size) {
+vec4 GetVolumetricClouds(int cloudAltitude, 
+    float distanceThreshold, 
+    inout float cloudLinearDepth, 
+    float skyFade, 
+    float skyMult0, 
+    vec3 cameraPos, 
+    vec3 nPlayerPos, 
+    float lViewPosM, 
+    float VdotS, 
+    float VdotU, 
+    float dither, 
+    float noisePersistance, 
+    float mult, 
+    float straightness, 
+    float size,
+    bool layer2
+    ) {
     vec4 volumetricClouds = vec4(0.0);
 
     #if CLOUD_QUALITY <= 1
@@ -223,7 +224,22 @@ vec4 GetVolumetricClouds(int cloudAltitude, float distanceThreshold, inout float
         stepMult = stepMult / sqrt(float(size));
         //#endif
 
-        int sampleCount = int(planeDistanceDif / stepMult + dither + 1);
+        int sampleCount = 0;
+
+        #if SCREENSHOT == 0
+            #ifdef CLOUD_QUALITY == 3
+            if (layer2) {
+                sampleCount = max(int(planeDistanceDif) / 24, 2);
+            } else {
+                sampleCount = max(int(planeDistanceDif + dither) / 16, 5);
+            }
+            #else
+                sampleCount = int(planeDistanceDif / stepMult + dither + 1);
+            #endif
+        #elif SCREENSHOT == 1
+            sampleCount = 16;
+        #endif
+        
         vec3 traceAdd = nPlayerPos * stepMult;
         vec3 tracePos = cameraPos + minPlaneDistance * nPlayerPos;
         tracePos += traceAdd * dither;
@@ -250,11 +266,14 @@ vec4 GetVolumetricClouds(int cloudAltitude, float distanceThreshold, inout float
             float cloudMult = 2.0;
             if (lTracePosXZ > distanceThreshold) break;
             if (lTracePos > lViewPosM) {
-                if (skyFade < 0.7) continue;
-                else cloudMult = skyMult0;
+                cloudMult = mix(cloudMult, skyMult0, step(0.7, skyFade));
+                if (skyFade < 0.7 && lTracePos > lViewPosM) continue;
             }
-
+           
             float cloudNoise = GetCloudNoise(tracePos, cloudAltitude, lTracePosXZ, cloudPlayerPos.y, noisePersistance, mult, straightness, size);
+
+            //float cloudNoise = ApproximateLightOcclusion(tracePos, normalize(sunVec), stepMult * 2.0, cloudAltitude, cloudStretch, straightness, size);
+            //cloudNoise = pow(shadowFactor, 2.2);
 
             if (cloudNoise > 0.00001) {
                 #if defined CLOUD_CLOSED_AREA_CHECK && SHADOW_QUALITY > -1
@@ -271,18 +290,16 @@ vec4 GetVolumetricClouds(int cloudAltitude, float distanceThreshold, inout float
                         tracePos.y += 4.0 * (texture2D(noisetex, tracePos.xz * 0.001).r - 0.5);
                     #endif
                 }
+                
+                float cloudShading = (1.0 - rainFactor) - (higherPlaneAltitude - tracePos.y) / cloudHeight;
 
                 float opacityFactor = min1(cloudNoise * 32.0);
 
-                float cloudShading = 1.0 - (higherPlaneAltitude - tracePos.y) / cloudHeight;
-                cloudShading *= 1.0 + 0.75 * VdotSM3 * (1.0 - opacityFactor);
-
-                float cosTheta = dot(normalize(sunVec), -nPlayerPos); // light-to-view angle
-                float sss = PhaseHG(cosTheta, 1.0); // g=0.3 for mild forward scattering
+                float cosTheta = dot(normalize(lightVec), nPlayerPos); // light-to-view angle
+                float sss = PhaseHG(cosTheta, 0.3);
                 cloudShading += sss;
 
-                vec3 colorSample = cloudAmbientColor * (0.7 + 0.2 * cloudShading) + cloudLightColor * cloudShading;
-                //vec3 colorSample = 1.5 * cloudLightColor * pow2(cloudShading); // <-- Used this to take the Unbound logo
+                vec3 colorSample = cloudAmbientColor * (0.7 + 0.1 * cloudShading) + cloudLightColor * cloudShading;
                 vec3 cloudSkyColor = GetSky(VdotU, VdotS, dither, true, false);
                 #ifdef ATM_COLOR_MULTS
                     cloudSkyColor *= sqrtAtmColorMult; // C72380KD - Reduced atmColorMult impact on some things
@@ -296,7 +313,7 @@ vec4 GetVolumetricClouds(int cloudAltitude, float distanceThreshold, inout float
                 #endif
                 float skyMult1 = 1.0 - 0.2 * (1.0 - skyFade) * max(sunVisibility2, nightFactor);
                 float skyMult2 = 1.0 - 0.33333 * skyFade;
-                colorSample = mix(cloudSkyColor, colorSample * skyMult1, cloudFogFactor * skyMult2 * 0.72);
+                colorSample = mix(cloudSkyColor, colorSample * skyMult1, cloudFogFactor * skyMult2 * 0.5);
                 colorSample *= pow2(1.0 - maxBlindnessDarkness);
 
                 volumetricClouds.rgb = mix(volumetricClouds.rgb, colorSample, 1.0 - min1(volumetricClouds.a));

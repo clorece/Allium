@@ -322,4 +322,59 @@
         }
     #endif
 
+    vec3 CosineSampleHemisphere(float u1, float u2, vec3 n) {
+        float r     = sqrt(u1);
+        float theta = 6.2831853 * u2;
+        vec3 tangent   = normalize(cross(n, vec3(0,1,0)));
+        vec3 bitangent = cross(n, tangent);
+        return normalize(
+            r*cos(theta)*tangent +
+            r*sin(theta)*bitangent +
+            sqrt(1.0 - u1)*n
+        );
+    }
+
+    vec3 coneTraceVoxelGI(vec3 worldPos, vec3 normal) {
+        const int NUM_CONES = 8;      // Number of cone directions
+        const int NUM_STEPS = 16;      // Steps per cone
+        const float MAX_DIST = 64.0;  // Max distance a cone travels
+        const float STEP_SIZE = MAX_DIST / float(NUM_STEPS);
+
+        vec3 gi = vec3(0.0);
+
+        for (int c = 0; c < NUM_CONES; c++) {
+            // generate hemisphere direction
+            float u1 = fract(float(c) * 0.618033); // Golden ratio offset for better sampling
+            float u2 = fract(float(c) * 0.326532);
+            vec3 dir = CosineSampleHemisphere(u1, u2, normal);
+
+            float coneAccum = 0.0;
+
+            for (int s = 0; s < NUM_STEPS; ++s) {
+                // === (2) Move along the cone direction ===
+                float dist = STEP_SIZE * float(s + 1);
+                vec3 samplePos = worldPos + dir * dist;
+
+                // === (3) Convert world pos to voxel coord ===
+                vec3 voxelCoord = SceneToVoxel(samplePos);
+                //return SceneToVoxel(worldPos);
+
+                // === (4) Sample the voxel lighting buffer ===
+                vec3 light = texture(floodfill_sampler, voxelCoord.xyz).rgb;
+
+                // === (5) Distance-based falloff (approximate energy loss) ===
+                float falloff = 1.0 / (1.0 + dist * dist); // inverse-square
+
+                gi += light * falloff;
+
+                // Optional: coneAccum += falloff;
+            }
+        }
+
+        // === (6) Normalize the accumulated light ===
+        float totalSamples = float(NUM_CONES * NUM_STEPS);
+        gi /= totalSamples;
+        return gi;
+    }
+
 #endif //INCLUDE_VOXELIZATION

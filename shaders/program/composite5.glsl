@@ -13,7 +13,7 @@
 
 
 #define Overworld_Lut                5          //[0 1 2 3 4 5 6 7 8 9]
-#define Nether_Lut                1          //[0 1 2 3 4 5 6 7 8 9]
+#define Nether_Lut                8          //[0 1 2 3 4 5 6 7 8 9]
 #define End_Lut                 1          //[0 1 2 3 4 5 6 7 8 9]
 
 #define GBPreset 18 // [1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32]
@@ -266,7 +266,7 @@ void main() {
     // Calculate noise and sample texture
     float noise = (fract(sin(dot(texCoord * sin(frameTimeCounter) + 1.0, vec2(12.9898,78.233) * 2.0)) * 43758.5453));
 
-    #define FILM_GRAIN_I 2  // [0 1 2 3 4 5 6 7 8 9 10]
+    #define FILM_GRAIN_I 3  // [0 1 2 3 4 5 6 7 8 9 10]
     
     color.rgb *= max(noise, 1.0 - (float(FILM_GRAIN_I) / 10));
     color *= 1.3;

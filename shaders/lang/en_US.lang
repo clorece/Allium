@@ -7,7 +7,7 @@ profile.LOW=§aLow
 profile.MEDIUM=§aMedium
 profile.HIGH=§eHigh (Default)
 profile.ULTRA=§cUltra
-profile.CINEMATIC=§4§lCinematic
+profile.CINEMATIC=§4§lScreenshot
 profile.COMPLEMENTARY=§4§l§n§oComplementary
 profile.comment=Shader profiles change performance settings with the most optimised visual fidelity to performance ratio. §e[*]§r It's recommended to use one of these profiles for your settings unless you know what you are doing. §e[*]§r All affected settings can all be found in the "Performance Settings" menu.
 
@@ -1097,11 +1097,18 @@ screen.INDIRECT_LIGHTING=Indirect Lighting
     option.SSRAO_RADIUS=SSRAO Radius
     option.DEPTH_TOLERANCE=SSRAO Gap Threshold
         option.DEPTH_TOLERANCE.comment=Determines how wide much occlusioning needs to be done depending on the gap. Lower values will make smaller gaps (e.g. gaps in fences) less occluded, higher values will make them more occluded in the gaps.
-    option.FAKE_GLOBAL_ILLUMINATION=Global Illumination
-        option.FAKE_GLOBAL_ILLUMINATION.comment=Only an approximation of Global Illumination, not physically accurate.
-        value.FAKE_GLOBAL_ILLUMINATION.0=§aOff
-        value.FAKE_GLOBAL_ILLUMINATION.1=§cOn
-    option.GI_MULT=GI Intensity
+    option.GLOBAL_ILLUMINATION=Global Illumination
+        option.GLOBAL_ILLUMINATION.comment=Screenspaced indirect lighting, filling and illuminating surfaces.
+            value.GLOBAL_ILLUMINATION.0=§aOff
+            value.GLOBAL_ILLUMINATION.1=§cOn
+    option.GI_SAMPLES=Ray Sample Quality
+        option.GI_SAMPLES.comment=Controls how many rays are cast per pixel for global illumination. Higher = smoother, better GI, but more expensive.
+    option.GI_STEPS=Ray Distance
+        option.GI_STEPS.comment=Scales the total ray length for each ray. Affects performance and range; more steps = longer, denser rays, but more costly.
+    option.GI_RADIUS=Illumination Radius 
+        option.GI_RADIUS.comment=This determines how far rays can reach in a scene. Larger radius = more distant lighting, but also risk of hitting irrelevant surfaces or sky.
+    option.GI_INTENSITY=GI Intensity
+    option.GI_INTENSITY=Adjusts overall visibility of the Global Illumination contribution.
     option.GLOBAL_ILLUMINATION_VIEW=GI View
         option.GLOBAL_ILLUMINATION_VIEW.comment=Debug View for Global Illumination
 

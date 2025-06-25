@@ -50,6 +50,7 @@ uniform ivec2 eyeBrightness;
 uniform ivec2 eyeBrightnessSmooth;
 
 uniform vec3 cameraPosition;
+uniform vec3 sunPosition;
 uniform vec3 fogColor;
 uniform vec3 previousCameraPosition;
 uniform vec3 skyColor;

@@ -92,6 +92,10 @@ vec3 SampleBasicFilteredShadow(vec3 shadowPos, float offset) {
     return vec3(shadow * 0.25);
 }
 
+float GetDepth(float depth) {
+    return 2.0 * near * far / (far + near - (2.0 * depth - 1.0) * (far - near));
+}
+
 vec3 GetShadow(vec3 shadowPos, float lViewPos, float lightmapY, float offset, bool leaves) {
     #if SHADOW_QUALITY > 0
         #if ENTITY_SHADOWS_DEFINE == -1 && defined GBUFFERS_BLOCK

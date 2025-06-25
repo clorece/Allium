@@ -8,6 +8,10 @@ vec3 ViewToScreen(vec3 viewPos) {
     return ndc * 0.5 + 0.5;
 }
 
+vec3 toClipSpace(vec3 viewPos) {
+    return projMAD(gbufferProjection, viewPos) / -viewPos.z * 0.5 + 0.5;
+}
+
 vec3 ScreenToView(vec3 pos) {
     vec4 iProjDiag = vec4(gbufferProjectionInverse[0].x,
                           gbufferProjectionInverse[1].y,

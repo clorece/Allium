@@ -57,8 +57,9 @@ float GetLinearDepth(float depth) {
     return (2.0 * near) / (far + near - depth * farMinusNear);
 }
 
-
-
+float GetInverseLinearDepth(float linearDepth) {
+    return (far + near - (2.0 * near) / linearDepth) / (far - near);
+}
 
 #ifdef TEMPORAL_FILTER
     float GetApproxDistance(float depth) {
@@ -142,7 +143,7 @@ float GetLinearDepth(float depth) {
     #include "/lib/misc/distantLightBokeh.glsl"
 #endif
 
-#define FAKE_GLOBAL_ILLUMINATION 0 //[0 1]
+#define GLOBAL_ILLUMINATION 1 //[0 1]
 #define GI_MULT 1.0 //[1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0]
 
 #if SSAO_QUALI == 3
@@ -160,9 +161,9 @@ float GetLinearDepth(float depth) {
         return smoothstep(0.3, 1.0, facing);
     }
 
-    #define SSRAO_QUALITY 12 //[2 8 12 16 20]
+    #define SSRAO_QUALITY 16 //[2 8 12 16 20]
     #define SSRAO_I 1.5 //[0.5 0.6 0.7 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0]
-    #define SSRAO_STEP 6
+    #define SSRAO_STEP 4
     #define SSRAO_RADIUS 1.0 //[0.5 0.6 0.7 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0]
     #define DEPTH_TOLERANCE 12.0 //[1.0 2.0 8.0 12.0 16.0 24.0 32.0]
 
@@ -236,8 +237,8 @@ float hash1(float x) {
 }
 
 float SSAO(vec3 normalM, vec3 viewPos, sampler2D depthtex, float dither) {
-    #define SSAO_SAMPLES 5
-    #define SSAO_STEPS   4
+    #define SSAO_SAMPLES 2
+    #define SSAO_STEPS   12
     #define SSAO_RADIUS  1.0
 
     const vec2 rEdge = vec2(0.6, 0.55);
@@ -273,7 +274,7 @@ float SSAO(vec3 normalM, vec3 viewPos, sampler2D depthtex, float dither) {
                 break;
 
             // Reconstruct view-space position
-            float sceneZ = texture(depthtex, uv).r;
+            float sceneZ = texture2D(depthtex0, uv).r;
             vec4 projected = vec4(uv * 2.0 - 1.0, sceneZ * 2.0 - 1.0, 1.0);
             vec4 sceneVS4 = gbufferProjectionInverse * projected;
             vec3 sceneVS = sceneVS4.xyz / sceneVS4.w; // DO NOT skip this divide
@@ -292,111 +293,32 @@ float SSAO(vec3 normalM, vec3 viewPos, sampler2D depthtex, float dither) {
 }
 #endif
 
-//-----------------------------------------------------------------------------
-// Cosine-hemisphere sampling helper
-vec3 CosineSampleHemisphere(float u1, float u2, vec3 n) {
-    float r     = sqrt(u1);
-    float theta = 6.2831853 * u2;
-    vec3 tangent   = normalize(cross(n, vec3(0,1,0)));
-    vec3 bitangent = cross(n, tangent);
-    return normalize(
-        r*cos(theta)*tangent +
-        r*sin(theta)*bitangent +
-        sqrt(1.0 - u1)*n
-    );
-}
+#ifdef NETHER
+vec3 ambientColor = vec3(0.5, 0.21, 0.01);
+#endif
 
-#ifdef OVERWORLD
-    #ifdef SKY_ILLUMINATION
+#define MIN_LIGHT_AMOUNT 1.0
 
-        vec3 GetSkyIllumination(vec3 normalM, vec3 viewPos, vec3 nViewPos, float dither, float skyLightFactor, vec3 shadowMult, float VdotU, float VdotS) {
-            float sampleCount = 2;
 
-            vec3 nrm     = normalM;
-            #if defined(GBUFFERS_WATER) && WATER_STYLE==1 && defined(GENERATED_NORMALS)
-                nrm = normalize(mix(geoNormal, normalM, 0.05));
-            #endif
-
-            float inv   = 1.0 / float(2);
-
-            vec3 giAccum = vec3(0.0);
-
-            for (int i = 0; i < sampleCount; ++i) {
-                // generate two low-discrepancy numbers
-                //float u1 = fract(sin(dot(viewPos.xy, vec2(12.9898,78.233)))*43758.5453 + float(i));
-                //float u2 = fract(dither + float(i)*0.61803398875);
-
-                vec3 dir   = CosineSampleHemisphere(dither, fract(1.0 + float(i)*0.61803398875), normalM);
-            
-                // sky fallback
-                float U = dot(dir, upVec), S = dot(dir, sunVec);
-                //#ifdef DEFERRED1
-                #ifdef OVERWORLD
-                    giAccum += GetSky(U, S, dither,true,true) * skyLightFactor * 1.0;
-                #endif
-            }
-
-            return giAccum * inv;
-        }
+#ifdef OVERWORLD // GI ONLY AVAILABLE FOR OVERWORLD, for now...
+    #if GLOBAL_ILLUMINATION == 1
+        #include "/lib/lighting/GI.glsl"
     #endif
 #endif
 
-#if FAKE_GLOBAL_ILLUMINATION == 1
-    vec3 fakeGI(vec3 viewPos, vec3 normal, vec3 viewDir, float linearZ0, float dither) {
-        const int   SAMPLES   = 4;
-        const int   STEPS     = 2;
-        const float RADIUS    = 2.0;
-        const float STEP_SIZE = RADIUS / float(STEPS);
-        const float INV_SMP   = 1.0 / float(SAMPLES);
 
-        vec3 gi = vec3(0.0);
-
-        // Precompute depth->viewZ factor
-        // (GetLinearDepth returns [0..1] linearized, where 1=near, 0=far)
-        // so viewZ = -linearZ * far;
-        float farPlane = far;
-        
-        for (int i = 0; i < SAMPLES; ++i) {
-            // two low-discrepancy seeds
-            float u1 = fract(dither + float(i) * 0.618);
-            float u2 = fract(dither + float(i) * 0.326);
-
-            // cosine hemisphere direction
-            vec3 dir = CosineSampleHemisphere(u1, u2, normal);
-            vec3 marchPos = viewPos + normal * 0.01;
-
-            for (int s = 0; s < STEPS; ++s) {
-                marchPos += dir * STEP_SIZE;
-
-                // project once per step
-                vec4 clip  = gbufferProjection * vec4(marchPos, 1.0);
-                if (clip.w <= 0.0) break;
-                vec2 uv    = clip.xy * (0.5 / clip.w) + 0.5;
-                if (any(lessThan(uv, vec2(0.0))) || any(greaterThan(uv, vec2(1.0)))) break;
-
-                // fetch linear depth and reconstruct view-Z
-                float linD = GetLinearDepth(texture(depthtex0, uv).r);
-                float hitZ = -linD * farPlane;
-                if (hitZ < marchPos.z - 0.001) {
-                    // sample color
-                    vec3 col = texture(colortex0, uv).rgb;
-
-                    // simple distance fade
-                    float fade = 1.0 - clamp((hitZ - viewPos.z) / RADIUS, 0.0, 1.0);
-                    gi += col * fade;
-                    break;
-                }
-            }
-        }
-
-        return gi * INV_SMP * 1.3;
-    }
-#endif
-
+vec3 normVec (vec3 vec){
+	return vec*inversesqrt(dot(vec,vec));
+}
 
 //Program//
 void main() {
     vec3 color = texelFetch(colortex0, texelCoord, 0).rgb;
+    // FROM BLISS MUST NOT USE
+    //vec3 Indirect_lighting = vec3(0.0);
+    //vec3 minLightColor = vec3(1.0);
+
+
     float z0 = texelFetch(depthtex0, texelCoord, 0).r;
 
     vec4 screenPos = vec4(texCoord, z0, 1.0);
@@ -405,10 +327,16 @@ void main() {
     float lViewPos = length(viewPos);
     vec3 nViewPos = normalize(viewPos.xyz);
     vec3 playerPos = ViewToPlayer(viewPos.xyz);
+    vec3 feetPlayerPos = mat3(gbufferModelViewInverse) * viewPos.xyz;
+	vec3 feetPlayerPos_normalized = normVec(feetPlayerPos);
 
     float dither = texture2D(noisetex, texCoord * vec2(viewWidth, viewHeight) / 128.0).b;
+    vec3 dither2 = texture2D(noisetex, texCoord * vec2(viewWidth, viewHeight) / 128.0).xyz;
     #if defined TAA || defined TEMPORAL_FILTER
-        dither = fract(dither + goldenRatio * mod(float(frameCounter), 3600.0));
+        dither = fract(dither + goldenRatio * mod(float(frameCounter), 360.0));
+        dither2.x = fract(dither + goldenRatio * mod(float(frameCounter), 360.0));
+        dither2.y = fract(dither + goldenRatio * mod(float(frameCounter), 360.0));
+        dither2.z = fract(dither + goldenRatio * mod(float(frameCounter), 360.0));
     #endif
 
     #ifdef ATM_COLOR_MULTS
@@ -454,6 +382,11 @@ void main() {
         float skyLightFactor = texture6.b;
         vec3 texture5 = texelFetch(colortex5, texelCoord, 0).rgb;
         vec3 normalM = mat3(gbufferModelView) * texture5;
+
+        // FROM BLISS, MUST NOT USE
+        //Indirect_lighting += doIndirectLighting(ambientColor * 1.0, minLightColor, skyLightFactor);
+        //minLightColor = minLightColor + 0.7 * minLightColor * dot(normalM, feetPlayerPos_normalized);
+
         float ao = 1.0;
         #if SSAO_QUALI == 2
             ao = SSAO(normalM, viewPos.xyz, depthtex0, dither);
@@ -488,35 +421,23 @@ void main() {
         }
                 float darkness = 0.5 - dot(color.rgb, vec3(0.2126, 0.7152, 0.0722));
 
-        #ifdef OVERWORLD
-            #ifdef SKY_ILLUMINATION
-                vec3 indirect = GetSkyIllumination(normalM, viewPos.xyz, nViewPos, dither, skyLightFactor, vec3(0.0), VdotU, VdotS);
-                // Compute how dark the pixel is (0 = black, 1 = white)
-
-                // Use that to softly blend GI into dark areas only
-                #ifdef SKY_ILLUMINATION_VIEW
-                    color.rgb = mix(color.rgb, indirect, 1.0);
-                #else
-                    color.rgb = mix(color.rgb, min(color.rgb, indirect), darkness);
-                #endif
-            #endif
-        #endif
-
         color.rgb *= ao;
 
-        //#define GLOBAL_ILLUMINATION_VIEW
+    
+        #ifdef OVERWORLD || END
+            #if GLOBAL_ILLUMINATION == 1
+                vec3 skyIndirect = GetSkyIllumination(normalM, viewPos.xyz, nViewPos, dither, skyLightFactor, vec3(0.0), VdotU, VdotS);
+                //vec3 GlobalIllumination(vec3 viewPos, vec3 playerPos, vec3 normal, vec3 viewDir, float skyLightFactor, float linearZ0, float dither) {
+                color.rgb = mix(color.rgb, min(color.rgb, GITonemap(skyIndirect)), darkness);   
+                color.rgb += GITonemap(GlobalIllumination(viewPos.xyz, playerPos, normalM, nViewPos, skyLightFactor, linearZ0, dither));
+                //color.rgb += GITonemap(GI(color.rgb, normalM, viewPos.xyz, depthtex0, dither));
 
-        #if FAKE_GLOBAL_ILLUMINATION == 1
-            vec3 gi = fakeGI(viewPos.xyz, normalM, nViewPos, linearZ0, dither);
-            float lightAmt = clamp(-dot(normalM, lightVec) * length(lightColor) + 0.1, 0.7, 1.0);
-            float giWeight = 0.2 * GI_MULT * lightAmt;
-
-            color.rgb = mix(color.rgb, gi, vec3(giWeight));
-
-            #ifdef GLOBAL_ILLUMINATION_VIEW
-                color.rgb = gi;
+                // SAMPLE GI FOR BLISS SHADERS, MUST NOT USE
+                //vec3 indirect = GITonemap(applySSRT(Indirect_lighting, minLightColor, viewPos.xyz, dither2, skyLightFactor, entityOrHand));
+                //color.rgb += mix(color.rgb * vec3(0.1), min(color.rgb, indirect), darkness);  
             #endif
         #endif
+        
 
         #ifdef PBR_REFLECTIONS
 
