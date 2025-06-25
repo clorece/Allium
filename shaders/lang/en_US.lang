@@ -1108,7 +1108,7 @@ screen.INDIRECT_LIGHTING=Indirect Lighting
     option.GI_RADIUS=Illumination Radius 
         option.GI_RADIUS.comment=This determines how far rays can reach in a scene. Larger radius = more distant lighting, but also risk of hitting irrelevant surfaces or sky.
     option.GI_INTENSITY=GI Intensity
-    option.GI_INTENSITY=Adjusts overall visibility of the Global Illumination contribution.
+    option.GI_INTENSITY.comment=Adjusts overall visibility of the Global Illumination contribution.
     option.GLOBAL_ILLUMINATION_VIEW=GI View
         option.GLOBAL_ILLUMINATION_VIEW.comment=Debug View for Global Illumination
 
