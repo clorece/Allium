@@ -1,7 +1,7 @@
 #define GI_SAMPLES      4 //[2 3 4 5 6 7 8 9 10 12 14 16 18 20 22 24]
 #define GI_STEPS        12 //[2 3 4 5 6 7 8 9 10 12 14 16 18 20 22 24]
 #define GI_RADIUS       1.0 //[0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0 3.0]
-#define GI_INTENSITY    1.0 //[0.5 0.6 0.7 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0 3.0]
+#define GI_INTENSITY    0.75 //[0.5 0.6 0.7 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0 3.0]
 #define GI_INV_SAMPLES  (1.0 / float(GI_SAMPLES))
 #define GI_FADE_SCALE (1.0 / (GI_RADIUS * 0.1))
 #define GI_INV_STEPS  (1.0 / float(GI_STEPS))
