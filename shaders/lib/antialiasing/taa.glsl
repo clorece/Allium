@@ -6,7 +6,7 @@
     float regularEdge = 20.0;
     float extraEdgeMult = 3.0;
 #elif TAA_MODE == 2
-    float blendMinimum = 0.6;
+    float blendMinimum = 0.8;
     float blendVariable = 0.2;
     float blendConstant = 0.7;
 
@@ -167,7 +167,7 @@ void DoTAA(inout vec3 color, inout vec3 temp, float z1) {
     vec2 velocity = (texCoord - prvCoord.xy) * view;
     float blendFactor = float(prvCoord.x > 0.0 && prvCoord.x < 1.0 &&
                               prvCoord.y > 0.0 && prvCoord.y < 1.0);
-    float velocityFactor = dot(velocity, velocity) * 10.0;
+    float velocityFactor = dot(velocity, velocity) * 100.0;
     blendFactor *= max(exp(-velocityFactor) * blendVariable + blendConstant - length(cameraPosition - previousCameraPosition) * edge, blendMinimum);
 
     color = mix(color, tempColor, blendFactor);

@@ -220,6 +220,8 @@ value.LIGHTSHAFT_QUALI_DEFINE.2=§eMedium
 value.LIGHTSHAFT_QUALI_DEFINE.3=§cHigh
 value.LIGHTSHAFT_QUALI_DEFINE.4=§4§lVery High
 
+option.shadowMapResolution=Shadow Map Resolution
+
 option.shadowDistance=Shadow Distance
 option.shadowDistance.comment=Adjusts the distance from the player which real-time shadows are rendered. §e[*]§r The value is internally capped at Render Distance. §e[*]§r It's recommended to set this value to about 80% of your render distance for best performance and coverage. §c[-]§r Lower values may cause excessive Light Shaft leaking.
 value.shadowDistance.64.0=§a4 Chunks §c[-]
@@ -342,8 +344,10 @@ option.CLOUD_SHADOWS.comment=Enables shadows that are cast from the clouds. §e[
 option.CLOUD_CLOSED_AREA_CHECK=Prevent Clouds in Interiors
 option.CLOUD_CLOSED_AREA_CHECK.comment=Does additional checks to remove clouds in closed areas. §e[*]§r This setting only works with the "Reimagined" or "Unbound" Cloud Styles. §e[*]§r This setting will be disabled if "Real-Time Shadows" is OFF.
 
-option.CLOUD_ALT1=Cloud Altitude
-option.CLOUD_ALT1.comment=Determines the world height which the clouds will appear at. §e[*]§r This setting only works with the "Reimagined" or "Unbound" Cloud Styles.
+option.CLOUD_ALT1=Cumulus Cloud Altitude
+option.CLOUD_ALT1.comment=Determines the world height which the cumulus clouds will appear at.
+option.CLOUD_ALT1=Altocumulus Cloud Altitude
+option.CLOUD_ALT1.comment=Determines the world height which the altocumulus clouds will appear at.
 
 option.CLOUD_SPEED_MULT=Cloud Speed
 option.CLOUD_SPEED_MULT.comment=Determines how fast the clouds are going to move. "Synced to World Time" setting uses Minecraft world time to advance the cloud positions; this allows for clouds to appear the same between players in the same server. §e[*]§r This setting only works with the "Reimagined" or "Unbound" Cloud Styles.

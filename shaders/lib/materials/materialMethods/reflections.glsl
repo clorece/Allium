@@ -56,7 +56,7 @@ vec4 GetReflection(vec3 normalM, vec3 viewPos, vec3 nViewPos, vec3 playerPos, fl
             int sr = 0;
             float dist = 0.0;
             vec3 rfragpos = vec3(0.0);
-            for (int i = 0; i < 30; i++) { //originally 30 itterations but cut in half to save fps
+            for (int i = 0; i < 15; i++) { //originally 30 itterations but cut in half to save fps
                 refPos = nvec3(gbufferProjection * vec4(viewPosRT, 1.0)) * 0.5 + 0.5;
                 if (abs(refPos.x - 0.5) > rEdge.x || abs(refPos.y - 0.5) > rEdge.y) break;
 

@@ -20,12 +20,12 @@
 
 
         #ifndef COMPOSITE //ground and cloud color
-            vec3 sunsetClearLightColor = pow(vec3(0.54, 0.43, 0.32), vec3(1.5 + invNoonFactor)) * 5.0;\
+            vec3 sunsetClearLightColor = pow(vec3(0.54, 0.43, 0.22), vec3(1.5 + invNoonFactor)) * 5.0;
 
 
 
         #else //light shaft color
-            vec3 sunsetClearLightColor = pow(vec3(0.54, 0.52, 0.5), vec3(1.5 + invNoonFactor)) * 6.8;
+            vec3 sunsetClearLightColor = pow(vec3(0.51, 0.43, 0.32), vec3(1.5 + invNoonFactor)) * 6.8;
         #endif
 
 
@@ -61,7 +61,7 @@
         #endif
 
         // day rain colors
-        vec3 dayRainLightColor   = vec3(0.7, 0.7, 0.6) * 0.085 + noonFactor * vec3(0.0, 0.02, 0.06)
+        vec3 dayRainLightColor   = vec3(0.7, 0.7, 0.6) * 0.3 + noonFactor * vec3(0.0, 0.02, 0.06)
                                 + rainFactor * (drlcRainM + drlcSnowM + drlcDryM);
         vec3 dayRainAmbientColor = vec3(0.2, 0.2, 0.25) * (1.8 + 0.5 * vsBrightness);
 

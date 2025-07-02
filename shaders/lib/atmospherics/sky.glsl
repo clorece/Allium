@@ -49,60 +49,45 @@
     
     vec3 GetSky(float VdotU, float VdotS, float dither, bool doGlare, bool doGround) {
         
-        float skyGradient = 0.1;
-        float rayleighScatteringStrength = 1.7;
+        float skyGradient = 0.09;
+        float lightScatter = 1.6;
         float sunlightInfluence = 0.5;
         float horizonBrightness = 1.0;
     
-
-        // === Constants and parameters ===
         vec3 fogColor = vec3(0.2294, 0.3573, 0.9204);
             fogColor = mix(nightUpSkyColor, fogColor, (sunFactor + sunVisibility) * 0.5);
             fogColor = mix(fogColor, vec3(1.0, 1.0, 1.0), rainFactor * 0.5);
-        float mieSharpness = 3.14 * 25.0;
-        float sunSharpness = 3.14 * 700.0;
+        float mieSharpness = 3.14 * 16.0;
 
-        // === Horizon-based sky color ===
         float horizon = 0.2 / max(VdotU, 0.0001); 
             horizon = clamp(horizon, 0.0, 10.0);
+            //horizon += rainFactor;
         vec3 color = fogColor * horizon;
-        color = mix(nightUpSkyColor * 0.2, color, (sunFactor + sunVisibility) * 0.5);
+        color = mix(nightUpSkyColor * 0.4, color, (sunFactor + sunVisibility) * 0.5);
         color = max(color, 0.0);
 
-        
-        // === Sun influence on color blending ===
         float sunDotUp = clamp(VdotS * 0.5 + 0.5, 0.2, 0.1);
         //float sunDotUp = clamp(VdotS * 0.5 + 0.5, 0.0, 1.0);
         vec3 mixedColor = mix(
             pow(color, sunlightInfluence - color),
-            color / (rayleighScatteringStrength * color + skyGradient - color),
+            color / (lightScatter * color + skyGradient - color),
             sunDotUp + lightColor * horizonBrightness
         );
         color = max(mixedColor, 0.0);
 
-        // === Fade toward zenith ===
         float zenithFalloff = pow(VdotU * 0.5 + 0.5, 1.0);
         color /= 1.0 + zenithFalloff;
 
-        // === Mie scattering near sun ===
         float mieScatter = pow(VdotS * 0.5 + 0.5, mieSharpness);
         color += lightColor * (mieScatter * 0.5);
 
-        //float underscatter = distance(VdotS * 0.5 + 0.5, 1.0);
-        //color = mix(color, vec3(0.0), clamp(underscatter, 0.0, 1.0));
-
-        // === Optional ground fade ===
         if (doGround) {
             float groundFade = smoothstep(0.0, 1.0, pow(1.0 + min(VdotU, 0.0), 2.0));
             color *= groundFade;
         }
 
-        //color *= pow2(pow2(1.1 + min(VdotU, 0.0)));
-
-        // === Optional dither to fix banding ===
         color += (dither - 0.5) / 128.0;
 
-        //color = pow(color, vec3(2.2));
         color *= 1.2;
 
         return color;

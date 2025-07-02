@@ -1,15 +1,35 @@
+#define CLOUD_RENDER_DISTANCE 1536 //[1024 1536 2048]
+#define CLOUD_ALT1 144 //[-96 -92 -88 -84 -80 -76 -72 -68 -64 -60 -56 -52 -48 -44 -40 -36 -32 -28 -24 -20 -16 -10 -8 -4 0 4 8 12 16 20 22 24 28 32 36 40 44 48 52 56 60 64 68 72 76 80 84 88 92 96 100 104 108 112 116 120 124 128 132 136 140 144 148 152 156 160 164 168 172 176 180 184 188 192 196 200 204 208 212 216 220 224 228 232 236 240 244 248 252 256 260 264 268 272 276 280 284 288 292 296 300 304 308 312 316 320 324 328 332 336 340 344 348 352 356 360 364 368 372 376 380 384 388 392 396 400 404 408 412 416 420 424 428 432 436 440 444 448 452 456 460 464 468 472 476 480 484 488 492 496 500 510 520 530 540 550 560 570 580 590 600 610 620 630 640 650 660 670 680 690 700 710 720 730 740 750 760 770 780 790 800]
+#define CLOUD_ALT2 256 //[-96 -92 -88 -84 -80 -76 -72 -68 -64 -60 -56 -52 -48 -44 -40 -36 -32 -28 -24 -20 -16 -10 -8 -4 0 4 8 12 16 20 22 24 28 32 36 40 44 48 52 56 60 64 68 72 76 80 84 88 92 96 100 104 108 112 116 120 124 128 132 136 140 144 148 152 156 160 164 168 172 176 180 184 188 192 196 200 204 208 212 216 220 224 228 232 236 240 244 248 252 256 260 264 268 272 276 280 284 288 292 296 300 304 308 312 316 320 324 328 332 336 340 344 348 352 356 360 364 368 372 376 380 384 388 392 396 400 404 408 412 416 420 424 428 432 436 440 444 448 452 456 460 464 468 472 476 480 484 488 492 496 500 510 520 530 540 550 560 570 580 590 600 610 620 630 640 650 660 670 680 690 700 710 720 730 740 750 760 770 780 790 800]
+
+#define CUMULUS_MULT 0.4 //[0.4 0.45 0.5 0.55 0.6 0.65 0.7]
+    #define CUMULUS_SIZE_MULT 300.0 //[100.0 200.0 300.0 400.0 500.0 600.0 700.0 800.0 900.0]
+        #define CUMULUS_SIZE_MULT_M CUMULUS_SIZE_MULT * 0.01
+    #define CUMULUS_GRANULARITY 0.5 //[0.1 0.2 0.3 0.4 0.475 0.5 0.6 0.7 0.8 0.9 1.0]
+    #define ALTOCUMULUS_MULT 0.04 //[0.4 0.45 0.5 0.55 0.6 0.65 0.7]
+        #define ALTOCUMULUS_SIZE_MULT_M ALTOCUMULUS_SIZE_MULT * 0.01
+    #define ALTOCUMULUS_SIZE_MULT 500.0 //[100.0 200.0 300.0 400.0 500.0 600.0 700.0 800.0 900.0]
+    #define ALTOCUMULUS_GRANULARITY 0.4 //[0.1 0.2 0.3 0.4 0.5 0.55 0.6 0.7 0.8 0.9 1.0]
+
+#ifndef DISTANT_HORIZONS
+    #define CLOUD_BASE_ADD 0.65
+    #define CLOUD_FAR_ADD 0.01
+    #define CLOUD_ABOVE_ADD 0.1
+#else
+    #define CLOUD_BASE_ADD 0.9
+    #define CLOUD_FAR_ADD -0.005
+    #define CLOUD_ABOVE_ADD 0.03
+#endif
+
+const int cloudAlt1i = int(CLOUD_ALT1); // Old setting files can send float values
+const int cloudAlt2i = int(CLOUD_ALT2);
+
+float cloudStretch = 16.0;
+float cloudHeight = cloudStretch * 2.0;
+
 #include "/lib/colors/lightAndAmbientColors.glsl"
 #include "/lib/colors/cloudColors.glsl"
 #include "/lib/atmospherics/sky.glsl"
-
-float InterleavedGradientNoiseForClouds() {
-    float n = 52.9829189 * fract(0.06711056 * gl_FragCoord.x + 0.00583715 * gl_FragCoord.y);
-    #ifdef TAA
-        return fract(n + goldenRatio * mod(float(frameCounter), 3600.0));
-    #else
-        return fract(n);
-    #endif
-}
 
 #if SHADOW_QUALITY > -1
     vec3 GetShadowOnCloudPosition(vec3 tracePos, vec3 cameraPos) {
@@ -33,26 +53,411 @@ float InterleavedGradientNoiseForClouds() {
         return false;
     }
 
-    float shadowOnCloud(vec3 tracePos, vec3 cameraPos, int cloudAltitude, float lowerPlaneAltitude, float higherPlaneAltitude) {
-        const float cloudShadowOffset = 0.01;
+#endif
 
-        vec3 shadowPosition0 = GetShadowOnCloudPosition(tracePos, cameraPos);
-        return shadow2D(shadowtex0, shadowPosition0).z;
+// THIS Volumetric Cloud Code based off of VOLUMETRIC CLOUD by alro at Shadertoy: https://www.shadertoy.com/view/3sffzj
+
+#if CLOUD_UNBOUND_SIZE_MULT != 100
+    #define CLOUD_UNBOUND_SIZE_MULT_M CLOUD_UNBOUND_SIZE_MULT * 0.01
+#endif
+
+float saturate(float x) {
+    return clamp(x, 0.0, 1.0);
+}
+
+float remap(float x, float low1, float high1, float low2, float high2){
+    return low2 + (x - low1) * (high2 - low2) / (high1 - low1);
+}
+
+#define SIZE 8.0
+
+vec3 modulo(vec3 m, float n){
+  return mod(mod(m, n) + n, n);
+}
+
+// https://www.shadertoy.com/view/4djSRW
+vec3 hash(vec3 p3){
+    p3 = modulo(p3, SIZE);
+    p3 = fract(p3 * vec3(0.1031, 0.1030, 0.0973));
+    p3 += dot(p3, p3.yxz + 33.33);
+    return 2.0 * fract((p3.xxy + p3.yxx) * p3.zyx) - 1.0;
+}
+
+float Noise3D(vec3 p) {
+    p.z = fract(p.z) * 24.0;
+    float iz = floor(p.z);
+    float fz = fract(p.z);
+    vec2 a_off = vec2(23.0, 29.0) * (iz) / 24.0;
+    vec2 b_off = vec2(23.0, 29.0) * (iz + 1.0) / 24.0;
+    float a = texture2D(colortex3, p.xy + a_off).r;
+    float b = texture2D(colortex3, p.xy + b_off).r;
+    return mix(a, b, fz);
+}
+
+float worley(vec3 pos, float numCells){
+    vec3 p = pos * numCells;
+    float d = 1.0e10;
+    for (int x = -1; x <= 1; x++){
+        for (int y = -1; y <= 1; y++){
+            for (int z = -1; z <= 1; z++){
+                vec3 tp = floor(p) + vec3(x, y, z);
+                tp = p - tp - (0.5 + 0.5 * hash(mod(tp, numCells)));
+                d = min(d, dot(tp, tp));
+            }
+        }
+    }
+    return 1.0 - saturate(d);
+}
+
+float GetWind() {
+    float wind = 0.0006;
+    #if CLOUD_SPEED_MULT == 100
+        #define CLOUD_SPEED_MULT_M CLOUD_SPEED_MULT * 0.01
+        wind *= syncedTime;
+    #else
+        #define CLOUD_SPEED_MULT_M CLOUD_SPEED_MULT * 0.01
+        wind *= frameTimeCounter * CLOUD_SPEED_MULT_M;
+    #endif
+
+    return wind;
+}
+
+
+vec3 Offset(float wind) {return vec3(wind * 0.7, wind * 0.5, wind * 0.2);}
+
+float GetCumulusCloud(vec3 tracePos, int steps, int cloudAltitude, float lTracePosXZ, float cloudPlayerPosY, float noisePersistance, float mult, float size) {
+    vec3 tracePosM = tracePos.xyz * 0.00016;
+    float noise = 0.0;
+    float currentPersist = 1.0;
+    float total = 0.0;
+
+    float wind = GetWind();
+    
+    tracePosM *= size;
+    wind *= size;
+
+    int sampleCount = 4;
+
+    float persistance = noisePersistance;
+        persistance += (rainFactor * 0.1);
+    float noiseMult = 1.0;
+
+    #ifndef DEFERRED1
+        noiseMult *= 1.2;
+    #endif
+
+    vec3 offset = Offset(wind);
+
+    for (int i = 0; i < sampleCount; i++) {
+        vec3 p = tracePosM * 2.0 + offset;
+        vec3 circle = normalize(p.xyz) * length(p.xyz);
+        p.xyz = mix(p.xyz, circle, 1.0);
+
+        float baseNoise = Noise3D(p);
+        noise += baseNoise * currentPersist * (1.0 + 0.75 + 0.5 + 0.35);
+        //noise *= saturate(remap(noise + rainFactor * 0.25, 1.0 * (baseNoise), 1.0, 0.0, 1.0));
+        //#if CLOUD_QUALITY >= 3
+        //    noise *= saturate(remap(noise * 2.5 + rainFactor * 0.25, 0.6 * (baseNoise), 1.0, 0.0, 1.0));
+        //#endif
+
+        noise *= 1.05;
+        total += currentPersist;
+
+        tracePosM *= 3.0;
+        wind *= 0.2;
+        currentPersist *= persistance;
+    }
+    
+    noise = pow(noise / total, 0.75); // puffier
+    noise *= saturate(noise);
+    
+    noiseMult *= CLOUD_BASE_ADD
+                + CLOUD_FAR_ADD * sqrt(lTracePosXZ + 10.0) // more/less clouds far away
+                + CLOUD_ABOVE_ADD * clamp01(-cloudPlayerPosY / cloudHeight) // more clouds when camera is above them
+                + CLOUD_UNBOUND_RAIN_ADD * (rainFactor * 10.5); // more clouds during rain
+    noise *= noiseMult * mult;
+
+    float threshold = clamp(abs(cloudAltitude - tracePos.y) / cloudStretch, 2.0, 0.0001);
+    threshold = pow2(pow2(pow2(threshold)));
+
+    return noise - (threshold * 0.01 + 0.25);
+
+}
+
+
+float getCloudMap(vec3 p){
+    vec2 uv = 0.5 + 0.5 * (p.xz/(1.8 * 100.0));
+    return texture2D(noisetex, uv).x;
+}
+
+#if CLOUD_QUALITY >= 3
+float GetAltocumulusCloud(vec3 tracePos, int steps, int cloudAltitude, float lTracePosXZ, float cloudPlayerPosY, float noisePersistance, float mult, float size) {
+    vec3 tracePosM = tracePos * 0.00016 * size;
+    tracePosM.y *= 2.0;
+    float noise = 0.0;
+    float total = 0.0;
+
+    float wind = GetWind() * size;
+    vec3 offset = Offset(wind);
+
+    // Use fewer, sharper octaves
+    const int sampleCount = 3;
+    float currentPersist = 1.6;
+    float persistance = noisePersistance + rainFactor * 0.1;
+
+    float cloudMap = getCloudMap(tracePos * 0.025 + offset * 10.0);
+    cloudMap += cloudMap * currentPersist * (1.0 + 0.75 + 0.5 + 0.35);
+
+    for (int i = 0; i < sampleCount; i++) {
+    vec3 p = tracePosM * 6.0 + offset;
+
+    // Add directionally unaligned variation
+    p.z += sin(p.x * 1.25 + i * 17.2) * 1.1;
+    p.x += cos(p.z * 1.0 + i * 9.1) * 1.0;
+    //p.x += 2.0;
+
+    float baseNoise = sin(Noise3D(p)) * 1.25;
+    noise += baseNoise * currentPersist * (1.0 + 0.75 + 0.5 + 0.35 + 0.25 + 0.2 + 0.15);
+
+    noise += smoothstep(0.5, 1.0, baseNoise);
+
+    noise += baseNoise * currentPersist;
+    total += currentPersist;
+
+    tracePosM *= 3.0;
+    currentPersist *= persistance;
+}
+
+    noise += pow(noise / total, 8.0); // stronger puff shaping
+
+    
+    // Apply cloud map mask here
+    //noise *= smoothstep(0.3, 0.7, cloudMap);
+
+    float noiseMult = (CLOUD_BASE_ADD
+                     + CLOUD_FAR_ADD * sqrt(lTracePosXZ + 10.0)
+                     + CLOUD_ABOVE_ADD * clamp01(-cloudPlayerPosY / cloudHeight)
+                     + CLOUD_UNBOUND_RAIN_ADD * rainFactor * 2.5);
+
+    // Apply cloud map mask here
+    return noise * noiseMult * mult * smoothstep(2.5, 16.0, cloudMap);
+}
+#endif
+
+float PhaseHG(float cosTheta, float g) {
+    float g2 = g * g;
+    float denom = 1.0 + g2 - 2.0 * g * cosTheta;
+    return (1.0 - g2) / (4.0 * 3.14159 * pow(denom, 1.5));
+}
+
+float SampleCloudShadow(vec3 tracePos, vec3 lightDir, float dither, int steps, int cloudAltitude, float stretch, float size, bool layer2) {
+    float shadow = 0.0;
+    float density = 0.0;
+    vec3 samplePos = tracePos;
+
+    for (int i = 0; i < steps; ++i) {
+        samplePos += lightDir * 5.0 + dither;
+        if (abs(samplePos.y - cloudAltitude) > stretch * 2.0) break;
+
+        #if CLOUD_QUALITY >= 3
+        if (layer2) {
+            density = clamp(GetAltocumulusCloud(samplePos, steps, cloudAltitude, length(samplePos.xz), samplePos.y - cloudAltitude, 0.6, 1.0, size), 0.0, 1.0);
+        } else {
+            density = clamp(GetCumulusCloud(samplePos, steps, cloudAltitude, length(samplePos.xz), samplePos.y - cloudAltitude, 0.6, 1.0, size), 0.0, 1.0);
+        }
+        #else
+            density = clamp(GetCumulusCloud(samplePos, steps, cloudAltitude, length(samplePos.xz), samplePos.y - cloudAltitude, 0.6, 1.0, size), 0.0, 1.0);
+        #endif
+
+        shadow += density / float(i + 1);
+        //if (shadow < 1e-5) break;
     }
 
-#endif
+    return clamp(shadow / float(steps), 0.0, 1.0);
+}
 
-#ifdef CLOUDS_REIMAGINED
-    #include "/lib/atmospherics/clouds/reimaginedClouds.glsl"
-#endif
-#ifdef CLOUDS_UNBOUND
-    #include "/lib/atmospherics/clouds/unboundClouds.glsl"
-#endif
+vec4 GetVolumetricClouds(int cloudAltitude, 
+    float distanceThreshold, 
+    inout float cloudLinearDepth, 
+    float skyFade, 
+    float skyMult0, 
+    vec3 cameraPos, 
+    vec3 nPlayerPos, 
+    float lViewPosM, 
+    float VdotS, 
+    float VdotU, 
+    float dither, 
+    float noisePersistance, 
+    float mult, 
+    float size,
+    bool layer2
+    ) {
+    vec4 volumetricClouds = vec4(0.0);
+
+    #if CLOUD_QUALITY <= 1
+        return volumetricClouds;
+    #else
+        float higherPlaneAltitude = cloudAltitude + cloudStretch;
+        float lowerPlaneAltitude  = cloudAltitude - cloudStretch;
+
+        float lowerPlaneDistance  = (lowerPlaneAltitude - cameraPos.y) / nPlayerPos.y;
+        float higherPlaneDistance = (higherPlaneAltitude - cameraPos.y) / nPlayerPos.y;
+        float minPlaneDistance = min(lowerPlaneDistance, higherPlaneDistance);
+            minPlaneDistance = max(minPlaneDistance, 0.0);
+        float maxPlaneDistance = max(lowerPlaneDistance, higherPlaneDistance);
+        if (maxPlaneDistance < 0.0) return vec4(0.0);
+        float planeDistanceDif = maxPlaneDistance - minPlaneDistance;
+
+        #ifndef DEFERRED1
+            float stepMult = 32.0;
+        #elif CLOUD_QUALITY == 1
+            float stepMult = 16.0;
+        #elif CLOUD_QUALITY == 2
+            float stepMult = 24.0;
+        #elif CLOUD_QUALITY == 3
+            float stepMult = 16.0;
+        #endif
+        
+        stepMult = stepMult / sqrt(float(size));
+
+        int sampleCount = int(planeDistanceDif / stepMult + dither + 1);
+        int cloudSteps =  6;
+
+        float wind = GetWind();
+        
+        vec3 traceAdd = nPlayerPos;
+            traceAdd *= 16.0;
+
+        vec3 tracePos = cameraPos + minPlaneDistance * nPlayerPos;
+        tracePos += traceAdd * dither;
+
+        float firstHitPos = 0.0;
+        float VdotSM1 = max0(sunVisibility > 0.5 ? VdotS : - VdotS);
+        float VdotSM1M = VdotSM1 * invRainFactor;
+        float VdotSM2 = pow2(VdotSM1) * abs(sunVisibility - 0.5) * 2.0;
+        float VdotSM3 = VdotSM2 * (2.5 + rainFactor) + 1.5 * rainFactor;
+
+        #ifdef FIX_AMD_REFLECTION_CRASH
+            sampleCount = min(sampleCount, 30); //BFARC
+        #endif
+
+        vec3 worldSunVec = normalize(mat3(gbufferModelViewInverse) * lightVec);
+        float cosTheta = dot(worldSunVec, nPlayerPos);
+
+        float sss = PhaseHG(cosTheta, 0.1) * 12.0;
+
+        vec3 sunContribution = cloudLightColor * sss;
+        vec3 skyColor = GetSky(VdotU, VdotS, dither, true, false);
+
+        float cloudNoise = getCloudMap(tracePos);
+
+        for (int i = 0; i < sampleCount; i++) {
+            tracePos += traceAdd;
+
+            if (abs(tracePos.y - cloudAltitude) > cloudStretch * 1.0) break;
+
+            vec3 cloudPlayerPos = tracePos - cameraPos;
+            float lTracePos = length(cloudPlayerPos);
+            float lTracePosXZ = length(cloudPlayerPos.xz);
+            float cloudMult = 2.0;
+
+            if (lTracePosXZ > distanceThreshold) break;
+            if (lTracePos > lViewPosM) {
+                cloudMult = mix(cloudMult, skyMult0, step(0.7, skyFade));
+                if (skyFade < 0.7 && lTracePos > lViewPosM) continue;
+            }
+
+            #if CLOUD_QUALITY >= 3
+            if (layer2) {
+                cloudNoise = GetAltocumulusCloud(tracePos, cloudSteps, cloudAltitude, lTracePosXZ, cloudPlayerPos.y, noisePersistance, mult, size);
+            } else {
+                cloudNoise = GetCumulusCloud(tracePos, cloudSteps, cloudAltitude, lTracePosXZ, cloudPlayerPos.y, noisePersistance, mult, size);
+            }
+            #else
+                cloudNoise = GetCumulusCloud(tracePos, cloudSteps, cloudAltitude, lTracePosXZ, cloudPlayerPos.y, noisePersistance, mult, size);
+            #endif
+
+            float detail = getCloudMap(tracePos * vec3(wind, wind, wind));
+            
+            cloudNoise += saturate(remap(cloudNoise, 0.0001 * (detail), 0.5, 0.1, 1.0));
+
+            if (cloudNoise > 0.3) {
+                #if defined CLOUD_CLOSED_AREA_CHECK && SHADOW_QUALITY > -1
+                    float shadowLength = min(shadowDistance, far) * 0.9166667;
+                    if (shadowLength < lTracePos)
+                    if (GetShadowOnCloud(tracePos, cameraPos, cloudAltitude, lowerPlaneAltitude, higherPlaneAltitude)) {
+                        if (eyeBrightness.y <= 240) continue;
+                    }
+                #endif
+
+                if (firstHitPos < 0.5) {
+                    firstHitPos = lTracePos;
+                    #if CLOUD_QUALITY == 1 && defined DEFERRED1
+                        tracePos.y += 4.0 * (texture2D(noisetex, tracePos.xz * 0.001).r - 0.5);
+                    #endif
+                }
+
+        
+                float opacityFactor = min1(cloudNoise * 8.0);
+                
+                float ambientShadow = 1.1 - clamp(exp((tracePos.y - (cloudAltitude + cloudStretch - 3.0)) / 100.0), 0.0, 1.0);
+                //ambientShadow *= 1.0 + 0.75 * VdotSM3 * (1.0 - opacityFactor);
+
+                float shadow = SampleCloudShadow(tracePos, worldSunVec, dither, cloudSteps, cloudAltitude, cloudStretch, size, layer2);
+
+                float stableDensity = clamp(cloudNoise, 0.7, 0.75);
+
+                if (layer2) shadow *= 0.75;
+
+                float powder      = 1.0 - exp(stableDensity * coeff * 0.33);
+                float lessPowder  = mix(0.6, 1.0, powder);
+                float skyAttenuation = exp(coeff * 0.5 * stableDensity * ambientShadow);
+
+                vec3 colorSample = skyColor * skyAttenuation * lessPowder;
+
+                float sunTerm1 = exp(coeff * shadow + powder);
+                float sunTerm2 = exp(coeff * 0.3 * shadow + 1.5 * powder);
+
+                vec3 directLight = sunContribution * (sunTerm1 + sunTerm2);
+
+                colorSample += directLight;
+
+                float distanceRatio = (distanceThreshold - lTracePosXZ) / distanceThreshold;
+                float cloudDistanceFactor = clamp(distanceRatio, 0.0, 0.8) * 1.25;
+                #ifndef DISTANT_HORIZONS
+                    float cloudFogFactor = cloudDistanceFactor;
+                #else
+                    float cloudFogFactor = clamp(distanceRatio, 0.0, 1.0);
+                #endif
+
+                float skyMult1 = 1.0 - 0.2 * (1.0 - skyFade) * max(sunVisibility2, nightFactor);
+                float skyMult2 = 1.0 - 0.33333 * skyFade;
+
+                if (layer2) {
+                    colorSample = mix(skyColor, colorSample * skyMult1, cloudFogFactor * skyMult2 * 0.5);
+                } else {
+                    colorSample = mix(skyColor, colorSample * skyMult1, cloudFogFactor * skyMult2 * 0.75);
+                }
+
+                colorSample *= pow2(1.0 - maxBlindnessDarkness);
+
+                volumetricClouds.rgb = mix(volumetricClouds.rgb, colorSample, 1.0 - min1(volumetricClouds.a));
+                volumetricClouds.a += opacityFactor * pow((distanceThreshold - lTracePosXZ) / distanceThreshold, 0.5 + 10.0 * pow(abs(VdotSM1M), 90.0)) * cloudMult;
+
+                if (volumetricClouds.a > 0.9) {
+                    volumetricClouds.a = 1.0;
+                    break;
+                }
+            }
+        }
+
+        if (volumetricClouds.a > 0.5) cloudLinearDepth = sqrt(firstHitPos / renderDistance);
+        return volumetricClouds;
+    #endif
+}
 
 vec4 GetClouds(inout float cloudLinearDepth, float skyFade, vec3 cameraPos, vec3 playerPos,
-               float lViewPos, float VdotS, float VdotU, float dither, vec3 auroraBorealis, vec3 nightNebula) {
-    
-    #define CLOUD_RENDER_DISTANCE 1536 //[1024 1536 2048]
+            float lViewPos, float VdotS, float VdotU, float dither, vec3 auroraBorealis, vec3 nightNebula) {
 
     vec4 clouds = vec4(0.0);
 
@@ -66,10 +471,6 @@ vec4 GetClouds(inout float cloudLinearDepth, float skyFade, vec3 cameraPos, vec3
         thresholdF = max(thresholdF, renderDistance);
     #endif
 
-    #ifdef CLOUDS_REIMAGINED
-        cloudAmbientColor *= 1.0 - 0.25 * rainFactor;
-    #endif
-
     vec3 cloudColorMult = vec3(1.0);
     #if CLOUD_R != 100 || CLOUD_G != 100 || CLOUD_B != 100
         cloudColorMult *= vec3(CLOUD_R, CLOUD_G, CLOUD_B) * 0.01;
@@ -77,38 +478,29 @@ vec4 GetClouds(inout float cloudLinearDepth, float skyFade, vec3 cameraPos, vec3
     cloudAmbientColor *= cloudColorMult;
     cloudLightColor *= cloudColorMult * 0.5;
 
-    int maxCloudAlt = max(cloudAlt1i, cloudAlt2i) * 2;
+    int maxCloudAlt = max(cloudAlt1i, cloudAlt2i);
     int minCloudAlt = min(cloudAlt1i, cloudAlt2i);
-    #define CUMULUS_MULT 0.5 //[0.4 0.45 0.5 0.55 0.6 0.65 0.7]
-    #define CUMULUS_SIZE_MULT 800.0 //[100.0 200.0 300.0 400.0 500.0 600.0 700.0 800.0 900.0]
-        #define CUMULUS_SIZE_MULT_M CUMULUS_SIZE_MULT * 0.01
-    #define CUMULUS_GRANULARITY 0.5 //[0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0]
-    #define CUMUMLUS_SHAPING 1.0 //[1.0 1.1 1.2 1.3]
-    #define ALTOCUMULUS_MULT 0.45 //[0.4 0.45 0.5 0.55 0.6 0.65 0.7]
-        #define ALTOCUMULUS_SIZE_MULT_M ALTOCUMULUS_SIZE_MULT * 0.01
-    #define ALTOCUMULUS_SIZE_MULT 400.0 //[100.0 200.0 300.0 400.0 500.0 600.0 700.0 800.0 900.0]
-    #define ALTOCUMULUS_GRANULARITY 0.55 //[0.1 0.2 0.3 0.4 0.5 0.55 0.6 0.7 0.8 0.9 1.0]
-    #define ALTOCUMULUS_SHAPING 1.0 //[1.0 1.005 1.01 1.015 1.02 1.025 1.03 1.035]
 
     #if CLOUD_QUALITY == 3
+
         if (abs(cameraPos.y - minCloudAlt) < abs(cameraPos.y - maxCloudAlt)) {
             clouds = GetVolumetricClouds(minCloudAlt, thresholdF, cloudLinearDepth, skyFade, skyMult0,
-                                            cameraPos, nPlayerPos, lViewPosM, VdotS, VdotU, dither, CUMULUS_GRANULARITY, CUMULUS_MULT, CUMUMLUS_SHAPING, CUMULUS_SIZE_MULT_M, false);
+                                            cameraPos, nPlayerPos, lViewPosM, VdotS, VdotU, dither, CUMULUS_GRANULARITY, CUMULUS_MULT, CUMULUS_SIZE_MULT_M, false);
             if (clouds.a == 0.0) {
-                clouds = GetVolumetricClouds(maxCloudAlt, thresholdF * 2.0, cloudLinearDepth, skyFade, skyMult0,
-                                                cameraPos, nPlayerPos, lViewPosM, VdotS, VdotU, dither, ALTOCUMULUS_GRANULARITY, ALTOCUMULUS_MULT, ALTOCUMULUS_SHAPING, ALTOCUMULUS_SIZE_MULT_M, true);
+            clouds = GetVolumetricClouds(maxCloudAlt, thresholdF, cloudLinearDepth, skyFade, skyMult0,
+                                                cameraPos, nPlayerPos, lViewPosM, VdotS, VdotU, dither, ALTOCUMULUS_GRANULARITY, ALTOCUMULUS_MULT, ALTOCUMULUS_SIZE_MULT_M, true);
             }
-        } /*else {
-            clouds = GetVolumetricClouds(maxCloudAlt, thresholdF * 2.0, cloudLinearDepth, skyFade, skyMult0,
-                                            cameraPos, nPlayerPos, lViewPosM, VdotS, VdotU, dither, ALTOCUMULUS_GRANULARITY, ALTOCUMULUS_MULT, ALTOCUMULUS_SHAPING, ALTOCUMULUS_SIZE_MULT_M, true);
+        } else {
+            clouds = GetVolumetricClouds(maxCloudAlt, thresholdF, cloudLinearDepth, skyFade, skyMult0,
+                                                cameraPos, nPlayerPos, lViewPosM, VdotS, VdotU, dither, ALTOCUMULUS_GRANULARITY, ALTOCUMULUS_MULT, ALTOCUMULUS_SIZE_MULT_M, true);
             if (clouds.a == 0.0) {
-                clouds = GetVolumetricClouds(minCloudAlt, thresholdF, cloudLinearDepth, skyFade, skyMult0,
-                                                cameraPos, nPlayerPos, lViewPosM, VdotS, VdotU, dither, CUMULUS_GRANULARITY, CUMULUS_MULT, CUMUMLUS_SHAPING, CUMULUS_SIZE_MULT_M, false);
+            clouds = GetVolumetricClouds(minCloudAlt, thresholdF, cloudLinearDepth, skyFade, skyMult0,
+                                            cameraPos, nPlayerPos, lViewPosM, VdotS, VdotU, dither, CUMULUS_GRANULARITY, CUMULUS_MULT, CUMULUS_SIZE_MULT_M, false);
             }
-        }*/
+        }
     #else
         clouds = GetVolumetricClouds(minCloudAlt, thresholdF, cloudLinearDepth, skyFade, skyMult0,
-                                        cameraPos, nPlayerPos, lViewPosM, VdotS, VdotU, dither, CUMULUS_GRANULARITY, CUMULUS_MULT, CUMUMLUS_SHAPING, CUMULUS_SIZE_MULT_M, false);
+                                        cameraPos, nPlayerPos, lViewPosM, VdotS, VdotU, dither, CUMULUS_GRANULARITY, CUMULUS_MULT, CUMULUS_SIZE_MULT_M, false);
     #endif
 
     #ifdef ATM_COLOR_MULTS

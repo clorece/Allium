@@ -146,6 +146,24 @@ float GetInverseLinearDepth(float linearDepth) {
 #define GLOBAL_ILLUMINATION 1 //[0 1]
 #define GI_MULT 1.0 //[1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0]
 
+vec2 texelSize = vec2(1.0 / viewWidth, 1.0 / viewHeight);
+
+float rand(float dither, int i) {
+    return fract(dither + float(i)*0.61803398875);
+}
+
+vec3 CosineSampleHemisphere(float x, vec3 n) {
+    float r     = sqrt(x);
+    float theta = 6.2831853 * x;
+    vec3 tangent   = normalize(cross(n, vec3(0,1,0)));
+    vec3 bitangent = cross(n, tangent);
+    return normalize(
+        r*cos(theta)*tangent +
+        r*sin(theta)*bitangent +
+        sqrt(1.0 - x)*n
+    );
+}
+
 #if SSAO_QUALI == 3
     float geometryAwareOcclusion(vec3 surfaceNormal, vec3 viewDir, vec3 hitPos, vec3 viewPos) {
         // Estimate normal of the hit position using screen-space derivatives
@@ -184,6 +202,7 @@ float GetInverseLinearDepth(float linearDepth) {
         float stepSize = AO_RADIUS / float(MAX_STEPS);
 
         for (int i = 0; i < NUM_SAMPLES; ++i) {
+            
             float fi = float(i);
             float rand = fract(fi * 0.73 + dither * SSRAO_STEP);
             float phi = 6.2831 * (rand);
@@ -193,6 +212,9 @@ float GetInverseLinearDepth(float linearDepth) {
             vec3 hemiDir = sinTheta * cos(phi) * tangent +
                         sinTheta * sin(phi) * bitangent +
                         cosTheta * normalM;
+                        
+
+            //vec3 hemiDir = CosineSampleHemisphere(rand(dither, i), normalM);
 
             vec3 rayDir = hemiDir * stepSize;
             vec3 rayPos = viewPos + normalM * 0.01 * color;
@@ -206,7 +228,7 @@ float GetInverseLinearDepth(float linearDepth) {
                 vec2 screenUV = projected.xy / projected.w * 0.5 + 0.5;
                 if (abs(screenUV.x - 0.5) > view.x || abs(screenUV.y - 0.5) > view.y) break;
 
-                float sceneZ = texture(depthtex0, screenUV).r;
+                float sceneZ = texture2D(depthtex1, screenUV).r;
                 vec4 hitClip = vec4(screenUV * 2.0 - 1.0, sceneZ * 2.0 - 1.0, 1.0);
                 vec4 hitPos4 = gbufferProjectionInverse * hitClip;
                 vec3 hitPos = hitPos4.xyz / hitPos4.w;
@@ -314,6 +336,7 @@ vec3 normVec (vec3 vec){
 //Program//
 void main() {
     vec3 color = texelFetch(colortex0, texelCoord, 0).rgb;
+
     // FROM BLISS MUST NOT USE
     //vec3 Indirect_lighting = vec3(0.0);
     //vec3 minLightColor = vec3(1.0);
@@ -419,19 +442,17 @@ void main() {
                 entityOrHand = true;
             }
         }
-                float darkness = 0.5 - dot(color.rgb, vec3(0.2126, 0.7152, 0.0722));
+                float darkness = 0.85 - dot(color.rgb, vec3(0.5126, 1.9152, 0.07152));
 
         color.rgb *= ao;
 
     
-        #ifdef OVERWORLD || END
+        #ifdef OVERWORLD
             #if GLOBAL_ILLUMINATION == 1
                 vec3 skyIndirect = GetSkyIllumination(normalM, viewPos.xyz, nViewPos, dither, skyLightFactor, vec3(0.0), VdotU, VdotS);
-                //vec3 GlobalIllumination(vec3 viewPos, vec3 playerPos, vec3 normal, vec3 viewDir, float skyLightFactor, float linearZ0, float dither) {
-                color.rgb = mix(color.rgb, min(color.rgb, GITonemap(skyIndirect)), darkness);   
-                color.rgb += GITonemap(GlobalIllumination(viewPos.xyz, playerPos, normalM, nViewPos, skyLightFactor, linearZ0, dither));
-                //color.rgb += GITonemap(GI(color.rgb, normalM, viewPos.xyz, depthtex0, dither));
-
+                color.rgb = mix(color.rgb, min(color.rgb, skyIndirect), darkness);   
+                color.rgb += mix(color.rgb, GITonemap(GlobalIllumination(viewPos.xyz, playerPos, normalM, nViewPos, skyLightFactor, linearZ0, dither)), vec3(1.0));
+    
                 // SAMPLE GI FOR BLISS SHADERS, MUST NOT USE
                 //vec3 indirect = GITonemap(applySSRT(Indirect_lighting, minLightColor, viewPos.xyz, dither2, skyLightFactor, entityOrHand));
                 //color.rgb += mix(color.rgb * vec3(0.1), min(color.rgb, indirect), darkness);  

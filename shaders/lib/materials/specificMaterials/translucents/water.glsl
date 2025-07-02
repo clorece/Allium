@@ -87,10 +87,16 @@
             #if WATER_STYLE >= 2
                 waterPosM *= 2.5; wind *= 2.5;
 
-                
-                //vec2 parallaxMult = -0.01 * viewVector.xy / viewVector.z;
+                /*#if WATER_MAT_QUALITY >= 2
+                    vec2 parallaxMult = -0.001 * viewVector.xy / viewVector.z;
+                    for (int i = 0; i < 8; i++) {
+                        waterPosM += parallaxMult * texture2D(noisetex, waterPosM + wind).rg - 0.5;
+                        waterPosM += parallaxMult * texture2D(noisetex, waterPosM * 4.0 - 2.0 * wind).rg - 0.5;
+                        waterPosM += parallaxMult * texture2D(noisetex, waterPosM * 0.25 - 0.5 * wind).rg - 0.5;
+                        waterPosM += parallaxMult * texture2D(noisetex, waterPosM * 0.05 - 0.05 * wind).rg - 0.5;
+                    }
+                #endif*/
 
-                
                 vec2 normalMed = texture2D(gaux4, waterPosM + wind).rg - 0.5;
                 vec2 normalSmall = texture2D(gaux4, waterPosM * 4.0 - 2.0 * wind).rg - 0.5;
                 vec2 normalBig = texture2D(gaux4, waterPosM * 0.25 - 0.5 * wind).rg - 0.5;

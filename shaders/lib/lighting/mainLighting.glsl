@@ -28,81 +28,6 @@
 
 vec3 highlightColor = normalize(pow(lightColor, vec3(0.37))) * (0.3 + 1.5 * sunVisibility2) * (1.0 - 0.85 * rainFactor);
 
-//float farMinusNear = far - near;
-
-/*
-float getDepth(float depth) {
-    return (2.0 * near) / (far + near - depth * far - near);
-}
-
-vec3 cosineHemisphereSample(vec2 Xi){
-    float theta = 2.0 * 3.14159265359 * Xi.y;
-
-    float r = sqrt(Xi.x);
-    float x = r * cos(theta);
-    float y = r * sin(theta);
-
-    return vec3(x, y, sqrt(clamp(1.0 - Xi.x,0.,1.)));
-}
-
-// Raytraced Global Illumination from bliss shaders:
-
-vec2 texelSize = vec2(1.0 / viewWidth, 1.0 / viewHeight);
-
-vec3 raytraceGI(vec3 dir, vec3 pos, float dither, float quality) {
-    vec3 clipPos = toClipSpace(pos);
-    float rayLength = ((pos.z + dir.z * far * sqrt(3.0)) > -near) ? (-near - pos.z) / dir.z : far * sqrt(3.0);
-
-    vec3 direction = normalize(toClipSpace(pos + dir * rayLength) - clipPos);  //convert to clip space
-	direction.xy = normalize(direction.xy);
-
-	//get at which length the ray intersects with the edge of the screen
-	vec3 maxLengths = (step(0.0, direction) - clipPos) / direction;
-	float mult = min(min(maxLengths.x,maxLengths.y),maxLengths.z);
-
-	vec3 stepv = (direction * mult) / quality * vec3(1.0, 1.0 ,1.0);
-	vec3 sPos = clipPos * vec3(1.0, 1.0,1.0) + stepv * dither;
-
-    float minZ = sPos.z;
-	float maxZ = sPos.z;
-
-	for(int i = 0; i < int(quality); i++){
-		if (sPos.x < 0.0 || sPos.y < 0.0 || sPos.z < 0.0 || sPos.x > 1.0 || sPos.y > 1.0 || sPos.z > 1.0) return vec3(1.1);
-
-		float sp = texelFetch(depthtex1,ivec2(sPos.xy / texelSize), 0).r;
-
-
-		float currZ = getDepth(sPos.z);
-		float nextZ = getDepth(sp);
-
-		if(nextZ < currZ && (sp <= max(minZ,maxZ) && sp >= min(minZ,maxZ))) return vec3(sPos.xy / vec2(1.0, 1.0), sp);
-		
-		float biasamount = 0.00005;
-
-		minZ = maxZ - biasamount / currZ;
-		maxZ += stepv.z;
-
-		sPos += stepv;
-	}
-  return vec3(1.1);
-}
-
-#define RAY_COUNT 8
-
-vec3 applySSRT(vec3 viewPos, float dither, vec3 sky) {
-    int nrays = RAY_COUNT;
-
-	vec3 radiance = vec3(0.0);
-	vec3 occlusion = vec3(0.0);
-	vec3 skycontribution = sky;
-
-	vec3 radiance2 = vec3(0.0);
-	vec3 occlusion2 = vec3(0.0);
-
-    return raytraceGI(vec3(0.0), viewPos, dither, 50.0);
-}
-*/
-
 //Lighting//
 void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 viewPos, float lViewPos, vec3 geoNormal, vec3 normalM, float dither,
                 vec3 worldGeoNormal, vec2 lightmap, bool noSmoothLighting, bool noDirectionalShading, bool noVanillaAO,
@@ -614,7 +539,9 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
     #endif
 
     // Scene Lighting Stuff
+   // lightColorM -= rainFactor * 0.3;
     vec3 sceneLighting = lightColorM * shadowMult + ambientColorM * ambientMult;
+    ambientColorM -= rainFactor * 0.5;
 
     float dotSceneLighting = dot(sceneLighting, sceneLighting);
 
