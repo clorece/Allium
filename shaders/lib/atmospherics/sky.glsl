@@ -49,7 +49,7 @@
     
     vec3 GetSky(float VdotU, float VdotS, float dither, bool doGlare, bool doGround) {
         
-        float skyGradient = 0.09;
+        float skyGradient = 0.06;
         float lightScatter = 1.6;
         float sunlightInfluence = 0.5;
         float horizonBrightness = 1.0;
@@ -59,7 +59,7 @@
             fogColor = mix(fogColor, vec3(1.0, 1.0, 1.0), rainFactor * 0.5);
         float mieSharpness = 3.14 * 16.0;
 
-        float horizon = 0.2 / max(VdotU, 0.0001); 
+        float horizon = 0.1 / max(VdotU, 0.0001); 
             horizon = clamp(horizon, 0.0, 10.0);
             //horizon += rainFactor;
         vec3 color = fogColor * horizon;
