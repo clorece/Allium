@@ -178,7 +178,7 @@ float GetCumulusCloud(vec3 tracePos, int steps, int cloudAltitude, float lTraceP
     noise *= noiseMult * mult;
 
     float threshold = clamp(abs(cloudAltitude - tracePos.y) / cloudStretch, 2.0, 0.0001);
-    threshold = pow2(pow2(pow2(threshold)));
+    threshold = pow(clamp(threshold, 0.001, 10.0), 8.0);
 
     return noise - (threshold * 0.01 + 0.25);
 
