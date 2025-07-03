@@ -181,7 +181,7 @@ float GetCumulonimbusCloud(vec3 tracePos, int steps, int cloudAltitude, float lT
         float baseNoise = sin(Noise3D(p));
         noise += baseNoise * currentPersist * (1.0 + 0.75 + 0.5 + 0.35);
 
-        noise *= 1.1;
+        noise *= 1.05;
         total += currentPersist;
 
         tracePosM *= 3.5;
@@ -189,7 +189,7 @@ float GetCumulonimbusCloud(vec3 tracePos, int steps, int cloudAltitude, float lT
         currentPersist *= persistance;
     }
     
-    noise = pow(noise / total, 0.75); // puffier
+    noise = pow(noise / total, 0.5); // puffier
     noise *= saturate(noise);
     
     noiseMult *= CLOUD_BASE_ADD
@@ -278,7 +278,7 @@ float GetAltocumulusCloud(vec3 tracePos, int steps, int cloudAltitude, float lTr
 
     // Use fewer, sharper octaves
     const int sampleCount = 3;
-    float currentPersist = 1.6;
+    float currentPersist = 1.5;
     float persistance = noisePersistance + rainFactor * 0.1;
 
     float cloudMap = getCloudMap(tracePos * 0.025 + offset * 10.0);
