@@ -126,7 +126,7 @@ void main() {
                                  - dot(texture2D(gaux4, cPos1 - vec2(offset, 0.0)).rg, vec2(cMult));
                         caustic -= dot(texture2D(gaux4, cPos2 + vec2(0.0, offset)).rg, vec2(cMult))
                                  - dot(texture2D(gaux4, cPos2 - vec2(0.0, offset)).rg, vec2(cMult));
-                        color1.rgb = vec3(max0(min1(caustic * 0.25 + 0.15)) * 0.5 + 0.01);
+                        color1.rgb = vec3(max0(min1(caustic * 0.25 + 0.5)) * 0.5 + 0.01);
 
                         #if MC_VERSION < 11300
                             color1.rgb *= vec3(0.3, 0.45, 0.9);

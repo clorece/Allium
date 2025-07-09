@@ -9,18 +9,24 @@
     #define CUMULONIMBUS_SIZE_MULT_M CUMULONIMBUS_SIZE_MULT * 0.01
     #define CUMULONIMBUS_GRANULARITY 0.6 //[0.1 0.2 0.3 0.4 0.475 0.5 0.6 0.7 0.8 0.9 1.0]
     #define CUMULONIMBUS_ALT 128  //[-96 -92 -88 -84 -80 -76 -72 -68 -64 -60 -56 -52 -48 -44 -40 -36 -32 -28 -24 -20 -16 -10 -8 -4 0 4 8 12 16 20 22 24 28 32 36 40 44 48 52 56 60 64 68 72 76 80 84 88 92 96 100 104 108 112 116 120 124 128 132 136 140 144 148 152 156 160 164 168 172 176 180 184 188 192 196 200 204 208 212 216 220 224 228 232 236 240 244 248 252 256 260 264 268 272 276 280 284 288 292 296 300 304 308 312 316 320 324 328 332 336 340 344 348 352 356 360 364 368 372 376 380 384 388 392 396 400 404 408 412 416 420 424 428 432 436 440 444 448 452 456 460 464 468 472 476 480 484 488 492 496 500 510 520 530 540 550 560 570 580 590 600 610 620 630 640 650 660 670 680 690 700 710 720 730 740 750 760 770 780 790 800]
+    #define CUMULONIMBUS_HEIGHT 32.0 //[6.0 8.0 10.0 12.0 14.0 16.0 18.0 20.0 24.0 32.0 48.0 54.0 64.0]
+    #define CUMULONIMBUS_COVERAGE 1.0 // [0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0]
 
 #define CUMULUS_MULT 0.5 //[0.4 0.45 0.5 0.55 0.6 0.65 0.7]
     #define CUMULUS_SIZE_MULT 200.0 //[100.0 200.0 300.0 400.0 500.0 600.0 700.0 800.0 900.0]
     #define CUMULUS_SIZE_MULT_M CUMULUS_SIZE_MULT * 0.01
     #define CUMULUS_GRANULARITY 0.4 //[0.1 0.2 0.3 0.4 0.475 0.5 0.6 0.7 0.8 0.9 1.0]
     #define CUMULUS_ALT      212 //[-96 -92 -88 -84 -80 -76 -72 -68 -64 -60 -56 -52 -48 -44 -40 -36 -32 -28 -24 -20 -16 -10 -8 -4 0 4 8 12 16 20 22 24 28 32 36 40 44 48 52 56 60 64 68 72 76 80 84 88 92 96 100 104 108 112 116 120 124 128 132 136 140 144 148 152 156 160 164 168 172 176 180 184 188 192 196 200 204 208 212 216 220 224 228 232 236 240 244 248 252 256 260 264 268 272 276 280 284 288 292 296 300 304 308 312 316 320 324 328 332 336 340 344 348 352 356 360 364 368 372 376 380 384 388 392 396 400 404 408 412 416 420 424 428 432 436 440 444 448 452 456 460 464 468 472 476 480 484 488 492 496 500 510 520 530 540 550 560 570 580 590 600 610 620 630 640 650 660 670 680 690 700 710 720 730 740 750 760 770 780 790 800]
+    #define CUMULUS_HEIGHT 20.0 //[6.0 8.0 10.0 12.0 14.0 16.0 18.0 20.0 24.0 32.0 48.0 54.0 64.0]
+    #define CUMULUS_COVERAGE 1.0 // [0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0]
 
 #define ALTOCUMULUS_MULT 0.3 //[0.2 0.25 0.3 0.35 0.4 0.45 0.5 0.55 0.6 0.65 0.7]
     #define ALTOCUMULUS_SIZE_MULT 200.0 //[100.0 200.0 300.0 400.0 500.0 600.0 700.0 800.0 900.0]
     #define ALTOCUMULUS_SIZE_MULT_M ALTOCUMULUS_SIZE_MULT * 0.01
     #define ALTOCUMULUS_GRANULARITY 0.6 //[0.1 0.2 0.3 0.4 0.5 0.55 0.6 0.7 0.8 0.9 1.0]
     #define ALTOCUMULUS_ALT  300 //[-96 -92 -88 -84 -80 -76 -72 -68 -64 -60 -56 -52 -48 -44 -40 -36 -32 -28 -24 -20 -16 -10 -8 -4 0 4 8 12 16 20 22 24 28 32 36 40 44 48 52 56 60 64 68 72 76 80 84 88 92 96 100 104 108 112 116 120 124 128 132 136 140 144 148 152 156 160 164 168 172 176 180 184 188 192 196 200 204 208 212 216 220 224 228 232 236 240 244 248 252 256 260 264 268 272 276 280 284 288 292 296 300 304 308 312 316 320 324 328 332 336 340 344 348 352 356 360 364 368 372 376 380 384 388 392 396 400 404 408 412 416 420 424 428 432 436 440 444 448 452 456 460 464 468 472 476 480 484 488 492 496 500 510 520 530 540 550 560 570 580 590 600 610 620 630 640 650 660 670 680 690 700 710 720 730 740 750 760 770 780 790 800]
+    #define ALTOCUMULUS_HEIGHT 8.0 //[6.0 8.0 10.0 12.0 14.0 16.0 18.0 20.0 24.0 32.0 48.0 54.0 64.0]
+    #define ALTOCUMULUS_COVERAGE 1.0 // [0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0]
 
 #ifndef DISTANT_HORIZONS
     #define CLOUD_BASE_ADD 0.65
@@ -39,11 +45,11 @@ const int cumulonimbusAlt = int(CUMULONIMBUS_ALT);
 const int cumulusAlt      = int(CUMULUS_ALT);
 const int altocumulusAlt  = int(ALTOCUMULUS_ALT);
 
-float cumulonimbusCloudStretch = 24.0;
+float cumulonimbusCloudStretch = CUMULONIMBUS_HEIGHT;
 float cumulonimbusCloudHeight = cumulonimbusCloudStretch * 2.0;
-float cumulusCloudStretch = 16.0;
+float cumulusCloudStretch = CUMULUS_HEIGHT;
 float cumulusCloudHeight = cumulusCloudStretch * 2.0;
-float altocumulusCloudStretch = 8.0;
+float altocumulusCloudStretch = ALTOCUMULUS_HEIGHT;
 float altocumulusCloudHeight = altocumulusCloudStretch * 2.0;
 
 #include "/lib/colors/lightAndAmbientColors.glsl"
@@ -125,7 +131,7 @@ float Noise3D2(vec3 p) {
 }
 
 float GetWind() {
-    float wind = 0.00085;
+    float wind = 0.00035;
     #if CLOUD_SPEED_MULT == 100
         #define CLOUD_SPEED_MULT_M CLOUD_SPEED_MULT * 0.01
         wind *= syncedTime;
@@ -245,7 +251,7 @@ vec4 GetVolumetricClouds(int cloudAltitude,
         vec3 traceAdd = nPlayerPos;
         if (layer == 1) traceAdd *= 8.0;
         if (layer == 2) traceAdd *= 8.0;
-        if (layer == 3) traceAdd *= 8.0;
+        if (layer == 3) traceAdd *= 14.0;
 
         vec3 tracePos = cameraPos + minPlaneDistance * nPlayerPos;
         tracePos += traceAdd * dither;
@@ -263,9 +269,9 @@ vec4 GetVolumetricClouds(int cloudAltitude,
         vec3 worldSunVec = normalize(mat3(gbufferModelViewInverse) * lightVec);
         float cosTheta = dot(worldSunVec, nPlayerPos);
 
-        float sss = PhaseHG(cosTheta, 0.1) * 12.0;
+        float sss = PhaseHG(cosTheta, 0.1) * 10.0;
 
-        vec3 sunContribution = cloudLightColor * sss;
+        vec3 sunContribution = cloudLightColor;
         vec3 skyColor = GetSky(VdotU, VdotS, dither, true, false);
 
         float cloudNoise = 0.0;
@@ -327,11 +333,11 @@ vec4 GetVolumetricClouds(int cloudAltitude,
                 }
 
                 if (layer == 1) {
-                    shadow = SampleCloudShadow(tracePos, worldSunVec, dither, cloudSteps, cloudAltitude, cumulonimbusCloudStretch, size, 1) * 0.9;
+                    shadow = SampleCloudShadow(tracePos, worldSunVec, dither, cloudSteps, cloudAltitude, cumulonimbusCloudStretch, size, 1) * 0.75;
                 } else if (layer == 2) {
-                    shadow = SampleCloudShadow(tracePos, worldSunVec, dither, cloudSteps, cloudAltitude, cumulusCloudStretch, size, 2) * 0.75;
+                    shadow = SampleCloudShadow(tracePos, worldSunVec, dither, cloudSteps, cloudAltitude, cumulusCloudStretch, size, 2) * 0.5;
                 } else if (layer == 3) {
-                    shadow = SampleCloudShadow(tracePos, worldSunVec, dither, cloudSteps, cloudAltitude, altocumulusCloudStretch, size, 3) * 0.5;
+                    shadow = SampleCloudShadow(tracePos, worldSunVec, dither, cloudSteps, cloudAltitude, altocumulusCloudStretch, size, 3) * 0.4;
                 }
 
                 float stableDensity = clamp(cloudNoise, 0.7, 0.75);
@@ -346,7 +352,6 @@ vec4 GetVolumetricClouds(int cloudAltitude,
                 float sunTerm2 = exp(coeff * 0.3 * shadow + 1.0 * powder);
 
                 vec3 directLight = sunContribution * (sunTerm1 + sunTerm2);
-
                 colorSample += directLight;
 
                 float distanceRatio = (distanceThreshold - lTracePosXZ) / distanceThreshold;
@@ -363,7 +368,7 @@ vec4 GetVolumetricClouds(int cloudAltitude,
                 if (layer == 2) {
                     colorSample = mix(skyColor, colorSample * skyMult1, cloudFogFactor * skyMult2 * 0.6);
                 } else if (layer == 1) {
-                    colorSample = mix(skyColor, colorSample * skyMult1, cloudFogFactor * skyMult2 * 0.9);
+                    colorSample = mix(skyColor, colorSample * skyMult1, cloudFogFactor * skyMult2 * 0.7);
                 } else if (layer == 3) {
                     colorSample = mix(skyColor, colorSample * skyMult1, cloudFogFactor * skyMult2 * 0.5);
                 }

@@ -3,7 +3,7 @@
 
     const float cloudNarrowness = 0.05;
 
-    // Thanks to SixthSurge
+        // Thanks to SixthSurge
     vec2 GetRoundedCloudCoord(vec2 pos, float cloudRoundness) { // cloudRoundness is meant to be 0.125 for clouds and 0.35 for cloud shadows
         vec2 coord = pos.xy + 0.5;
         vec2 signCoord = sign(coord);

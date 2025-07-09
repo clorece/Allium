@@ -7,7 +7,7 @@ float GetCumulonimbusDetail(vec3 pos, vec3 offset, float persistence) {
     const int detailSamples = 3;
 
     for (int i = 0; i < detailSamples; ++i) {
-        float n = Noise3D(p * (4.0 + float(i) * 1.5) + offset * 1.5);
+        float n = Noise3D(p * (6.0 + float(i) * 1.5) + offset * 1.5);
         detail += n * amplitude;
         total += amplitude;
         amplitude *= persistence;
@@ -22,11 +22,11 @@ float GetCumulonimbusCloud(vec3 tracePos, int steps, int cloudAltitude, float lT
     tracePosM.y *= 0.5;
 
     vec3 offset = Offset(GetWind() * size);
-        offset *= 0.1;
+        offset *= 1.0;
 
-    float base = Noise3D(tracePosM * 1.0 + offset) * 12.0;
-        base += Noise3D(tracePosM * 3.0 + offset) * 6.0;
-        base /= 9.0;
+    float base = Noise3D(tracePosM * 0.75 + offset) * 12.0;
+        base += Noise3D(tracePosM * 1.0 + offset) * 6.0;
+        base /= 9.0 / CUMULONIMBUS_COVERAGE;
         base += rainFactor * 0.4;
     float detail = GetCumulonimbusDetail(tracePosM, offset, noisePersistence);
 

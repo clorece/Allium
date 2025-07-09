@@ -26,7 +26,7 @@ float GetAltocumulusCloud(vec3 tracePos, int steps, int cloudAltitude, float lTr
 
     float base = Noise3D2(tracePosM * 1.5 + offset) * 12.0;
         base += Noise3D2(tracePosM * 2.0 + offset) * 6.0;
-        base /= 1.75;
+        base /= 1.75 / ALTOCUMULUS_COVERAGE;
         //base += rainFactor * 1.75;
     float detail = GetAltocumulusDetail(tracePosM, offset, noisePersistence);
 

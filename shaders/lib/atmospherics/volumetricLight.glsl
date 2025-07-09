@@ -153,6 +153,8 @@ vec4 GetVolumetricLight(inout vec3 color, inout float vlFactor, vec3 translucent
 
         float shadowSample = 1.0;
         vec3 vlSample = vec3(1.0);
+
+
         #if SHADOW_QUALITY > -1
             wpos = shadowModelView * wpos;
             wpos = shadowProjection * wpos;

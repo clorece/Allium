@@ -53,6 +53,8 @@
         float lightScatter = 1.6;
         float sunlightInfluence = 0.5;
         float horizonBrightness = 1.0;
+
+        float VdotSML = sunVisibility > 0.5 ? VdotS : -VdotS;
     
         vec3 fogColor = vec3(0.2294, 0.3573, 0.9204);
             fogColor = mix(nightUpSkyColor, fogColor, (sunFactor + sunVisibility) * 0.5);
