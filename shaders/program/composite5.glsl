@@ -5,7 +5,6 @@
 //Common//
 #include "/lib/common.glsl"
 
-#define HDR_MONITOR
 
 // Query's AWESOME LUTs
 // LUT DEFAULT SHOULD BE 2

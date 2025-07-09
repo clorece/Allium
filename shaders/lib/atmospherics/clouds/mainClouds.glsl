@@ -167,7 +167,7 @@ float SampleCloudShadow(vec3 tracePos, vec3 lightDir, float dither, int steps, i
     vec3 samplePos = tracePos;
 
     for (int i = 0; i < steps; ++i) {
-        samplePos += lightDir * 2.5;
+        samplePos += lightDir * 1.5;
         if (abs(samplePos.y - cloudAltitude) > stretch * 2.0) break;
 
         if (layer == 2) {
