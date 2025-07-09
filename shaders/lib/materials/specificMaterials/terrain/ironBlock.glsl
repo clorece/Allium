@@ -3,7 +3,7 @@
 #else
     smoothnessG = pow2(color.r);
 #endif
-highlightMult = smoothnessG * 1.5;
+highlightMult = smoothnessG * 1.0;
 smoothnessD = smoothnessG;
 materialMask = OSIEBCA; // Intense Fresnel
 
