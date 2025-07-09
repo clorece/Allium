@@ -1,3 +1,4 @@
+#define WATER_PARALLAX
 
 // ============================== Step 1: Color Prep ============================== //
 #if MC_VERSION >= 11300
@@ -84,30 +85,39 @@
 
             #define WATER_BUMPINESS_M WATER_BUMPINESS * 0.8
 
-            #if WATER_STYLE >= 2
-                waterPosM *= 2.5; wind *= 2.5;
+           #if WATER_STYLE >= 2
+            #ifdef WATER_PARALLAX
+                const int steps = 8;
+                const float stepSize = inversesqrt(float(steps));
+                const float maxHeight = 0.1;
 
-                /*#if WATER_MAT_QUALITY >= 2
-                    vec2 parallaxMult = -0.001 * viewVector.xy / viewVector.z;
-                    for (int i = 0; i < 8; i++) {
-                        waterPosM += parallaxMult * texture2D(noisetex, waterPosM + wind).rg - 0.5;
-                        waterPosM += parallaxMult * texture2D(noisetex, waterPosM * 4.0 - 2.0 * wind).rg - 0.5;
-                        waterPosM += parallaxMult * texture2D(noisetex, waterPosM * 0.25 - 0.5 * wind).rg - 0.5;
-                        waterPosM += parallaxMult * texture2D(noisetex, waterPosM * 0.05 - 0.05 * wind).rg - 0.5;
-                    }
-                #endif*/
+                vec3 rayStep = stepSize * vec3(viewVector.xy, viewVector.z) / viewVector.z;
 
-                vec2 normalMed = texture2D(gaux4, waterPosM + wind).rg - 0.5;
-                vec2 normalSmall = texture2D(gaux4, waterPosM * 4.0 - 2.0 * wind).rg - 0.5;
-                vec2 normalBig = texture2D(gaux4, waterPosM * 0.25 - 0.5 * wind).rg - 0.5;
-                     normalBig += texture2D(gaux4, waterPosM * 0.05 - 0.05 * wind).rg - 0.5;
+                vec3 offset = vec3(0.0);
+                float height = 0.0;
 
-                normalMap.xy = normalMed * WATER_BUMP_MED + normalSmall * WATER_BUMP_SMALL + normalBig * WATER_BUMP_BIG;
-                normalMap.xy *= 6.0 * (1.0 - 0.7 * fresnel) * WATER_BUMPINESS_M;
+                for (int i = 0; i < steps; ++i) {
+                    vec2 sampleUV = waterPosM + offset.xy;
+                    height = dot(GetCombinedWaves(sampleUV, wind), vec2(0.5)) * maxHeight;
+
+                    if (offset.z >= height) break;
+
+                    float dz = height - offset.z;
+                    offset += rayStep * dz;
+                }
+
+                height = dot(GetCombinedWaves(waterPosM + offset.xy, wind), vec2(0.5)) * maxHeight;
+                float dz = height - offset.z;
+                offset.xy += rayStep.xy * dz;
+
+                waterPosM += offset.xy;
             #endif
 
-            normalMap.xy *= 0.03 * lmCoordM.y + 0.01;
+            vec2 finalNormal = GetCombinedWaves(waterPosM, wind);
+            normalMap.xy = finalNormal * 6.0 * (1.0 - 0.7 * fresnel) * WATER_BUMPINESS_M;
+        #endif
 
+            normalMap.xy *= 0.03 * lmCoordM.y + 0.01;
             normalMap.z = sqrt(1.0 - (pow2(normalMap.x) + pow2(normalMap.y)));
             normalM = clamp(normalize(normalMap * tbnMatrix), vec3(-1.0), vec3(1.0));
 
@@ -244,7 +254,7 @@
             smoothnessG = 1.0;
 
             const float WATER_BUMPINESS_M2 = min(WATER_BUMP_MED * WATER_BUMP_SMALL * WATER_BUMPINESS * 0.65, 1.0);
-            vec2 lightNormalP = WATER_BUMPINESS_M2 * (normalMed + 0.5 * normalSmall);
+            vec2 lightNormalP = WATER_BUMPINESS_M2 * ((texture2D(gaux4, waterPosM + wind).rg - 0.5) + 0.5 * (texture2D(gaux4, waterPosM * 2.0 - 2.0 * wind).rg - 0.5));
             vec3 lightNormal = normalize(vec3(lightNormalP, 1.0) * tbnMatrix);
             highlightMult = dot(lightNormal, lightVec);
             highlightMult = max0(highlightMult) / max(dot(normal, lightVec), 0.17);

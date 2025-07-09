@@ -88,7 +88,7 @@ void DoWave_Lava(inout vec3 playerPos, vec3 worldPos) {
         float wave  = sin(lavaWaveTime * 0.7 + worldPos.x * 0.14 + worldPos.z * 0.07);
               wave -= sin(lavaWaveTime * 0.5 + worldPos.x * 0.05 + worldPos.z * 0.10);
 
-        playerPos.y += wave * 0.1;
+        playerPos.y += wave * 0.025;
     }
 }
 

@@ -207,11 +207,10 @@ vec4 GetReflection(vec3 normalM, vec3 viewPos, vec3 nViewPos, vec3 playerPos, fl
                             vec3 RPlayerPos = normalize(mat3(gbufferModelViewInverse) * nViewPosR);
                             float RlViewPos = 100000.0;
 
-                            vec4 clouds = GetClouds(cloudLinearDepth, skyFade, RCameraPos, RPlayerPos,
+                            vec4 clouds = GetCloudReflection(cloudLinearDepth, skyFade, RCameraPos, RPlayerPos,
                                                     RlViewPos, RVdotS, RVdotU, dither, auroraBorealis, nightNebula);
 
-                            skyReflection = mix(skyReflection, clouds.rgb, clouds.a);
-                            //skyReflection += clouds.rgb;
+                            //skyReflection = mix(skyReflection, clouds.rgb, clouds.a);
                         #endif
                     #endif
 

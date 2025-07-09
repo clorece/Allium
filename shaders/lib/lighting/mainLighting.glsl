@@ -59,7 +59,7 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
 
     float lightmapY2 = pow2(lightmap.y);
     float lightmapYM = smoothstep1(lightmap.y);
-    float subsurfaceHighlight = 9.0;
+    float subsurfaceHighlight = 0.0;
     float ambientMult = 1.0;
     vec3 lightColorM = lightColor;
     vec3 ambientColorM = ambientColor;
@@ -147,7 +147,6 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
                     float shadowLength = min(shadowDistance, far) * 0.9166667 - lViewPos; //consistent08JJ622
 
                     if (shadowLength > 0.000001) {
-                        
                         #if SHADOW_SMOOTHING == 4 || SHADOW_QUALITY == 0
                             float offset = 0.00098;
                         #elif SHADOW_SMOOTHING == 3
@@ -225,42 +224,32 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
 
                         bool leaves = false;
                         #ifdef GBUFFERS_TERRAIN
-                        
                             if (subsurfaceMode == 0) {
                                 #if defined PERPENDICULAR_TWEAKS && defined SIDE_SHADOWING
                                     offset *= 1.0 + pow2(absNdotN);
                                 #endif
                             } else {
                                 float VdotL = dot(nViewPos, lightVec);
-                                float lightFactor = pow(max(VdotL, 0.0), 1.0) * float(isEyeInWater == 0);
+                                float lightFactor = pow(max(VdotL, 0.0), 10.0) * float(isEyeInWater == 0);
                                 if (subsurfaceMode == 1) {
-
-                                    subsurfaceHighlight = lightFactor * 0.8;
-                                    //return;
-                                    
-                                    offset = 0.00050235 * lightmapYM + 0.0009765;
+                                    offset = 0.0010235 * lightmapYM + 0.0009765;
                                     shadowPos.z -= max(NdotL * 0.0001, 0.0) * lightmapYM;
                                     subsurfaceHighlight = lightFactor * 0.8;
                                     #ifndef SHADOW_FILTERING
                                         shadowPos.z -= 0.0002;
                                     #endif
-                                    
                                 } else if (subsurfaceMode == 2) {
-                                    subsurfaceHighlight = lightFactor * 0.6;
-                                    
                                     leaves = true;
-                                    offset = 0.001235 * lightmapYM + 0.0009765;
+                                    offset = 0.0005235 * lightmapYM + 0.0009765;
                                     shadowPos.z -= 0.000175 * lightmapYM;
-                                    //subsurfaceHighlight = lightFactor * 0.6;
+                                    subsurfaceHighlight = lightFactor * 0.6;
                                     #ifndef SHADOW_FILTERING
                                         NdotLM = mix(NdotL, NdotLM, 0.5);
                                     #endif
-                                    
                                 } else {
                                     
                                 }
                             }
-                            
                         #endif
 
                         shadowMult *= GetShadow(shadowPos, lViewPos, lightmap.y, offset, leaves);
@@ -294,9 +283,42 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
                     worldPos = playerPosPixelated + cameraPosition;
                 #endif
 
+                #ifdef CLOUDS_REIMAGINED
+                    float EdotL = dot(eastVec, lightVec);
+                    float EdotLM = tan(acos(EdotL));
+
+                    #if SUN_ANGLE != 0
+                        float NVdotLM = tan(acos(dot(northVec, lightVec)));
+                    #endif
+
+                    float distToCloudLayer1 = cloudAlt1i - worldPos.y;
+                    vec3 cloudOffset1 = vec3(distToCloudLayer1 / EdotLM, 0.0, 0.0);
+                    #if SUN_ANGLE != 0
+                        cloudOffset1.z += distToCloudLayer1 / NVdotLM;
+                    #endif
+                    vec2 cloudPos1 = GetRoundedCloudCoord(ModifyTracePos(worldPos + cloudOffset1, cloudAlt1i).xz, 0.35);
+                    float cloudSample = texture2D(gaux4, cloudPos1).b;
+                    cloudSample *= clamp(distToCloudLayer1 * 0.1, 0.0, 1.0);
+
+                    #ifdef DOUBLE_REIM_CLOUDS
+                        float distToCloudLayer2 = cloudAlt2i - worldPos.y;
+                        vec3 cloudOffset2 = vec3(distToCloudLayer2 / EdotLM, 0.0, 0.0);
+                        #if SUN_ANGLE != 0
+                            cloudOffset2.z += distToCloudLayer2 / NVdotLM;
+                        #endif
+                        vec2 cloudPos2 = GetRoundedCloudCoord(ModifyTracePos(worldPos + cloudOffset2, cloudAlt2i).xz, 0.35);
+                        float cloudSample2 = texture2D(gaux4, cloudPos2).b;
+                        cloudSample2 *= clamp(distToCloudLayer2 * 0.1, 0.0, 1.0);
+
+                        cloudSample = 1.0 - (1.0 - cloudSample) * (1.0 - cloudSample2);
+                    #endif
+
+                    cloudSample *= sqrt3(1.0 - abs(EdotL));
+                    shadowMult *= 1.0 - 0.85 * cloudSample;
+                #else
                     vec2 csPos = worldPos.xz + worldPos.y * 0.25;
                     csPos.x += syncedTime;
-                    csPos *= 0.000002 * 200.0;
+                    csPos *= 0.000002 * CLOUD_UNBOUND_SIZE_MULT;
 
                     vec2 shadowoffsets[8] = vec2[8](
                         vec2( 0.0   , 1.0   ),
@@ -313,6 +335,7 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
                     }
 
                     shadowMult *= smoothstep1(pow2(min1(cloudSample * 0.2)));
+                #endif
             #endif
 
             shadowMult *= max(NdotLM * shadowTime, 0.0);
@@ -341,8 +364,6 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
 
     #if COLORED_LIGHTING_INTERNAL > 0
         // Prepare
-        vec3 worldPos = playerPos + cameraPosition;
-
         #if defined GBUFFERS_HAND
             vec3 voxelPos = SceneToVoxel(vec3(0.0));
         #elif defined GBUFFERS_TEXTURED
@@ -364,8 +385,6 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
         // Add extra articial light for blocks that request it
         lightmapXM = max(lightmapXM, mix(lightmapXM, 10.0, lightVolume.a));
         specialLighting *= 1.0 + 50.0 * lightVolume.a;
-
-        //specialLighting += coneTraceVoxelGI(worldPos, normal) * 50.0;
 
         // Color Balance
         specialLighting = lightmapXM * 0.13 * DoLuminanceCorrection(specialLighting + blocklightCol * 0.05);
@@ -391,7 +410,6 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
         //if (heldItemId != 40000 || heldItemId2 == 40000) // Hold spider eye to see vanilla lighting
         blockLighting = mix(specialLighting, blockLighting, blocklightDecider);
         //if (heldItemId2 == 40000 && heldItemId != 40000) blockLighting = lightVolume.rgb; // Hold spider eye to see light volume
-
     #endif
 
     #if HELD_LIGHTING_MODE >= 1
@@ -539,21 +557,14 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
     #endif
 
     // Scene Lighting Stuff
-   // lightColorM -= rainFactor * 0.3;
     vec3 sceneLighting = lightColorM * shadowMult + ambientColorM * ambientMult;
-    ambientColorM -= rainFactor * 0.5;
-
     float dotSceneLighting = dot(sceneLighting, sceneLighting);
 
     #if HELD_LIGHTING_MODE >= 1
         blockLighting = sqrt(pow2(blockLighting) + heldLighting);
     #endif
 
-    #ifdef GLOBAL_ILLUMINATION
-        blockLighting *= XLIGHT_I * 2.0;
-    #else
-        blockLighting *= XLIGHT_I * 2.0;
-    #endif
+    blockLighting *= XLIGHT_I;
 
     #ifdef LIGHT_COLOR_MULTS
         sceneLighting *= lightColorMult;
@@ -603,7 +614,6 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
 
     // Light Highlight
     vec3 lightHighlight = vec3(0.0);
-    /*
     #ifdef LIGHT_HIGHLIGHT
         float specularHighlight = GGX(normalM, nViewPos, lightVec, NdotLmax0, smoothnessG);
 
@@ -619,17 +629,9 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
             lightHighlight *= pow2(moonPhaseInfluence);
         #endif
     #endif
-    */
 
     // Mix Colors
-    #ifndef GLOBAL_ILLUMINATION
-        vec3 finalDiffuse = pow2(directionShade * vanillaAO) * (blockLighting + pow2(sceneLighting) + minLighting) + pow2(emission * 0.1);
-    #else
-        vec3 finalDiffuse = pow2(directionShade * vanillaAO) * (blockLighting + pow2(sceneLighting) + minLighting) + pow2(emission);
-    #endif
-
-    //finalDiffuse += applySSRT(viewPos, dither);
-
+    vec3 finalDiffuse = pow2(directionShade * vanillaAO) * (blockLighting + pow2(sceneLighting) + minLighting) + pow2(emission * 0.5);
     finalDiffuse = sqrt(max(finalDiffuse, vec3(0.0))); // sqrt() for a bit more realistic light mix, max() to prevent NaNs
 
     // Apply Lighting
@@ -637,3 +639,5 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
     color.rgb += lightHighlight;
     color.rgb *= pow2(1.0 - darknessLightFactor);
 }
+
+// pow2(emission * 0.25)

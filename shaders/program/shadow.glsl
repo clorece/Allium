@@ -46,6 +46,20 @@ void DoNaturalShadowCalculation(inout vec4 color1, inout vec4 color2) {
     #include "/lib/materials/materialMethods/connectedGlass.glsl"
 #endif
 
+vec2 GetCombinedWaves(vec2 uv, vec2 wind) {
+    uv *= 1.0;
+    wind *= 1.5;
+    //uv *= 1.5;
+    vec2 nMed   = texture2D(gaux4, uv + 0.25 * wind).rg - 0.5;
+    vec2 nSmall = texture2D(gaux4, uv * 2.0 - 2.0 * wind).rg - 0.5;
+    vec2 nBig   = texture2D(gaux4, uv * 0.35 + 0.65 * wind).rg - 0.5;
+    //    nBig  += texture2D(gaux4, uv * 0.15 - 0.8 * wind).rg - 0.5;
+
+    return nMed * WATER_BUMP_MED +
+            nSmall * WATER_BUMP_SMALL +
+            nBig * WATER_BUMP_BIG;
+}
+
 //Program//
 void main() {
     vec4 color1 = texture2DLod(tex, texCoord, 0); // Shadow Color
@@ -101,18 +115,18 @@ void main() {
                     #else
                         #define WATER_SPEED_MULT_M WATER_SPEED_MULT * 0.035
                         vec2 causticWind = vec2(frameTimeCounter * WATER_SPEED_MULT_M, 0.0);
-                        vec2 cPos1 = worldPos.xz * 0.10 - causticWind;
+                        causticWind *= 0.25;
+                        vec2 cPos1 = -worldPos.xz * 0.010 - causticWind;
                         vec2 cPos2 = worldPos.xz * 0.05 + causticWind;
 
-                        float cMult = 14.0;
+                        float cMult = 17.0;
                         float offset = 0.001;
-
                         float caustic = 0.0;
                         caustic += dot(texture2D(gaux4, cPos1 + vec2(offset, 0.0)).rg, vec2(cMult))
                                  - dot(texture2D(gaux4, cPos1 - vec2(offset, 0.0)).rg, vec2(cMult));
                         caustic -= dot(texture2D(gaux4, cPos2 + vec2(0.0, offset)).rg, vec2(cMult))
                                  - dot(texture2D(gaux4, cPos2 - vec2(0.0, offset)).rg, vec2(cMult));
-                        color1.rgb = vec3(max0(min1(caustic * 0.8 + 0.35)) * 0.5 + 0.01);
+                        color1.rgb = vec3(max0(min1(caustic * 0.25 + 0.15)) * 0.5 + 0.01);
 
                         #if MC_VERSION < 11300
                             color1.rgb *= vec3(0.3, 0.45, 0.9);

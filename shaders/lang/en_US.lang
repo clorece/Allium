@@ -344,11 +344,6 @@ option.CLOUD_SHADOWS.comment=Enables shadows that are cast from the clouds. §e[
 option.CLOUD_CLOSED_AREA_CHECK=Prevent Clouds in Interiors
 option.CLOUD_CLOSED_AREA_CHECK.comment=Does additional checks to remove clouds in closed areas. §e[*]§r This setting only works with the "Reimagined" or "Unbound" Cloud Styles. §e[*]§r This setting will be disabled if "Real-Time Shadows" is OFF.
 
-option.CLOUD_ALT1=Cumulus Cloud Altitude
-option.CLOUD_ALT1.comment=Determines the world height which the cumulus clouds will appear at.
-option.CLOUD_ALT1=Altocumulus Cloud Altitude
-option.CLOUD_ALT1.comment=Determines the world height which the altocumulus clouds will appear at.
-
 option.CLOUD_SPEED_MULT=Cloud Speed
 option.CLOUD_SPEED_MULT.comment=Determines how fast the clouds are going to move. "Synced to World Time" setting uses Minecraft world time to advance the cloud positions; this allows for clouds to appear the same between players in the same server. §e[*]§r This setting only works with the "Reimagined" or "Unbound" Cloud Styles.
 value.CLOUD_SPEED_MULT.100=Synced to World Time
@@ -900,6 +895,9 @@ option.WAVING_LILY_PAD.comment=Adds movement to lily pads and frogspawn to simul
 option.WAVING_WATER_VERTEX=Waving Water Height
 option.WAVING_WATER_VERTEX.comment=Adds movement to water position to simulate wind. §e[*]§r This option is not related to the "Water Wave Strength" setting.
 
+option.WATER_PARALLAX=Water Parallax
+option.WATER_PARALLAX.comment=Adds parallax to water normals, giving it a 3D appearance.
+
 option.WAVING_RAIN=Waving Rain/Snow Texture
 option.WAVING_RAIN.comment=Adds movement to falling rain and snow textures to make it look more dynamic.
 
@@ -1116,35 +1114,49 @@ screen.INDIRECT_LIGHTING=Indirect Lighting
     option.GLOBAL_ILLUMINATION_VIEW=GI View
         option.GLOBAL_ILLUMINATION_VIEW.comment=Debug View for Global Illumination
 
+screen.CUMULONIMBUS_SETTINGS=Cumulonimbus Clouds
+    screen.CUMULONIMBUS_SETTINGS.comment=Cumulonimbus cloud settings (Lower level of clouds).
+    option.CUMULONIMBUS=Cumulonimbus Toggle
+    option.CUMULONIMBUS_MULT=Cumulonimbus Cloud Amount
+    option.CUMULONIMBUS_SIZE_MULT=Cumulonimbus Size Amount
+    option.CUMULONIMBUS_GRANULARITY=Cumulonimbus Granularity
+        option.CUMULONIMBUS_GRANULARITY.comment=Adjusts how granular the clouds can be.
+    option.CUMULONIMBUS_ALT=Cumulonimbus Cloud Altitude
+        option.CUMULONIMBUS_ALT.comment=Determines the world height which the cumulonimbus clouds will appear at.
+
 screen.CUMULUS_SETTINGS=Cumulus Clouds
     screen.CUMULUS_SETTINGS.comment=Cumulus cloud settings (Lower level of clouds).
+    option.CUMULUS=Cumulus Toggle
     option.CUMULUS_MULT=Cumulus Cloud Amount
     option.CUMULUS_SIZE_MULT=Cumulus Size Amount
     option.CUMULUS_GRANULARITY=Cumulus Granularity
-        option.CUMULUS_GRANULARITY.comment=How granular the clouds can be.
-    option.CUMUMLUS_SHAPING=Cloud Shaping
-        option.CUMUMLUS_SHAPING.comment=Cloud will appear more like a streak the higher the value.
+        option.CUMULUS_GRANULARITY.comment=Adjusts how granular the clouds can be.
+    option.CUMULUS_ALT=Cumulus Cloud Altitude
+        option.CUMULUS_ALT.comment=Determines the world height which the cumulus clouds will appear at.
+
 screen.ALTOCUMULUS_SETTINGS=Altocumulus Clouds
     screen.ALTOCUMULUS_SETTINGS.comment=Altocumulus Cloud settings (Higher level of clouds).
+    option.ALTOCUMULUS=Altocumulus Toggle
     option.ALTOCUMULUS_MULT=Altocumulus Cloud Amount
     option.ALTOCUMULUS_SIZE_MULT=Altocumulus Size Amount
     option.ALTOCUMULUS_GRANULARITY=Altocumulus Granularity
-        option.ALTOCUMULUS_GRANULARITY.comment=How granular the clouds can be.
-    option.ALTOCUMULUS_SHAPING=Cloud Shaping
-        option.ALTOCUMULUS_SHAPING.comment=Cloud will appear more like a streak the higher the value.
+        option.ALTOCUMULUS_GRANULARITY.comment=Adjusts how granular the clouds can be.
+    option.ALTOCUMULUS_ALT=Altocumulus Cloud Altitude
+        option.ALTOCUMULUS_ALT.comment=Determines the world height which the altocumulus clouds will appear at.
+
 option.CLOUD_RENDER_DISTANCE=Cloud Render Distance
-    option.CLOUD_RENDER_DISTANCE.comment=Render distance for both cloud layers
+    option.CLOUD_RENDER_DISTANCE.comment=Render distance for both cloud layers.
         value.CLOUD_RENDER_DISTANCE.1024=§aNear
         value.CLOUD_RENDER_DISTANCE.1536=§eFar
         value.CLOUD_RENDER_DISTANCE.2048=§cFarthest
 
 option.WHITE_WORLD=White World
-    option.WHITE_WORLD.comment=Ambient Occlusion Debug View
+    option.WHITE_WORLD.comment=Ambient Occlusion Debug View.
 
 option.SKY_ILLUMINATION=Skylight Illumination
-    option.SKY_ILLUMINATION.comment=Skylight only global illumination. Detail Quality must be set to 3 or more to enable
+    option.SKY_ILLUMINATION.comment=Skylight only global illumination. Detail Quality must be set to 3 or more to enable.
 option.SKY_ILLUMINATION_VIEW=SI Debug
-    option.SKY_ILLUMINATION_VIEW.comment=Debug View for Skylight Illumination
+    option.SKY_ILLUMINATION_VIEW.comment=Debug View for Skylight Illumination.
 
 option.FILM_GRAIN_I=Film Grain Strength
     option.FILM_GRAIN_I.comment=Adds or changes the intensity of camera noise throughout the image. Set slider to 0 to turn off.

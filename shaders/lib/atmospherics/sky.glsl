@@ -49,7 +49,7 @@
     
     vec3 GetSky(float VdotU, float VdotS, float dither, bool doGlare, bool doGround) {
         
-        float skyGradient = 0.06;
+        float skyGradient = 0.05;
         float lightScatter = 1.6;
         float sunlightInfluence = 0.5;
         float horizonBrightness = 1.0;
