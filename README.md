@@ -44,7 +44,10 @@ If you happen to find any bugs, please report them on the [Github Page](https://
 
 ## Screenshots
 <img width="1080" height="1440" alt="2025-07-10_13 40 51" src="https://github.com/user-attachments/assets/5c6fa0c7-ef96-4ed6-98d7-08eb9f46dee6" />
+
 <img width="2560" height="1080" alt="2025-07-10_13 41 18" src="https://github.com/user-attachments/assets/8a776694-6bc7-416e-94be-13404f9ccc0a" />
+
 <img width="2560" height="1080" alt="2025-07-10_14 13 41" src="https://github.com/user-attachments/assets/aa989686-d292-4571-bd50-0db276e77aea" />
+
 <img width="1440" height="1440" alt="2025-07-10_14 19 03" src="https://github.com/user-attachments/assets/62736d9e-257e-4b42-aa71-b102a858c3fb" />
 
