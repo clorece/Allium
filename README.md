@@ -1,6 +1,6 @@
 # Allium Shaders
 
-![2025-06-15_13 27 04](https://github.com/user-attachments/assets/749f16d9-bddd-4576-9905-ee302f729e8e)
+<img width="2560" height="1440" alt="2025-07-12_01 31 43" src="https://github.com/user-attachments/assets/51b0abe5-20b4-4e26-bf10-d419b0f57fd0" />
 
 
 Shader development has always been a huge interest of mine ever since I first laid eyes on Chocapic13's Shaders. I decided to drop that passion for a while since I wasn't really learning anything. After experiencing the wonderful work of art, Complementary, I wanted to try and challenge myself and create something I truly love while persevering through college.
@@ -27,7 +27,7 @@ Once downloaded, install the ZIP file as you would any shader pack—no need to 
 ### Release
 Releases are stable, polished versions that result from thorough testing and iteration during the in-development phase. These builds are intended for general use and offer the best balance of visuals, performance, and reliability.
 
-There are no official releases yet...
+Release Versions are located to the right of the Github.
 
 ## Bug Reporting
 If you happen to find any bugs, please report them on the [Github Page](https://github.com/clorece/Allium) by:
@@ -43,14 +43,8 @@ If you happen to find any bugs, please report them on the [Github Page](https://
 - Upload log files if applicable.
 
 ## Screenshots
-All Screenshots are taken on the Minecraft Map by Elarion by Zhyrr.
+<img width="1080" height="1440" alt="2025-07-10_13 40 51" src="https://github.com/user-attachments/assets/5c6fa0c7-ef96-4ed6-98d7-08eb9f46dee6" />
+<img width="2560" height="1080" alt="2025-07-10_13 41 18" src="https://github.com/user-attachments/assets/8a776694-6bc7-416e-94be-13404f9ccc0a" />
+<img width="2560" height="1080" alt="2025-07-10_14 13 41" src="https://github.com/user-attachments/assets/aa989686-d292-4571-bd50-0db276e77aea" />
+<img width="1440" height="1440" alt="2025-07-10_14 19 03" src="https://github.com/user-attachments/assets/62736d9e-257e-4b42-aa71-b102a858c3fb" />
 
-![2025-06-10_21 23 46](https://github.com/user-attachments/assets/1dd5a5a3-4a18-43c8-8c90-bb938f4b7671)
-![2025-06-10_22 01 18](https://github.com/user-attachments/assets/a8ae927d-56ba-411c-ba23-ea2a34bbdd06)
-![2025-06-10_21 52 55](https://github.com/user-attachments/assets/971265d6-f1f3-4021-88bc-5d43efdd77fc)
-![2025-06-10_21 56 04](https://github.com/user-attachments/assets/47f1a430-be44-467a-a575-a73b46d1aac8)
-![2025-06-10_22 03 56](https://github.com/user-attachments/assets/908e9e9c-4248-45a0-9384-837c1f849499)
-![2025-06-10_22 16 54](https://github.com/user-attachments/assets/67ab3082-948f-4648-b359-05c64717c918)
-![2025-06-10_22 20 16](https://github.com/user-attachments/assets/aef824fa-22b0-403e-8ce3-32178004ee6d)
-![2025-06-10_22 24 27](https://github.com/user-attachments/assets/95ed8994-6b8e-476a-b660-24c6bf0bacc5)
-![2025-06-10_22 08 38](https://github.com/user-attachments/assets/822371d4-397e-4985-8a25-2d279d93552e)
