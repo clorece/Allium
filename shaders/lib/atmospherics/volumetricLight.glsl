@@ -215,8 +215,8 @@ vec4 GetVolumetricLight(inout vec3 color, inout float vlFactor, vec3 translucent
 
         #ifdef OVERWORLD
             #ifdef LIGHTSHAFT_SMOKE
-                vec3 smokePos = 0.0015 * (playerPos + cameraPosition);
-                vec3 smokeWind = frameTimeCounter * vec3(0.002, 0.001, 0.0);
+                vec3 smokePos = 0.00015 * (playerPos + cameraPosition);
+                vec3 smokeWind = frameTimeCounter * vec3(0.002, 0.001, 0.0) * 0.1;
                 float smoke = 0.65 * Noise3D(smokePos + smokeWind)
                             + 0.25 * Noise3D((smokePos - smokeWind) * 3.0)
                             + 0.10 * Noise3D((smokePos + smokeWind) * 9.0);
@@ -229,7 +229,7 @@ vec4 GetVolumetricLight(inout vec3 color, inout float vlFactor, vec3 translucent
         #endif
     }
 
-    float smokeVisibility = 5.0; // how much more visible the smoke noise patterns, without strengthening light shaft strength
+    float smokeVisibility = 10.0; // how much more visible the smoke noise patterns, without strengthening light shaft strength
 
     #ifdef LIGHTSHAFT_SMOKE
         volumetricLight += pow(totalSmoke / volumetricLight.a, min(smokeVisibility - volumetricLight.a, smokeVisibility));
