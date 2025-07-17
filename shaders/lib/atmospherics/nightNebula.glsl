@@ -65,40 +65,33 @@ float fbmCloud2(vec2 inCoord, float minimum){
 }
 
 vec3 GetNightNebula(vec3 viewPos, float VdotU, float VdotS) {
-    float nebulaFactor = pow2(max0(VdotU) * min1(nightFactor * 2.0)) * invRainFactor - maxBlindnessDarkness;
-    if (nebulaFactor < 0.001) return vec3(0.0);
+    float nebulaFactor = 1.0;
+
     vec2 UV = GetStarCoord(viewPos, 0.75);
-    float TIME = syncedTime * 0.003 + 15.0;
+    vec2 centeredUV = UV - 0.25;
 
-    float timescaled = TIME * timescale;
-    vec2 zoomUV2
-    = vec2(zoomScale * UV.x + 0.03  * timescaled * sinM(0.07 * timescaled), zoomScale * UV.y + 0.03  * timescaled * cosM(0.06 * timescaled));
-    vec2 zoomUV3
-    = vec2(zoomScale * UV.x + 0.027 * timescaled * sinM(0.07 * timescaled), zoomScale * UV.y + 0.025 * timescaled * cosM(0.06 * timescaled));
-    vec2 zoomUV4
-    = vec2(zoomScale * UV.x + 0.021 * timescaled * sinM(0.07 * timescaled), zoomScale * UV.y + 0.021 * timescaled * cosM(0.07 * timescaled));
-    float tide = 0.25 * sinM(TIME);
-    float tide2 = 0.26 * cosM(0.3 * TIME);
+    float band = smoothstep(0.3, 0.0, abs(centeredUV.y));
 
-    vec4 nebulaTexture = vec4(vec3(0.0), 0.5 + 0.2 * sinM(0.23 * TIME + UV.x - UV.y));
-    nebulaTexture += fbmCloud2(zoomUV3 * 2.0, 0.24 + tide) * CLOUD1_COL;
-    nebulaTexture += fbmCloud(zoomUV2 * 2.0, 0.33 - tide) * CLOUD2_COL;
-    nebulaTexture = mix(nebulaTexture, CLOUD3_COL, fbmCloud(vec2(0.9 * zoomUV4.x, 0.9 * zoomUV4.y), 0.25 + tide2));
+    float noise = fbmCloud2(UV * 12.0, 0.2);
 
-    nebulaFactor *= 1.0 - pow2(pow2(pow2(abs(VdotS))));
-    nebulaTexture.a *= min1(pow2(pow2(nebulaTexture.a))) * nebulaFactor;
+    vec3 baseColor = mix(vec3(0.3, 0.4, 0.6), vec3(0.9, 0.7, 0.4), smoothstep(-0.5, 0.5, centeredUV.x));
+
+    float brightness = noise * band * 0.2;
+
+    float dust = smoothstep(0.05, 0.01, abs(centeredUV.y + 0.1 * sin(centeredUV.x * 10.0)));
+    float dustMask = mix(1.0, 0.3, dust);
+    
+    brightness *= dustMask;
+
+    float bandCenterFalloff = smoothstep(0.15, 0.0, abs(centeredUV.y));
+
     float starFactor = 1024.0;
     vec2 starCoord = floor(UV * 0.75 * starFactor) / starFactor;
-    nebulaTexture.rgb *= 1.5 + 10.0 * pow2(max0(GetStarNoise(starCoord) * GetStarNoise(starCoord + 0.1) - 0.6));
+    float starNoise = GetStarNoise(starCoord) * GetStarNoise(starCoord + 0.1);
 
-    #if NIGHT_NEBULA_I != 100
-        #define NIGHT_NEBULA_IM NIGHT_NEBULA_I * 0.01
-        nebulaTexture.a *= NIGHT_NEBULA_IM;
-    #endif
+    float starIntensity = bandCenterFalloff * max(0.0, starNoise - 0.6) * 1.0;
+    brightness += starIntensity;
+    brightness *= nightFactor;
 
-    #ifdef ATM_COLOR_MULTS
-        nebulaTexture.rgb *= sqrtAtmColorMult; // C72380KD - Reduced atmColorMult impact on some things
-    #endif
-
-    return max(nebulaTexture.rgb * nebulaTexture.a, vec3(0.0));
+    return baseColor * brightness;
 }

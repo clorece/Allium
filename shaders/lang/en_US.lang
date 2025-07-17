@@ -540,11 +540,11 @@ value.AURORA_CONDITION.2=Snowy Biome
 value.AURORA_CONDITION.3=Full Moon in Snowy Biome
 value.AURORA_CONDITION.4=Full Moon or Snowy Biome
 
-option.NIGHT_NEBULA=Night Nebulae
-option.NIGHT_NEBULA.comment=Adds galaxy-style nebulae to the night sky. The nebulae are procedurally generated, and they will look different every night. §c[-]§r This effect can impact performance. §e[*]§r "Nebulae" isn't a typo, it's the plural of Nebula =D
+option.NIGHT_NEBULA=Milky Way
+option.NIGHT_NEBULA.comment=Adds Milky Way Galaxy in the night sky.
 
-option.NIGHT_NEBULA_I=Night Nebula Brightness
-option.NIGHT_NEBULA_I.comment=Adjusts the brightness of Night Nebulae.
+option.NIGHT_NEBULA_I=Milky Way Brightness
+option.NIGHT_NEBULA_I.comment=Adjusts the brightness of the Milky Way
 
 option.RAIN_STYLE=Rainy Weather Style
 option.RAIN_STYLE.comment=Determines the style of rainy weather.
