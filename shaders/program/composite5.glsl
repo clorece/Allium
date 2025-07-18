@@ -210,6 +210,7 @@ void EndLookup(inout vec3 color) {
         vec3 bloom = texture2D(colortex3, bloomCoord / rescale).rgb;
         bloom *= bloom;
         bloom *= bloom;
+        
         return bloom * 128.0;
     }
 
@@ -265,7 +266,7 @@ void main() {
     // Calculate noise and sample texture
     float noise = (fract(sin(dot(texCoord * sin(frameTimeCounter) + 1.0, vec2(12.9898,78.233) * 2.0)) * 43758.5453));
 
-    #define FILM_GRAIN_I 3  // [0 1 2 3 4 5 6 7 8 9 10]
+    #define FILM_GRAIN_I 2  // [0 1 2 3 4 5 6 7 8 9 10]
     
     color.rgb *= max(noise, 1.0 - (float(FILM_GRAIN_I) / 10));
     color *= 1.3;

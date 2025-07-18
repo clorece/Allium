@@ -61,6 +61,18 @@ vec2 view = vec2(viewWidth, viewHeight);
     #include "/lib/util/spaceConversion.glsl"
 //#endif
 
+vec2 GetCombinedWaves(vec2 uv, vec2 wind) {
+    uv *= 1.0;
+    wind *= 0.9;
+    vec2 nMed   = texture2D(gaux4, uv + 0.25 * wind).gg - 0.5;
+    vec2 nSmall = texture2D(gaux4, uv * 2.0 - 2.0 * wind).gg - 0.5;
+    vec2 nBig   = texture2D(gaux4, uv * 0.35 + 0.65 * wind).gg - 0.5;
+
+    return nMed * WATER_BUMP_MED +
+            nSmall * WATER_BUMP_SMALL +
+            nBig * WATER_BUMP_BIG;
+}
+
 #if WATER_MAT_QUALITY >= 3
     #include "/lib/materials/materialMethods/refraction.glsl"
 #endif

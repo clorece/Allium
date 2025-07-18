@@ -7,7 +7,7 @@ float GetCumulonimbusDetail(vec3 pos, vec3 offset, float persistence) {
     const int detailSamples = 3;
 
     for (int i = 0; i < detailSamples; ++i) {
-        float n = Noise3D(p * (6.0 + float(i) * 1.5) + offset * 1.5);
+        float n = Noise3D(p * (4.5 + float(i) * 1.5) + offset * 1.5);
         detail += n * amplitude;
         total += amplitude;
         amplitude *= persistence;
@@ -27,7 +27,7 @@ float GetCumulonimbusCloud(vec3 tracePos, int steps, int cloudAltitude, float lT
     float base = Noise3D(tracePosM * 0.75 + offset) * 12.0;
         base += Noise3D(tracePosM * 1.0 + offset) * 6.0;
         base /= 9.0 / CUMULONIMBUS_COVERAGE;
-        base += rainFactor * 0.4;
+        base += rainFactor * 0.7;
     float detail = GetCumulonimbusDetail(tracePosM, offset, noisePersistence);
 
     float combined = mix(base, base * detail, 0.5);
@@ -35,7 +35,7 @@ float GetCumulonimbusCloud(vec3 tracePos, int steps, int cloudAltitude, float lT
     combined = pow(combined, 1.35) * mult;
 
     float fadeTop    = smoothstep(0.0, cumulonimbusCloudStretch, cloudAltitude + cumulonimbusCloudStretch - tracePos.y);
-    float fadeBottom = smoothstep(cumulonimbusCloudStretch * 0.86, cumulonimbusCloudStretch, tracePos.y - (cloudAltitude - cumulonimbusCloudStretch)); // reposition lower boundary to cut off bottom of cloud to make it flatter
+    float fadeBottom = smoothstep(cumulonimbusCloudStretch * 0.85, cumulonimbusCloudStretch, tracePos.y - (cloudAltitude - cumulonimbusCloudStretch)); // reposition lower boundary to cut off bottom of cloud to make it flatter
     float verticalFade = fadeTop * fadeBottom;
     
     return combined * verticalFade;

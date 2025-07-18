@@ -127,14 +127,14 @@ void main() {
                     //color.rgb = pow(color.rgb, vec3(2.2)) * 0.3;
                 } else {
                     float horizonFactor = GetHorizonFactor(-SdotU);
-                    sunMoonMixer = max0(sunMoonMixer - 0.25) * 1.33333 * horizonFactor;
+                    sunMoonMixer = max0(sunMoonMixer - 0.0001) * 1.33333 * horizonFactor;
 
                     starCoord = GetStarCoord(viewPos.xyz, 1.0) * 0.5 + 0.617;
                     float moonNoise = texture2D(noisetex, starCoord).g
                                     + texture2D(noisetex, starCoord * 2.5).g * 0.7
                                     + texture2D(noisetex, starCoord * 5.0).g * 0.5;
-                    moonNoise = max0(moonNoise - 0.75) * 1.7;
-                    vec3 moonColor = vec3(0.38, 0.4, 0.5) * (1.2 - (0.2 + 0.2 * sqrt1(nightFactor)) * moonNoise) * 0.75;
+                    moonNoise = max0(moonNoise - 0.75) * 1.5;
+                    vec3 moonColor = vec3(0.5) * (1.2 - (0.2 + 0.2 * sqrt1(nightFactor)) * moonNoise) * 0.75;
 
                     if (moonPhase >= 1) {
                         float moonPhaseOffset = 0.0;

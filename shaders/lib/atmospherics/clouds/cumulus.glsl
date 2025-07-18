@@ -30,7 +30,7 @@ float GetCumulusCloud(vec3 tracePos, int steps, int cloudAltitude, float lTraceP
         //base += rainFactor * 1.75;
     float detail = GetCumulusDetail(tracePosM, offset, noisePersistence);
 
-    float combined = mix(base, base * detail, 0.7);
+    float combined = mix(base, base * detail, 0.6);
     combined = max(combined - 0.2, 0.0);
     combined = pow(combined, 1.35) * mult;
 

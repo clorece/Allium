@@ -8,41 +8,43 @@
         #include "/lib/atmospherics/fog/caveFactor.glsl"
     #endif
 
-    float starNoise(vec2 uv) {
-        // Simple hash function for star brightness
-        float n = fract(sin(dot(uv * 1000.0, vec2(12.9898,78.233))) * 43758.5453);
-        return n;
-    }
+    vec3 GetLowQualitySky(float VdotU, float VdotS, float dither, bool doGlare, bool doGround) {
+        // Prepare variables
+        float VdotUmax0 = max(VdotU, 0.0);
+        float VdotUmax0M = 1.0 - pow2(VdotUmax0);
 
-    float starfield(vec3 dir) {
-        // Convert direction to spherical coords (theta, phi)
-        float theta = acos(dir.y);             // vertical angle 0..pi
-        float phi = atan(dir.z, dir.x);        // horizontal angle -pi..pi
+        // Prepare colors
+        vec3 upColor = mix(nightUpSkyColor, dayUpSkyColor, sunFactor);
+        vec3 middleColor = mix(nightMiddleSkyColor, dayMiddleSkyColor, sunFactor);
 
-        // Map angles to [0,1]
-        vec2 uv = vec2(phi / (2.0 * 3.14159) + 0.5, theta / 3.14159);
+        // Mix the colors
+            // Set sky gradient
+            float VdotUM1 = pow2(1.0 - VdotUmax0);
+                  VdotUM1 = mix(VdotUM1, 1.0, rainFactor2 * 0.2);
+            vec3 finalSky = mix(upColor, middleColor, VdotUM1);
 
-        // Sample star noise
-        float n = starNoise(uv * 1000.0);  // scale to get high freq
+            // Add sunset color
+            float VdotUM2 = pow2(1.0 - abs(VdotU));
+                  VdotUM2 *= invNoonFactor * sunFactor * (0.8 + 0.2 * VdotS);
+            finalSky = mix(finalSky, sunsetDownSkyColorP * (shadowTime * 0.6 + 0.2), VdotUM2 * invRainFactor);
+        //
 
-        // Threshold to create sparse stars
-        float stars = step(0.995, n) * smoothstep(0.995, 1.0, n);
+        // Sky Ground
+        finalSky *= pow2(pow2(1.0 + min(VdotU, 0.0)));
 
-        return stars;
-    }
+        // Apply Underwater Fog
+        if (isEyeInWater == 1)
+            finalSky = mix(finalSky, waterFogColor, VdotUmax0M);
 
-    float milkyWayBand(vec3 dir) {
-        // Define the axis of the band (you can tweak this)
-        vec3 bandAxis = normalize(vec3(0.0, 0.3, 1.0)); 
+        // Sun/Moon Glare
+        finalSky *= 1.0 + mix(nightFactor, 0.5 + 0.7 * noonFactor, VdotS * 0.5 + 0.5) * pow2(pow2(pow2(VdotS)));
 
-        // Angle between view direction and band axis
-        float angle = dot(dir, bandAxis);
+        #ifdef CAVE_FOG
+            // Apply Cave Fog
+            finalSky = mix(finalSky, caveFogColor, GetCaveFactor() * VdotUmax0M);
+        #endif
 
-        // Create a narrow band around angle ~1 (aligned with band axis)
-        float band = smoothstep(0.2, 0.0, abs(angle - 1.0));
-
-        // Modulate brightness of the band
-        return band * 0.15; // tweak brightness as needed
+        return finalSky;
     }
     
     vec3 GetSky(float VdotU, float VdotS, float dither, bool doGlare, bool doGround) {
@@ -81,15 +83,26 @@
 
         vec3 nightSky = mix(nightHorizonColor, nightZenithColor, pow(upness, 0.4));
 
-        float starIntensity = smoothstep(0.995, 1.0, fract(sin(dot(vec2(dither, dither * 1.37), vec2(12.9898,78.233))) * 43758.5453));
-        nightSky += vec3(starIntensity * 0.1);
-
         vec3 color = mix(dayColorScatter, nightSky, nightFactor);
 
         if (doGround) {
             float groundFade = smoothstep(0.0, 1.0, pow(1.0 + min(VdotU, 0.0), 2.0));
             color *= groundFade;
         }
+
+        // === SUN & MOON GLARE ===
+        if (doGlare) {
+            float sunGlare = pow(max(VdotS, 0.0), 100.0); // tight falloff for sun
+            color += lightColor * sunGlare * 1.0;
+
+            // Assume moonDirection is a normalized vec3 and viewDir is also normalized
+            float moonIntensity = 0.2;
+            float moonGlare = pow(max(-VdotS, 0.0), 25.0);
+            vec3 moonColor = vec3(1.0, 0.85, 0.65); // soft bluish moon
+            color += moonColor * moonGlare * moonIntensity * nightFactor;
+        }
+
+        color += (dither - 0.5) / 128.0;
 
         color *= 1.1;
 

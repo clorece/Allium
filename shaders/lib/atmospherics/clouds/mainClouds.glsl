@@ -5,9 +5,9 @@
 #define CLOUD_RENDER_DISTANCE 1536 //[1024 1536 2048]
 
 #define CUMULONIMBUS_MULT 0.6 //[0.4 0.45 0.5 0.55 0.6 0.65 0.7]
-    #define CUMULONIMBUS_SIZE_MULT 200.0 //[100.0 200.0 300.0 400.0 500.0 600.0 700.0 800.0 900.0]
+    #define CUMULONIMBUS_SIZE_MULT 250.0 //[100.0 200.0 300.0 400.0 500.0 600.0 700.0 800.0 900.0]
     #define CUMULONIMBUS_SIZE_MULT_M CUMULONIMBUS_SIZE_MULT * 0.01
-    #define CUMULONIMBUS_GRANULARITY 0.3 //[0.1 0.2 0.3 0.4 0.475 0.5 0.6 0.7 0.8 0.9 1.0]
+    #define CUMULONIMBUS_GRANULARITY 0.4 //[0.1 0.2 0.3 0.4 0.475 0.5 0.6 0.7 0.8 0.9 1.0]
     #define CUMULONIMBUS_ALT 144  //[-96 -92 -88 -84 -80 -76 -72 -68 -64 -60 -56 -52 -48 -44 -40 -36 -32 -28 -24 -20 -16 -10 -8 -4 0 4 8 12 16 20 22 24 28 32 36 40 44 48 52 56 60 64 68 72 76 80 84 88 92 96 100 104 108 112 116 120 124 128 132 136 140 144 148 152 156 160 164 168 172 176 180 184 188 192 196 200 204 208 212 216 220 224 228 232 236 240 244 248 252 256 260 264 268 272 276 280 284 288 292 296 300 304 308 312 316 320 324 328 332 336 340 344 348 352 356 360 364 368 372 376 380 384 388 392 396 400 404 408 412 416 420 424 428 432 436 440 444 448 452 456 460 464 468 472 476 480 484 488 492 496 500 510 520 530 540 550 560 570 580 590 600 610 620 630 640 650 660 670 680 690 700 710 720 730 740 750 760 770 780 790 800]
     #define CUMULONIMBUS_HEIGHT 32.0 //[6.0 8.0 10.0 12.0 14.0 16.0 18.0 20.0 24.0 32.0 48.0 54.0 64.0]
     #define CUMULONIMBUS_COVERAGE 0.9 // [0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0]
@@ -16,9 +16,9 @@
     #define CUMULUS_SIZE_MULT 300.0 //[100.0 200.0 300.0 400.0 500.0 600.0 700.0 800.0 900.0]
     #define CUMULUS_SIZE_MULT_M CUMULUS_SIZE_MULT * 0.01
     #define CUMULUS_GRANULARITY 0.4 //[0.1 0.2 0.3 0.4 0.475 0.5 0.6 0.7 0.8 0.9 1.0]
-    #define CUMULUS_ALT      256 //[-96 -92 -88 -84 -80 -76 -72 -68 -64 -60 -56 -52 -48 -44 -40 -36 -32 -28 -24 -20 -16 -10 -8 -4 0 4 8 12 16 20 22 24 28 32 36 40 44 48 52 56 60 64 68 72 76 80 84 88 92 96 100 104 108 112 116 120 124 128 132 136 140 144 148 152 156 160 164 168 172 176 180 184 188 192 196 200 204 208 212 216 220 224 228 232 236 240 244 248 252 256 260 264 268 272 276 280 284 288 292 296 300 304 308 312 316 320 324 328 332 336 340 344 348 352 356 360 364 368 372 376 380 384 388 392 396 400 404 408 412 416 420 424 428 432 436 440 444 448 452 456 460 464 468 472 476 480 484 488 492 496 500 510 520 530 540 550 560 570 580 590 600 610 620 630 640 650 660 670 680 690 700 710 720 730 740 750 760 770 780 790 800]
+    #define CUMULUS_ALT      192 //[-96 -92 -88 -84 -80 -76 -72 -68 -64 -60 -56 -52 -48 -44 -40 -36 -32 -28 -24 -20 -16 -10 -8 -4 0 4 8 12 16 20 22 24 28 32 36 40 44 48 52 56 60 64 68 72 76 80 84 88 92 96 100 104 108 112 116 120 124 128 132 136 140 144 148 152 156 160 164 168 172 176 180 184 188 192 196 200 204 208 212 216 220 224 228 232 236 240 244 248 252 256 260 264 268 272 276 280 284 288 292 296 300 304 308 312 316 320 324 328 332 336 340 344 348 352 356 360 364 368 372 376 380 384 388 392 396 400 404 408 412 416 420 424 428 432 436 440 444 448 452 456 460 464 468 472 476 480 484 488 492 496 500 510 520 530 540 550 560 570 580 590 600 610 620 630 640 650 660 670 680 690 700 710 720 730 740 750 760 770 780 790 800]
     #define CUMULUS_HEIGHT 20.0 //[6.0 8.0 10.0 12.0 14.0 16.0 18.0 20.0 24.0 32.0 48.0 54.0 64.0]
-    #define CUMULUS_COVERAGE 1.0 // [0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0]
+    #define CUMULUS_COVERAGE 0.8 // [0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0]
 
 #define ALTOCUMULUS_MULT 0.3 //[0.2 0.25 0.3 0.35 0.4 0.45 0.5 0.55 0.6 0.65 0.7]
     #define ALTOCUMULUS_SIZE_MULT 200.0 //[100.0 200.0 300.0 400.0 500.0 600.0 700.0 800.0 900.0]
@@ -320,16 +320,16 @@ vec4 GetVolumetricClouds(int cloudAltitude,
                 }
 
         
-                float opacityFactor = min1(cloudNoise * 32.0);
+                float opacityFactor = min1(cloudNoise * 8.0);
                 float ambientShadow = 0.0;
                 float shadow = 0.0;
 
                 if (layer == 1) {
-                    ambientShadow = 1.0 - clamp(exp((tracePos.y - (cloudAltitude + cumulonimbusCloudStretch - 3.0)) / 100.0), 0.0, 1.0);
+                    ambientShadow = 0.85 - clamp(exp((tracePos.y - (cloudAltitude + cumulonimbusCloudStretch - 3.0)) / 100.0), 0.0, 1.0);
                 } else if (layer == 2) {
-                    ambientShadow = 1.1 - clamp(exp((tracePos.y - (cloudAltitude + cumulusCloudStretch - 3.0)) / 100.0), 0.0, 1.0);
+                    ambientShadow = 0.9 - clamp(exp((tracePos.y - (cloudAltitude + cumulusCloudStretch - 3.0)) / 100.0), 0.0, 1.0);
                 } else if (layer == 3) {
-                    ambientShadow = 1.1 - clamp(exp((tracePos.y - (cloudAltitude + altocumulusCloudStretch - 3.0)) / 100.0), 0.0, 1.0);
+                    ambientShadow = 1.0 - clamp(exp((tracePos.y - (cloudAltitude + altocumulusCloudStretch - 3.0)) / 100.0), 0.0, 1.0);
                 }
 
                 if (layer == 1) {
@@ -340,7 +340,7 @@ vec4 GetVolumetricClouds(int cloudAltitude,
                     shadow = SampleCloudShadow(tracePos, worldSunVec, dither, cloudSteps, cloudAltitude, altocumulusCloudStretch, size, 3) * 0.4;
                 }
 
-                float stableDensity = clamp(cloudNoise, 0.7, 0.75);
+                float stableDensity = clamp(cloudNoise, 0.7, 1.0);
 
                 float powder      = 1.0 - exp(stableDensity * coeff * 0.33);
                 float lessPowder  = mix(0.6, 1.0, powder);
@@ -376,10 +376,10 @@ vec4 GetVolumetricClouds(int cloudAltitude,
                 colorSample *= pow2(1.0 - maxBlindnessDarkness);
 
                 volumetricClouds.rgb = mix(volumetricClouds.rgb, colorSample, 1.0 - min1(volumetricClouds.a));
-                volumetricClouds.a += opacityFactor * pow((distanceThreshold - lTracePosXZ) / distanceThreshold, 0.5 + 10.0 * pow(abs(VdotSM1M), 90.0)) * cloudMult;
+                volumetricClouds.a += opacityFactor * pow(cloudDistanceFactor, 0.5 + 10.0 * pow(abs(VdotSM1M), 90.0)) * cloudMult;
 
                 if (volumetricClouds.a > 0.9) {
-                    volumetricClouds.a = 1.0;
+                    volumetricClouds.a = 0.85;
                     break;
                 }
             }
@@ -410,7 +410,7 @@ vec4 GetClouds(inout float cloudLinearDepth, float skyFade, vec3 cameraPos, vec3
         cloudColorMult *= vec3(CLOUD_R, CLOUD_G, CLOUD_B) * 0.01;
     #endif
     cloudAmbientColor *= cloudColorMult + rainFactor;
-    cloudLightColor *= cloudColorMult * 0.5 + rainFactor;
+    cloudLightColor *= cloudColorMult * 0.6 + rainFactor * 1.5;
 
     #if CLOUD_QUALITY == 3
         //cumulonimbus

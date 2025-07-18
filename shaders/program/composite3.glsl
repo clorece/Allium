@@ -75,7 +75,7 @@
             #elif defined END
                 float dbMult = WB_DB_END_I;
             #endif
-            float coc = clamp(lViewPos0 * 0.001, 0.0, 0.1) * dbMult * 0.03;
+            float coc = clamp(lViewPos0 * 0.001, 0.0, 0.1) * dbMult * 0.0025;
         #elif WORLD_BLUR == 2 // Depth Of Field
             #if WB_DOF_FOCUS >= 0
                 float coc = max(abs(z1 - centerDepthSmooth) * 0.125 * WB_DOF_I - 0.0001, 0.0);

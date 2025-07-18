@@ -1,17 +1,11 @@
 #include "/lib/colors/skyColors.glsl"
 
-#define SHOOTING_STARS 1 // [0 1]
-
-const float shootingStarLifeTime = 8.0; // total lifetime duration in seconds
+#define SHOOTING_STARS
+#define PLANETARY_STARS_CONDITION 2 // [0 1 2]
 
 float GetStarNoise(vec2 pos) {
     //return fract(sin(dot(pos, vec2(12.9898, 4.1414))) * 43758.54953);
     return fract(sin(mod(dot(pos, vec2(12.9898, 78.233)),6.283)) * 43758.5453);
-}
-
-float GetShootingStarNoise(vec2 pos) {
-    // Different seed to differentiate from static stars
-    return fract(sin(mod(dot(pos, vec2(78.233, 12.9898)), 6.283)) * 43758.5453);
 }
 
 vec2 GetStarCoord(vec3 viewPos, float sphereness) {
@@ -21,9 +15,9 @@ vec2 GetStarCoord(vec3 viewPos, float sphereness) {
     return starCoord.xz;
 }
 
-#if SHOOTING_STARS == 1
+#ifdef SHOOTING_STARS
     float GetStarLifetimeNoise(vec2 pos) {
-        float freq = 2.0; 
+        float freq = 6.0; 
         float t = syncedTime * 0.05;
 
         float lifetimeValue = 0.5 + 0.5 * sin((pos.x + t) * 6.28318 * freq);
@@ -35,7 +29,7 @@ vec2 GetStarCoord(vec3 viewPos, float sphereness) {
     vec3 GetShootingStarsLayer(vec2 starCoord, float VdotU, float VdotS) {
         if (VdotU < 0.0) return vec3(0.0);
 
-        float shootingStarNum = 0.95;
+        float shootingStarNum = 0.9;
         float starFactor = 512.0;
 
         starCoord.x += -0.1 * syncedTime;
@@ -88,7 +82,7 @@ vec2 GetStarCoord(vec3 viewPos, float sphereness) {
             trailStar *= min1(VdotU * 3.0) * max0(1.0 - pow(abs(VdotS) * 1.002, 100.0));
             trailStar *= invRainFactor * pow2(pow2(invNoonFactor2)) * (1.0 - 0.5 * sunVisibility);
 
-            trailColor += 100.0 * trailStar * vec3(1.0, 0.9, 0.7);
+            trailColor += 4096.0 * trailStar * vec3(1.0, 0.9, 0.7);
         }
 
         return (shootingStarColor + trailColor) * 6.0;
@@ -98,30 +92,51 @@ vec2 GetStarCoord(vec3 viewPos, float sphereness) {
 vec3 GetStars(vec2 starCoord, float VdotU, float VdotS) {
     if (VdotU < 0.0) return vec3(0.0);
 
-    starCoord *= 0.5;
+    vec2 baseCoord = starCoord * 0.5;
     float starFactor = 2046.0;
-    starCoord = floor(starCoord * starFactor) / starFactor;
+    vec2 staticCoord = floor(baseCoord * starFactor) / starFactor;
 
     float star = 1.05;
-    star *= GetStarNoise(starCoord.xy);
-    star *= GetStarNoise(starCoord.xy+0.1);
-    star *= GetStarNoise(starCoord.xy+0.23);
-
+    star *= GetStarNoise(staticCoord);
+    star *= GetStarNoise(staticCoord + 0.1);
+    star *= GetStarNoise(staticCoord + 0.23);
     star -= 0.7;
-
     star = max0(star);
     star *= star;
 
-    star *= min1(VdotU * 3.0) * max0(1.0 - pow(abs(VdotS) * 1.002, 100.0));
-    star *= invRainFactor * pow2(pow2(invNoonFactor2)) * (1.0 - 0.5 * sunVisibility);
+    float fade = min1(VdotU * 3.0) * max0(1.0 - pow(abs(VdotS) * 1.002, 100.0));
+    fade *= invRainFactor * pow2(pow2(invNoonFactor2)) * (1.0 - 0.5 * sunVisibility);
 
-    vec3 staticStars = 40.0 * star * vec3(0.38, 0.4, 0.5);
+    vec3 staticStars = 40.0 * star * vec3(0.38, 0.4, 0.5) * fade;
 
-    #if SHOOTING_STARS == 1
-        vec3 shootingStars = GetShootingStarsLayer(starCoord, VdotU, VdotS);
+    #if PLANETARY_STARS_CONDITION == 2
+        float planetFactor = 768.0;
+        vec2 planetCoord = floor(baseCoord * planetFactor) / planetFactor;
+
+        float p1 = GetStarNoise(planetCoord);
+        float p2 = GetStarNoise(planetCoord + vec2(0.12, 0.21));
+        float p3 = GetStarNoise(planetCoord + vec2(0.33, 0.77));
+        float pNoise = p1 * p2 * p3;
+        pNoise -= 0.92;
+        float planetMask = max0(pNoise);
+        planetMask *= planetMask;
+
+        float hue = fract(sin(dot(planetCoord, vec2(17.23, 48.73))) * 43758.5453);
+        vec3 planetColor = hsv2rgb(vec3(hue, 0.6, 1.0));
+
+        vec3 planetStars = 4096.0 * planetMask * planetColor * fade;
+
+        float flicker = 0.9 + 0.1 * sin(syncedTime * 2.5 + dot(planetCoord, vec2(23.0, 19.0)) * 10.0);
+        planetStars *= flicker;
+    #else
+        vec3 planetStars = vec3(0.0);
+    #endif
+
+    #ifdef SHOOTING_STARS
+        vec3 shootingStars = GetShootingStarsLayer(staticCoord, VdotU, VdotS);
     #else
         vec3 shootingStars = vec3(0.0);
     #endif
 
-    return staticStars + shootingStars;
+    return staticStars + planetStars + shootingStars;
 }

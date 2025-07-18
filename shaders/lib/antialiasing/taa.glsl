@@ -6,7 +6,7 @@
     float regularEdge = 20.0;
     float extraEdgeMult = 3.0;
 #elif TAA_MODE == 2
-    float blendMinimum = 0.8;
+    float blendMinimum = 0.6;
     float blendVariable = 0.2;
     float blendConstant = 0.7;
 

@@ -71,7 +71,6 @@ vec3 GetNightNebula(vec3 viewPos, float VdotU, float VdotS) {
     vec2 centeredUV = UV - 0.25;
 
     float band = smoothstep(0.3, 0.0, abs(centeredUV.y));
-
     float noise = fbmCloud2(UV * 12.0, 0.2);
 
     vec3 baseColor = mix(vec3(0.3, 0.4, 0.6), vec3(0.9, 0.7, 0.4), smoothstep(-0.5, 0.5, centeredUV.x));
@@ -80,7 +79,6 @@ vec3 GetNightNebula(vec3 viewPos, float VdotU, float VdotS) {
 
     float dust = smoothstep(0.05, 0.01, abs(centeredUV.y + 0.1 * sin(centeredUV.x * 10.0)));
     float dustMask = mix(1.0, 0.3, dust);
-    
     brightness *= dustMask;
 
     float bandCenterFalloff = smoothstep(0.15, 0.0, abs(centeredUV.y));
@@ -88,10 +86,33 @@ vec3 GetNightNebula(vec3 viewPos, float VdotU, float VdotS) {
     float starFactor = 1024.0;
     vec2 starCoord = floor(UV * 0.75 * starFactor) / starFactor;
     float starNoise = GetStarNoise(starCoord) * GetStarNoise(starCoord + 0.1);
-
-    float starIntensity = bandCenterFalloff * max(0.0, starNoise - 0.6) * 1.0;
+    float starIntensity = bandCenterFalloff * max(0.0, starNoise - 0.6);
     brightness += starIntensity;
-    brightness *= nightFactor;
 
-    return baseColor * brightness;
+    #if PLANETARY_STARS_CONDITION >= 1
+        float planetFactor = 512.0;
+        vec2 planetCoord = floor(UV * planetFactor) / planetFactor;
+
+        float p1 = GetStarNoise(planetCoord);
+        float p2 = GetStarNoise(planetCoord + vec2(0.12, 0.21));
+        float p3 = GetStarNoise(planetCoord + vec2(0.33, 0.77));
+        float pNoise = p1 * p2 * p3;
+        pNoise -= 0.82;
+        float planetMask = max0(pNoise);
+        planetMask *= planetMask;
+
+        float hue = fract(sin(dot(planetCoord, vec2(17.23, 48.73))) * 43758.5453);
+        vec3 planetColor = hsv2rgb(vec3(hue, 0.6, 1.0));
+
+        float flicker = 0.9 + 0.1 * sin(syncedTime * 2.0 + dot(planetCoord, vec2(23.0, 19.0)) * 10.0);
+
+        float nebulaDensityBoost = bandCenterFalloff;
+
+        vec3 planetStars = 768.0 * nebulaDensityBoost * planetMask * flicker * planetColor;
+    #else
+        vec3 planetStars = vec3(0.0);
+    #endif
+
+    vec3 finalColor = baseColor * brightness + planetStars;
+    return finalColor * nightFactor;
 }
