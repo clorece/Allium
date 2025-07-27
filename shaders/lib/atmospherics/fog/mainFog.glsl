@@ -96,7 +96,7 @@
                 nightUpSkyColor * (nightFogMult - dayNightFogBlend * nightFogMult),
                 dayDownSkyColor * (0.9 + 0.2 * noonFactor),
                 dayNightFogBlend
-            );
+            ) * 0.75;
         }
     #else
         float atmFogSRATA = 55.1;

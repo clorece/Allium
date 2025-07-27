@@ -50,20 +50,22 @@
     vec3 GetSky(float VdotU, float VdotS, float dither, bool doGlare, bool doGround) {
         float mieSharpness = 16.0;
         float mieStrength = 0.5;
-        float skyGradient = 0.05;
+        float skyGradient = 0.1;
         float lightScatter = 1.7;
         float sunlightInfluence = 0.5;
         float horizonBrightness = 1.0;
+        float R_earth = 6360000.0;
+        float H_atmos = 80000.0;
 
         float upness = clamp(VdotU * 0.5 + 0.5, 0.0, 1.0);
+        float sunDotUp = clamp(VdotS * 0.5 + 0.5, 0.0, 1.0);
         float nightFactor = clamp(1.0 - (sunFactor + sunVisibility), 0.0, 1.0);
         float dayFactor = 1.0 - nightFactor;
-        
+
         vec3 daySkyColor = vec3(0.2294, 0.3573, 0.9204);
         float horizonFactor = clamp(0.1 / max(VdotU, 0.001), 0.0, 0.5);
-        vec3 daySky = daySkyColor * horizonFactor;
+        vec3 daySky = daySkyColor * horizonFactor * 2.0;
 
-        float sunDotUp = clamp(VdotS * 0.5 + 0.5, 0.0, 1.0);
         vec3 dayColorScatter = pow(daySky, vec3(sunlightInfluence) - daySky);
         dayColorScatter = mix(
             dayColorScatter,
@@ -75,12 +77,23 @@
         float zenithFalloff = pow(upness, 1.0);
         dayColorScatter /= (1.0 + zenithFalloff);
 
+        float h_view = H_atmos * (1.0 - upness);
+        float horizonAngle = acos(R_earth / (R_earth + h_view));
+        float opticalLength = sqrt((R_earth + H_atmos) * (R_earth + H_atmos) - R_earth * R_earth * (VdotU * VdotU));
+        opticalLength = clamp(opticalLength / H_atmos, 0.0, 10.0);
+
+        float rayleighPhase = 1.0 * (1.0 + VdotS * VdotS);
+        vec3 rayleighColor = vec3(0.5, 0.7, 1.0);
+        float rayleighStrength = 1.0 - exp(-opticalLength * 0.4);
+        vec3 rayleigh = rayleighColor * rayleighPhase * rayleighStrength * lightColor;
+
+        dayColorScatter += rayleigh;
+
         float miePhase = pow(sunDotUp, mieSharpness);
         dayColorScatter += lightColor * (miePhase * mieStrength);
 
         vec3 nightZenithColor = vec3(0.06, 0.09, 0.15) * 1.1;
-        vec3 nightHorizonColor = vec3(0.5, 0.5, 0.4) * 1.0; 
-
+        vec3 nightHorizonColor = vec3(0.5, 0.5, 0.4);
         vec3 nightSky = mix(nightHorizonColor, nightZenithColor, pow(upness, 0.4));
 
         vec3 color = mix(dayColorScatter, nightSky, nightFactor);
@@ -90,22 +103,21 @@
             color *= groundFade;
         }
 
-        // === SUN & MOON GLARE ===
         if (doGlare) {
-            float sunGlare = pow(max(VdotS, 0.0), 100.0); // tight falloff for sun
+            float sunGlare = pow(max(VdotS, 0.0), 100.0);
             color += lightColor * sunGlare * 1.0;
 
-            // Assume moonDirection is a normalized vec3 and viewDir is also normalized
             float moonIntensity = 0.2;
             float moonGlare = pow(max(-VdotS, 0.0), 25.0);
-            vec3 moonColor = vec3(1.0, 0.85, 0.65); // soft bluish moon
+            vec3 moonColor = vec3(1.0, 0.85, 0.65);
             color += moonColor * moonGlare * moonIntensity * nightFactor;
         }
 
         color += (dither - 0.5) / 128.0;
-
-        color *= 1.1;
+        color *= 0.8;
 
         return color;
     }
+
+
 #endif //INCLUDE_SKY

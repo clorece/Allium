@@ -34,6 +34,7 @@ float shadowTime = shadowTimeVar2 * shadowTimeVar2;
 
 #ifdef OVERWORLD
     #include "/lib/atmospherics/sky.glsl"
+    //#include "/lib/atmospherics/clouds/planarClouds.glsl"
     #include "/lib/atmospherics/stars.glsl"
 #endif
 
@@ -91,6 +92,9 @@ void main() {
 
         vec2 starCoord = GetStarCoord(viewPos.xyz, 0.5);
         color.rgb += GetStars(starCoord, VdotU, VdotS);
+
+        //vec2 cloudCoord = GetCloudCoord(viewPos.xyz, 0.5);
+        //color.rgb += GetPlanarClouds(cloudCoord, VdotU, VdotS);
 
         #if SUN_MOON_STYLE >= 2
             float absVdotS = abs(VdotS) * 0.9980;

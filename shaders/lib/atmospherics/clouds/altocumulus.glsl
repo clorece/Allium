@@ -7,11 +7,11 @@ float GetAltocumulusDetail(vec3 pos, vec3 offset, float persistence) {
     const int detailSamples = 3;
 
     for (int i = 0; i < detailSamples; ++i) {
-        float n = Noise3D2(p * (16.0 + float(i) * 1.5) + offset * 1.5);
+        float n = Noise3D2(p * (20.0 + float(i) * 1.5) + offset * 1.5);
         detail += n * amplitude;
         total += amplitude;
         amplitude *= persistence;
-        p *= 3.0; // scale for next octave
+        p *= 2.5; // scale for next octave
     }
 
     return detail / total;
@@ -30,12 +30,12 @@ float GetAltocumulusCloud(vec3 tracePos, int steps, int cloudAltitude, float lTr
         //base += rainFactor * 1.75;
     float detail = GetAltocumulusDetail(tracePosM, offset, noisePersistence);
 
-    float combined = mix(base, base * detail, 0.95);
+    float combined = mix(base, base * detail, 0.95) * 0.9;
     combined = max(combined - 0.2, 0.0);
-    combined = pow(combined, 1.35) * mult;
+    combined = pow(combined, 2.2) * mult;
 
-    float fadeTop    = smoothstep(0.0, cumulusCloudStretch, cloudAltitude + cumulusCloudStretch - tracePos.y);
-    float fadeBottom = smoothstep(0.0, cumulusCloudStretch, tracePos.y - (cloudAltitude - cumulusCloudStretch));
+    float fadeTop    = smoothstep(0.0, altocumulusCloudStretch, cloudAltitude + altocumulusCloudStretch - tracePos.y);
+    float fadeBottom = smoothstep(altocumulusCloudStretch * 0.5, altocumulusCloudStretch, tracePos.y - (cloudAltitude - altocumulusCloudStretch));
     float verticalFade = fadeTop * fadeBottom;
     
     return combined * verticalFade;

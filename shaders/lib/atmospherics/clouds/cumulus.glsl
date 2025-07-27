@@ -7,7 +7,8 @@ float GetCumulusDetail(vec3 pos, vec3 offset, float persistence) {
     const int detailSamples = 3;
 
     for (int i = 0; i < detailSamples; ++i) {
-        float n = Noise3D(p * (4.0 + float(i) * 1.5) + offset * 1.5);
+        vec3 windOffset = windDir * GetWind() * 0.1 * float(i);
+        float n = Noise3D(p * (4.0 + float(i) * 1.5) + offset * 1.5 + windOffset);
         detail += n * amplitude;
         total += amplitude;
         amplitude *= persistence;
@@ -21,13 +22,16 @@ float GetCumulusCloud(vec3 tracePos, int steps, int cloudAltitude, float lTraceP
     vec3 tracePosM = tracePos * (0.00018 * size);
     tracePosM.y *= 0.5;
 
-    vec3 offset = Offset(GetWind() * size);
-        offset *= 2.0;
+    // Apply shear matrix to simulate wind distortion
+    tracePosM = shearMatrix * tracePosM;
 
-    float base = Noise3D2(tracePosM * 4.0 + offset) * 12.0;
-        base += Noise3D2(tracePosM * 3.0 + offset) * 6.0;
-        base /= 4.0 / CUMULUS_COVERAGE;
-        //base += rainFactor * 1.75;
+    vec3 offset = Offset(GetWind() * size);
+    offset *= 2.0;
+
+    float base = Noise3D2(tracePosM * 4.0 + offset + windDir * GetWind() * 0.05) * 12.0;
+    base += Noise3D2(tracePosM * 3.0 + offset + windDir * GetWind() * 0.05) * 6.0;
+    base /= 4.0 / CUMULUS_COVERAGE;
+
     float detail = GetCumulusDetail(tracePosM, offset, noisePersistence);
 
     float combined = mix(base, base * detail, 0.6);
@@ -38,6 +42,6 @@ float GetCumulusCloud(vec3 tracePos, int steps, int cloudAltitude, float lTraceP
     float fadeTop    = smoothstep(0.0, cumulusCloudStretch, cloudAltitude + cumulusCloudStretch - y);
     float fadeBottom = smoothstep(cumulusCloudStretch * 0.5, cumulusCloudStretch, y - (cloudAltitude - cumulusCloudStretch));
     float verticalFade = fadeTop * fadeBottom;
-    
+
     return combined * verticalFade;
 }
