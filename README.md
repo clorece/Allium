@@ -9,6 +9,7 @@ Allium is an edit of Complementary Unbound focused on bringing my creative visio
 ### Huge Thanks
 - Emin for using Complementary as the base shader
 - Query for their wonderful LUT code
+- Xonk & Chocapic13 for SSRTGI code from Bliss Shaders
 
 ## Beta & Release Versions
 ### Beta
