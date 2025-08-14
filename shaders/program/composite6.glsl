@@ -43,6 +43,8 @@ void main() {
         DoTAA(color, temp, z1);
     #endif
 
+    float averageLuma = GetLuminance(color);
+
     /* DRAWBUFFERS:32 */
     gl_FragData[0] = vec4(color, 1.0);
     gl_FragData[1] = vec4(temp, 1.0);

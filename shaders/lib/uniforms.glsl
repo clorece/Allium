@@ -98,10 +98,10 @@ uniform vec3 previousCameraPositionFract;
     uniform int renderStage;
 #endif
 
-#if SHADOW_QUALITY > -1 || defined LIGHTSHAFTS_ACTIVE || defined FF_BLOCKLIGHT
+//#if SHADOW_QUALITY > -1 || defined LIGHTSHAFTS_ACTIVE || defined FF_BLOCKLIGHT
     uniform sampler2D shadowcolor0;
     uniform sampler2D shadowcolor1;
-    uniform sampler2D shadowcolor2;  // RSM flux from RT2
+    uniform sampler2D shadowcolor2; 
 
     uniform sampler2DShadow shadowtex1;
 
@@ -110,7 +110,7 @@ uniform vec3 previousCameraPositionFract;
     #else
         uniform sampler2DShadow shadowtex0;
     #endif
-#endif
+//#endif
 
 #if !defined DH_TERRAIN && !defined DH_WATER
     uniform mat4 gbufferProjection;

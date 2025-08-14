@@ -1,8 +1,10 @@
+#define AO_RADIUS 1.0 //[0.5 0.6 0.7 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0]
+
 float rand(float dither, int i) {
     return fract(dither + float(i)*0.61803398875);
 }
 
-#if SSAO_QUALI == 3
+#if GLOBAL_ILLUMINATION == 2 || GLOBAL_ILLUMINATION == 4
     float geometryAwareOcclusion(vec3 surfaceNormal, vec3 viewDir, vec3 hitPos, vec3 viewPos) {
         // Estimate normal of the hit position using screen-space derivatives
         vec3 hitNormal = normalize(cross(dFdx(hitPos), dFdy(hitPos)));
@@ -18,16 +20,15 @@ float rand(float dither, int i) {
     }
 
     #define SSRAO_QUALITY 12 //[2 8 12 16 20]
-    #define SSRAO_I 1.0 //[0.5 0.6 0.7 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0]
+    #define SSRAO_I 1.0 //[0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0]
     #define SSRAO_STEP 4
-    #define SSRAO_RADIUS 1.0 //[0.5 0.6 0.7 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0]
     #define DEPTH_TOLERANCE 12.0 //[1.0 2.0 8.0 12.0 16.0 24.0 32.0]
 
     float SSRAO(vec3 color, vec3 normalM, vec3 viewPos, sampler2D depthtex, float dither) {
 
         const int NUM_SAMPLES = SSRAO_QUALITY;
         const int MAX_STEPS = SSRAO_STEP;
-        const float AO_RADIUS = SSRAO_RADIUS;
+        //const float AO_RADIUS = SSRAO_RADIUS;
 
         float occlusion = 0.0;
 
@@ -75,7 +76,11 @@ float rand(float dither, int i) {
                     float geomFactor = geometryAwareOcclusion(normalM, rayDir, hitPos, viewPos);
                     float weight = (1.0 - smoothstep(0.0, stepSize * DEPTH_TOLERANCE, dz));
                     //occlusion -= geomFactor;
+                    #if GLOBAL_ILLUMINATION == 0
                     occlusion += weight * SSRAO_I;
+                    #else
+                    occlusion += weight * SSRAO_I * 0.5;
+                    #endif 
                     break;
                 }
             }
@@ -88,7 +93,7 @@ float rand(float dither, int i) {
     }
 #endif
 
-#if SSAO_QUALI == 2
+#if GLOBAL_ILLUMINATION == 1
 float hash1(float x) {
     return fract(sin(x * 12.9898 + 78.233) * 43758.5453);
 }
@@ -118,7 +123,7 @@ float SSAO(vec3 normalM, vec3 viewPos, sampler2D depthtex, float dither) {
                        + normalM * cosTh;
 
         for (int j = 1; j <= SSAO_STEPS; j++) {
-            float t = float(j) / float(SSAO_STEPS) * SSAO_RADIUS;
+            float t = float(j) / float(SSAO_STEPS) * AO_RADIUS;
             vec3 sampPos = viewPos + sampleDir * t;
 
             // Project to clip space

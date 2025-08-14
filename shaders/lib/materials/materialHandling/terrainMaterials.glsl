@@ -11,7 +11,7 @@ if (mat < 11024) {
                                     noDirectionalShading = true;
                                 }
                                 else /*if (mat < 10008)*/ { // Grounded Waving Foliage
-                                    subsurfaceMode = 1, noSmoothLighting = true, noDirectionalShading = true;
+                                    subsurfaceMode = 1, noSmoothLighting = true, noDirectionalShading = true; foliage = 1;
 
                                     #ifdef GBUFFERS_TERRAIN
                                         DoFoliageColorTweaks(color.rgb, shadowMult, snowMinNdotU, viewPos, nViewPos, lViewPos, dither);
@@ -29,9 +29,11 @@ if (mat < 11024) {
                             } else {
                                 if (mat < 10012) { // Leaves
                                     #include "/lib/materials/specificMaterials/terrain/leaves.glsl"
+                                    foliage = 1;
                                 }
                                 else /*if (mat < 10016)*/ { // Vine
                                     subsurfaceMode = 3, centerShadowBias = true; noSmoothLighting = true;
+                                    foliage = 1;
 
                                     #if defined COATED_TEXTURES && defined GBUFFERS_TERRAIN
                                         doTileRandomisation = false;
@@ -47,10 +49,10 @@ if (mat < 11024) {
                         } else {
                             if (mat < 10024) {
                                 if (mat < 10020) { // Non-waving Foliage
-                                    subsurfaceMode = 1, noSmoothLighting = true, noDirectionalShading = true;
+                                    subsurfaceMode = 1, noSmoothLighting = true, noDirectionalShading = true; foliage = 1;
                                 }
                                 else /*if (mat < 10024)*/ { // Upper Waving Foliage
-                                    subsurfaceMode = 1, noSmoothLighting = true, noDirectionalShading = true;
+                                    subsurfaceMode = 1, noSmoothLighting = true, noDirectionalShading = true; foliage = 1;
 
                                     #ifdef GBUFFERS_TERRAIN
                                         DoFoliageColorTweaks(color.rgb, shadowMult, snowMinNdotU, viewPos, nViewPos, lViewPos, dither);
@@ -571,6 +573,7 @@ if (mat < 11024) {
                                 }
                             } else {
                                 if (mat < 10236) { // Sand, Suspicious Sand
+                                    subsurfaceMode = 3;
                                     smoothnessG = pow(color.g, 16.0) * 2.0;
                                     smoothnessG = min1(smoothnessG);
                                     smoothnessD = smoothnessG;
@@ -1002,6 +1005,7 @@ if (mat < 11024) {
                         if (mat < 10400) {
                             if (mat < 10392) {
                                 if (mat < 10388) { // Packed Ice
+                                    subsurfaceMode = 3;
                                     materialMask = OSIEBCA; // Intense Fresnel
                                     float factor = pow2(color.g);
                                     float factor2 = pow2(factor);
@@ -1014,6 +1018,7 @@ if (mat < 11024) {
                                     #endif
                                 }
                                 else /*if (mat < 10392)*/ { // Blue Ice
+                                    subsurfaceMode = 3;
                                     materialMask = OSIEBCA; // Intense Fresnel
                                     float factor = min1(pow2(color.g) * 1.38);
                                     float factor2 = pow2(factor);
@@ -1252,6 +1257,7 @@ if (mat < 11024) {
                         } else {
                             if (mat < 10472) {
                                 if (mat < 10468) { // Concrete Powder+
+                                    subsurfaceMode = 3;
                                     smoothnessG = 0.2;
                                     smoothnessD = 0.1;
 
@@ -1435,6 +1441,7 @@ if (mat < 11024) {
                                 }
                             } else {
                                 if (mat < 10524) { // Cactus
+                                    subsurfaceMode = 3;
                                     float factor = sqrt1(color.r);
                                     smoothnessG = factor * 0.5;
                                     highlightMult = factor;
@@ -1945,6 +1952,7 @@ if (mat < 11024) {
                                     }
                                 }
                                 else /*if (mat < 10672)*/ { // Wool+, Carpet+ except Lime
+                                    subsurfaceMode = 3;
                                     #ifdef COATED_TEXTURES
                                         noiseFactor = 0.77;
                                     #endif

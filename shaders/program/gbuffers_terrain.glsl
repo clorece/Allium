@@ -191,6 +191,9 @@ void main() {
 
     vec3 colorP = color.rgb;
     color.rgb *= glColor.rgb;
+    vec3 albedo = glColor.rgb;
+
+    vec3 flux = albedo * lightColor * max(dot(normal, lightVec), 0.0);
 
     vec3 screenPos = vec3(gl_FragCoord.xy / vec2(viewWidth, viewHeight), gl_FragCoord.z);
     #ifdef TAA
@@ -213,7 +216,7 @@ void main() {
     vec2 lmCoordM = lmCoord;
     vec3 normalM = normal, geoNormal = normal, shadowMult = vec3(1.0);
     vec3 worldGeoNormal = normalize(ViewToPlayer(geoNormal * 10000.0));
-
+    int foliage = 0;
     #ifdef IPBR
         vec3 maRecolor = vec3(0.0);
         #include "/lib/materials/materialHandling/terrainMaterials.glsl"
@@ -350,16 +353,17 @@ void main() {
         ColorCodeProgram(color, mat);
     #endif
 
-    /* DRAWBUFFERS:06 */
+    /* DRAWBUFFERS:069 */
     gl_FragData[0] = color;
     #ifdef WHITE_WORLD
         gl_FragData[0] = vec4(1.0, 1.0, 1.0, 1.0);    // white world debug
     #endif 
-    gl_FragData[1] = vec4(smoothnessD, materialMask, skyLightFactor, 1.0);
+    gl_FragData[1] = vec4(smoothnessD, materialMask, skyLightFactor, foliage);
+    gl_FragData[2] = vec4(flux, 1.0);
 
     #if BLOCK_REFLECT_QUALITY >= 2 && RP_MODE != 0
-        /* DRAWBUFFERS:065 */
-        gl_FragData[2] = vec4(mat3(gbufferModelViewInverse) * normalM, 1.0);
+        /* DRAWBUFFERS:0695 */
+        gl_FragData[3] = vec4(mat3(gbufferModelViewInverse) * normalM, 1.0);
     #endif
 }
 

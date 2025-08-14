@@ -50,10 +50,10 @@
     vec3 GetSky(float VdotU, float VdotS, float dither, bool doGlare, bool doGround) {
         float mieSharpness = 16.0;
         float mieStrength = 0.5;
-        float skyGradient = 0.1;
-        float lightScatter = 1.7;
+        float skyGradient = 0.135;
+        float lightScatter = 1.4;
         float sunlightInfluence = 0.5;
-        float horizonBrightness = 1.0;
+        float horizonBrightness = 7.0;
         float R_earth = 6360000.0;
         float H_atmos = 80000.0;
 
@@ -63,7 +63,7 @@
         float dayFactor = 1.0 - nightFactor;
 
         vec3 daySkyColor = vec3(0.2294, 0.3573, 0.9204);
-        float horizonFactor = clamp(0.1 / max(VdotU, 0.001), 0.0, 0.5);
+        float horizonFactor = clamp(0.1 / max(VdotU, 0.0001), 0.0, 0.5);
         vec3 daySky = daySkyColor * horizonFactor * 2.0;
 
         vec3 dayColorScatter = pow(daySky, vec3(sunlightInfluence) - daySky);
@@ -71,20 +71,21 @@
             dayColorScatter,
             daySky / (lightScatter * daySky + skyGradient - daySky),
             sunDotUp + horizonBrightness * lightColor
-        );
+        ) + rainFactor;
         dayColorScatter = max(dayColorScatter, 0.0);
 
         float zenithFalloff = pow(upness, 1.0);
         dayColorScatter /= (1.0 + zenithFalloff);
 
-        float h_view = H_atmos * (1.0 - upness);
+        float h_view = H_atmos * (1.0 - VdotS);
         float horizonAngle = acos(R_earth / (R_earth + h_view));
-        float opticalLength = sqrt((R_earth + H_atmos) * (R_earth + H_atmos) - R_earth * R_earth * (VdotU * VdotU));
+        float opticalLength = sqrt((R_earth + H_atmos) * (R_earth + H_atmos) - R_earth * R_earth * (VdotS * VdotS));
         opticalLength = clamp(opticalLength / H_atmos, 0.0, 10.0);
 
-        float rayleighPhase = 1.0 * (1.0 + VdotS * VdotS);
         vec3 rayleighColor = vec3(0.5, 0.7, 1.0);
-        float rayleighStrength = 1.0 - exp(-opticalLength * 0.4);
+        float rayleighStrength = 4.0 - exp(-opticalLength);
+        float visibility = exp(-pow(max(-sunDotUp, 0.5) * 2.0, 1.0)); // fades out behind horizon
+        float rayleighPhase = (1.0 + sunDotUp * sunDotUp) * visibility;
         vec3 rayleigh = rayleighColor * rayleighPhase * rayleighStrength * lightColor;
 
         dayColorScatter += rayleigh;
@@ -92,8 +93,8 @@
         float miePhase = pow(sunDotUp, mieSharpness);
         dayColorScatter += lightColor * (miePhase * mieStrength);
 
-        vec3 nightZenithColor = vec3(0.06, 0.09, 0.15) * 1.1;
-        vec3 nightHorizonColor = vec3(0.5, 0.5, 0.4);
+        vec3 nightZenithColor = nightClearLightColor * 1.25;
+        vec3 nightHorizonColor = vec3(0.6, 0.54, 0.4) * 1.15;
         vec3 nightSky = mix(nightHorizonColor, nightZenithColor, pow(upness, 0.4));
 
         vec3 color = mix(dayColorScatter, nightSky, nightFactor);
@@ -113,8 +114,8 @@
             color += moonColor * moonGlare * moonIntensity * nightFactor;
         }
 
-        color += (dither - 0.5) / 128.0;
-        color *= 0.8;
+        color += (dither - 0.5) / 64;
+        color *= 0.55;
 
         return color;
     }

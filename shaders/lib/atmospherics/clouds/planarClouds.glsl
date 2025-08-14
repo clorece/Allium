@@ -1,39 +1,74 @@
-/*#include "/lib/colors/skyColors.glsl"
+#include "/lib/colors/cloudColors.glsl"
 
-// 4-layer FBM for soft, cloudy appearance
-float GetCloudNoise(vec2 pos) {
-    vec2 uv = fract(pos); // wrap to [0,1] for tiling
-    return texture(noisetex, uv).r; // assumes grayscale in red channel
+// Map view position to planar cloud coordinates
+vec2 GetCloudCoords(vec3 viewPos, out vec3 wpos) {
+    // Project onto XZ plane for planar clouds
+    wpos = (gbufferModelViewInverse * vec4(viewPos * 1000.0, 1.0)).xyz;
+    
+    return wpos.xz * 0.001; // Scale for coverage size
 }
 
-// Uses sphereness for a flat-projected but curved layer
-vec2 GetCloudCoord(vec3 viewPos, float sphereness) {
-    vec3 wpos = normalize((gbufferModelViewInverse * vec4(viewPos * 1000.0, 1.0)).xyz);
-    vec3 flatCoord = wpos / (wpos.y + length(wpos.xz) * sphereness);
-    flatCoord.x += 0.001 * syncedTime;
-    return flatCoord.xz;
+float PhaseHG(float cosTheta, float g) {
+    float g2 = g * g;
+    float denom = 1.0 + g2 - 2.0 * g * cosTheta;
+    return (1.0 - g2) / (4.0 * 3.14159 * pow(denom, 1.5));
 }
 
-// Final cloud layer function (replaces GetStars)
-vec3 GetPlanarClouds(vec2 cloudCoord, float VdotU, float VdotS) {
-    if (VdotU < 0.0) return vec3(0.0); // skip when view is below horizon
+vec3 GetPlanarClouds(vec3 viewPos, float VdotU, float VdotS, float dither) {
+    float coverage = 1.85;
+    float softness = 1.0;
+        // Compute horizon fade factor
+    // Adjust these params to control how quickly clouds fade near horizon
+    float horizonFadeStart = 1.0;  // start fading at this height above horizon
+    float horizonFadeEnd = 0.0;    // fully faded at or below this height (horizon level)
 
-    vec2 uv = cloudCoord * 0.1;
-    uv.x += 0.0001 * syncedTime; // scrolling
+    vec3 wpos;
+    vec2 cloudCoord = GetCloudCoords(viewPos, wpos);
 
-    float noise = GetCloudNoise(uv);
-    noise += GetCloudNoise(uv * 2.2) * 0.66;
-    noise += GetCloudNoise(uv * 4.4) * 0.33;
-    noise += GetCloudNoise(uv * 8.8) * 0.1;
-    noise *= 0.5;
-    noise = smoothstep(0.4, 0.75, noise); // smooth edges
+    cloudCoord.x += 0.02 * syncedTime;
+    cloudCoord.y += 0.01 * syncedTime;
 
-    float fade = clamp(VdotU * 1.5, 0.0, 1.0);
-    float alpha = noise * fade;
+    // Base noise (fBm)
+    float cloudPattern = 0.0;
+    float amplitude = 0.5;
+    float frequency = 0.0005;
+    float swirliness = 1.5;
+    cloudCoord.x *= 1.2;
+    for (int i = 0; i < 10; i++) {
+        cloudPattern += amplitude * texture2D(noisetex, (cloudCoord - cloudPattern * swirliness) * frequency).r;
+        frequency *= 1.5;
+        amplitude *= 0.75;
+        swirliness *= 1.2;
+    }
 
-    vec3 baseColor = mix(vec3(0.7, 0.75, 0.8), vec3(1.0), noise);
-    alpha *= invRainFactor;
-    alpha *= 0.5 + 0.5 * pow(invNoonFactor2, 0.3); // brighten at dawn/dusk
+    cloudPattern -= moonFactor * 0.1;
 
-    return baseColor * alpha * 2.5;
-}*/
+    // Soft edge with smoothstep
+    float cloudAlpha = smoothstep(coverage - softness, coverage + softness, cloudPattern);
+
+    vec3 playerPos = ViewToPlayer(viewPos);
+
+    float xzMaxDistance = max(abs(playerPos.x), abs(playerPos.z));
+    float cloudDistance = 256.0;
+    cloudDistance = clamp((cloudDistance - xzMaxDistance) / cloudDistance, 0.0, 1.0);
+
+    if (playerPos.y <= 5.0) {
+        return vec3(0.0);
+    }
+
+    vec3 baseCloudColor = vec3(1.0);
+
+    // Lighting phase
+    float phase = PhaseHG(dot(normalize(mat3(gbufferModelViewInverse) * lightVec), normalize(wpos)), 0.5 - moonFactor);
+
+    vec3 sunLightColor = lightColor * phase * (1.0 - rainFactor);
+
+    vec3 skyColor = GetSky(VdotU, VdotS, dither, false, false);
+
+    vec3 color = (sunLightColor) * 100.0;
+
+    color += (dither - 0.5) / 64.0;
+    color *= cloudAlpha * cloudDistance;
+
+    return color;
+}

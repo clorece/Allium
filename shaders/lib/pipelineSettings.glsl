@@ -7,6 +7,7 @@ const int colortex4Format = R8;             //volumetric cloud linear depth & vo
 const int colortex5Format = RGBA8_SNORM;    //normalM & scene image for water reflections
 const int colortex6Format = RGBA8;          //smoothnessD & materialMask & skyLightFactor
 const int colortex7Format = RGBA16F;        //(cloud/water map on gbuffer) | temporal filter
+const int colortex9Format = RGBA16F;         //global illumination
 */
 
 const bool colortex0Clear = true;
@@ -29,3 +30,5 @@ const float drynessHalflife = 300.0;
 const float wetnessHalflife = 300.0;
 
 const float ambientOcclusionLevel = 1.0;
+
+const float eyeBrightnessHalflife = 1.0f;

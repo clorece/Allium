@@ -12,14 +12,14 @@ in vec2 texCoord;
 
 flat in vec4 glColor;
 
-#ifdef OVERWORLD
+#ifdef OVERWORLD || END
     flat in vec3 upVec, sunVec;
 #endif
 
 //Pipeline Constants//
 
 //Common Variables//
-#ifdef OVERWORLD
+#ifdef OVERWORLD || END
     float SdotU = dot(sunVec, upVec);
     float sunVisibility = clamp(SdotU + 0.0625, 0.0, 0.125) / 0.125;
     float sunVisibility2 = sunVisibility * sunVisibility;
@@ -40,7 +40,7 @@ flat in vec4 glColor;
 
 //Program//
 void main() {
-    #ifdef OVERWORLD
+    #ifdef OVERWORLD || END
         vec2 tSize = textureSize(tex, 0);
         vec4 color = texture2D(tex, texCoord);
         color.rgb *= glColor.rgb;
@@ -129,7 +129,7 @@ out vec2 texCoord;
 
 flat out vec4 glColor;
 
-#ifdef OVERWORLD
+#ifdef OVERWORLD || END
     flat out vec3 upVec, sunVec;
 #endif
 
@@ -148,7 +148,7 @@ void main() {
 
     glColor = gl_Color;
 
-    #ifdef OVERWORLD
+    #ifdef OVERWORLD || END
         upVec = normalize(gbufferModelView[1].xyz);
         sunVec = GetSunVector();
     #endif

@@ -16,10 +16,13 @@
         #ifdef OVERWORLD
             float fog = lPos / renderDistance;
             fog = pow2(pow2(fog));
+            
             #ifndef DISTANT_HORIZONS
                 fog = pow2(pow2(fog));
+            #else
+                fog *= 64.0;
             #endif
-            fog = 1.0 - exp(-3.0 * fog);
+            fog = 1.0 - exp(-1.0 * fog);
         #endif
         #ifdef NETHER
             float farM = min(renderDistance, NETHER_VIEW_LIMIT); // consistency9023HFUE85JG
@@ -27,9 +30,11 @@
             fog = fog * 0.3 + 0.7 * pow(fog, 256.0 / max(farM, 256.0));
         #endif
         #ifdef END
-            float fog = lPos / renderDistance;
+            /*float fog = lPos / renderDistance;
             fog = pow2(pow2(fog));
             fog = 1.0 - exp(-3.0 * fog);
+            */
+            float fog = 0.0;
         #endif
 
         #ifdef DREAM_TWEAKED_BORDERFOG
@@ -86,17 +91,17 @@
         #ifndef DISTANT_HORIZONS
             float atmFogCRFTM = 60.0;
         #else
-            float atmFogCRFTM = 90.0;
+            float atmFogCRFTM = 70.0;
         #endif
 
         vec3 GetAtmFogColor(float altitudeFactorRaw, float VdotS) {
             float nightFogMult = 2.5 - 0.625 * max(pow2(pow2(altitudeFactorRaw)), rainFactor);
             float dayNightFogBlend = pow(invNightFactor, 4.0 - VdotS - 2.5 * sunVisibility2);
             return mix(
-                nightUpSkyColor * (nightFogMult - dayNightFogBlend * nightFogMult),
-                dayDownSkyColor * (0.9 + 0.2 * noonFactor),
+                nightClearLightColor * 0.5 * (nightFogMult - dayNightFogBlend * nightFogMult),
+                mix((ambientColor * 0.5) * (invNoonFactor2 * 1.875 + 0.825), (ambientColor * 0.5) * (1.9 + 0.2 * noonFactor), vec3(0.5)),
                 dayNightFogBlend
-            ) * 0.75;
+            );
         }
     #else
         float atmFogSRATA = 55.1;
@@ -112,7 +117,7 @@
     }
 
     void DoAtmosphericFog(inout vec3 color, vec3 playerPos, float lViewPos, float VdotS) {
-        #ifndef DISTANT_HORIZONS
+        /*#ifndef DISTANT_HORIZONS
             float renDisFactor = min1(192.0 / renderDistance);
 
             #if ATM_FOG_DISTANCE != 100
@@ -121,9 +126,9 @@
             #endif
 
             float fog = 1.0 - exp(-pow(lViewPos * (0.001 - 0.0007 * rainFactor), 2.0 - rainFactor2) * lViewPos * renDisFactor);
-        #else
+        #else*/
             float fog = pow2(1.0 - exp(-max0(lViewPos - 40.0) * (0.7 + 0.7 * rainFactor) / ATM_FOG_DISTANCE));
-        #endif
+        //#endif
         
         fog *= ATM_FOG_MULT - 0.1 - 0.15 * invRainFactor;
 
@@ -136,7 +141,8 @@
         #endif
 
         #ifdef OVERWORLD
-            altitudeFactor *= 1.0 - 0.75 * GetAtmFogAltitudeFactor(cameraPosition.y) * invRainFactor;
+            altitudeFactor *= 1.0 - 0.1 * GetAtmFogAltitudeFactor(cameraPosition.y) * invRainFactor;
+            altitudeFactor += 0.5 * invNoonFactor2 * 1.0;
 
             #if defined SPECIAL_BIOME_WEATHER || RAIN_STYLE == 2
                 #if RAIN_STYLE == 2
@@ -151,7 +157,7 @@
                 #endif
 
                 float fogIntense = pow2(1.0 - exp(-lViewPos * fogFactor / ATM_FOG_DISTANCE));
-                fog = mix(fog, fogIntense / altitudeFactor, 0.8 * rainFactor * factor);
+                fog = mix(fog, fogIntense / altitudeFactor, 0.1 * rainFactor * factor);
             #endif
 
             #ifdef CAVE_FOG
@@ -192,7 +198,7 @@
 void DoWaterFog(inout vec3 color, float lViewPos) {
     float fog = GetWaterFog(lViewPos);
 
-    color = mix(color, waterFogColor, fog);
+    color = mix(color * 1.5, waterFogColor - nightFactor, fog);
 }
 
 void DoLavaFog(inout vec3 color, float lViewPos) {

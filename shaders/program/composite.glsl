@@ -18,26 +18,8 @@ flat in vec3 upVec, sunVec;
 
 //Pipeline Constants//
 
-//Common Variables//
-float SdotU = dot(sunVec, upVec);
-float sunFactor = SdotU < 0.0 ? clamp(SdotU + 0.375, 0.0, 0.75) / 0.75 : clamp(SdotU + 0.03125, 0.0, 0.0625) / 0.0625;
-float sunVisibility = clamp(SdotU + 0.0625, 0.0, 0.125) / 0.125;
-float sunVisibility2 = sunVisibility * sunVisibility;
-
-vec2 view = vec2(viewWidth, viewHeight);
-
-#ifdef OVERWORLD
-    vec3 lightVec = sunVec * ((timeAngle < 0.5325 || timeAngle > 0.9675) ? 1.0 : -1.0);
-#else
-    vec3 lightVec = sunVec;
-#endif
-
-#ifdef LIGHTSHAFTS_ACTIVE
-    float shadowTimeVar1 = abs(sunVisibility - 0.5) * 2.0;
-    float shadowTimeVar2 = shadowTimeVar1 * shadowTimeVar1;
-    float shadowTime = shadowTimeVar2 * shadowTimeVar2;
-    float vlTime = min(abs(SdotU) - 0.05, 0.15) / 0.15;
-#endif
+#include "/lib/commonVariables.glsl"
+#include "/lib/commonFunctions.glsl"
 
 //Common Functions//
 
@@ -81,19 +63,8 @@ vec2 GetCombinedWaves(vec2 uv, vec2 wind) {
     #include "/lib/atmospherics/netherStorm.glsl"
 #endif
 
-#ifdef END
-/*
-    float Noise3D(vec3 p) {
-        p.z = fract(p.z) * 128.0;
-        float iz = floor(p.z);
-        float fz = fract(p.z);
-        vec2 a_off = vec2(23.0, 29.0) * (iz) / 128.0;
-        vec2 b_off = vec2(23.0, 29.0) * (iz + 1.0) / 128.0;
-        float a = texture2D(noisetex, p.xy + a_off).r;
-        float b = texture2D(noisetex, p.xy + b_off).r;
-        return mix(a, b, fz);
-    }
-*/
+/*#ifdef END
+
 
     vec4 GetEndStorm(vec3 color, vec3 translucentMult, vec3 nPlayerPos, vec3 playerPos, float lViewPos, float lViewPos1, float VdotU, float dither) { 
         #define END_STORM_I 1.25
@@ -176,7 +147,7 @@ vec2 GetCombinedWaves(vec2 uv, vec2 wind) {
 
         return netherStorm;
     }
-#endif
+#endif*/
 
 #ifdef ATM_COLOR_MULTS
     #include "/lib/colors/colorMultipliers.glsl"
@@ -265,15 +236,15 @@ void main() {
         volumetricEffect = GetNetherStorm(color, translucentMult, nPlayerPos, playerPos, lViewPos, lViewPos1, dither);
     #endif
 
-    #ifdef END  
+    /*#ifdef END  
         //#if DETAIL_QUALITY > 2
         //vec3 playerPos = ViewToPlayer(viewPos1.xyz);
         //vec3 nPlayerPos = normalize(playerPos);
         //float VdotU = dot(nViewPos, upVec);
-        volumetricEffect = GetEndStorm(color, translucentMult, nPlayerPos, playerPos, lViewPos, lViewPos1, VdotU, dither);
-        color = mix(color, volumetricEffect.rgb, volumetricEffect.a);
+        //volumetricEffect = GetEndStorm(color, translucentMult, nPlayerPos, playerPos, lViewPos, lViewPos1, VdotU, dither);
+        //color = mix(color, volumetricEffect.rgb, volumetricEffect.a);
         //#endif
-    #endif
+    #endif*/
 
 
     #ifdef ATM_COLOR_MULTS
@@ -324,9 +295,9 @@ void main() {
     color = pow(color, vec3(2.2));
 
     #ifdef LIGHTSHAFTS_ACTIVE
-        #ifdef END
-            volumetricEffect.rgb *= 0.05;
-        #endif
+        //#ifdef END
+        //    volumetricEffect.rgb *= 0.05;
+        //#endif
 
         
         color += volumetricEffect.rgb;

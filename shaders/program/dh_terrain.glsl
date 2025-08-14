@@ -135,6 +135,7 @@ void main() {
     DoLighting(color, shadowMult, playerPos, viewPos, lViewPos, geoNormal, normalM, 0.5,
                worldGeoNormal, lmCoordM, noSmoothLighting, noDirectionalShading, noVanillaAO,
                centerShadowBias, subsurfaceMode, smoothnessG, highlightMult, emission);
+
     /* DRAWBUFFERS:0 */
     gl_FragData[0] = color;
 }

@@ -9,15 +9,29 @@
 // Query's AWESOME LUTs
 // LUT DEFAULT SHOULD BE 2
 #define Lut_Set                     1           //[1] // technically there should be a 2 for raspberry but ill keep it off for now :3
+    #define Overworld_Lut                5          //[0 1 2 3 4 5 6 7 8 9]
+    #define Nether_Lut                8          //[0 1 2 3 4 5 6 7 8 9]
+    #define End_Lut                 1          //[0 1 2 3 4 5 6 7 8 9]
+    #define GBPreset 18 // [1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32]
 
+#define TONEMAP
+#define EXPOSURE 1.0
+#define SATURATION 1.0
+#define CONTRAST 0.999
+#define GAMMA 2.2
+#define BLACK_DEPTH 0.0001
+#define WHITE_CLIP 1.0
+#define DESATURATION_AMOUNT 0.35
 
-#define Overworld_Lut                5          //[0 1 2 3 4 5 6 7 8 9]
-#define Nether_Lut                8          //[0 1 2 3 4 5 6 7 8 9]
-#define End_Lut                 1          //[0 1 2 3 4 5 6 7 8 9]
+#define RESATURATION_SATURATION 1.0    // Base saturation multiplier
+#define RESATURATION_CONTRAST 1.0      // Contrast multiplier for resaturation step
+#define RESATURATION_DESATURATION_AMOUNT 0.35
 
-#define GBPreset 18 // [1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32]
-
-const float eyeBrightnessHalflife = 1.0f;
+//#define PURKINJE
+#define MIN_EXPOSURE     0.1    // darkest allowed exposure
+#define BASE_EXPOSURE    1.0    // base exposure multiplier (normal brightness)
+#define MAX_EXPOSURE     5.0    // brightest allowed exposure
+#define EXPOSURE_CURVE   0.8    // curve < 1.0 brightens dark scenes more
 
 //////////Fragment Shader//////////Fragment Shader//////////Fragment Shader//////////
 #ifdef FRAGMENT_SHADER
@@ -65,40 +79,159 @@ void DoBSLColorSaturation(inout vec3 color) {
     color = color * T_SATURATION - graySaturation * (T_SATURATION - 1.0);
 }
 
+float getSceneBrightness() {
+    float skyLight = clamp(float(eyeBrightnessSmooth.y) / 240.0, 0.01, 1.0);
+    return pow(skyLight, 0.25); // lower = more sensitive to darkness
+}
 
-vec3 AcesTonemap(vec3 color) {
-    // === Adjustable parameters ===
+float getAverageSceneBrightness() {
+    vec3 color = textureLod(colortex0, vec2(0.5), 8).rgb;
+    float luminance = dot(color, vec3(0.2126, 0.7152, 0.0722));
+    luminance = max(luminance, 0.0001); // avoid log(0)
 
-    float exposure = 1.5;   // >1.0 = brighter, <1.0 = darker
-    float saturation = 1.0; // >1.0 = more vibrant, <1.0 = more gray
-    float gamma = 2.7;      // sRGB standard gamma
-    float contrast = 0.999;   // >1.0 = higher contrast, <1.0 = flatter
+    // Parameters to adjust range — tweak these to increase range sensitivity
+    float exposureMin = 0.0001;
+    float exposureMax = 1.0;
 
-    color *= exposure;
+    // Normalize luminance to [exposureMin, exposureMax] range, then remap [0..1]
+    float normalizedLum = clamp((luminance - exposureMin) / (exposureMax - exposureMin), 0.0, 1.0);
 
-    const mat3 m1 = mat3(
+    // Apply log average (simulate eye adaptation better)
+    return exp(mix(log(exposureMin), log(exposureMax), normalizedLum));
+}
+
+
+vec3 applyPurkinjeEffect(vec3 color, float sceneBrightness) {
+    // Shift strength based on how dark the scene is (1.0 = full daylight, 0.0 = full night)
+    float shift = smoothstep(0.0, 0.6, 0.5 - sceneBrightness) * 0.5;
+
+    // Adjust RGB channels to simulate scotopic vision
+    vec3 purkinje = vec3(
+        mix(1.0, 0.6, shift), // red dims
+        mix(1.0, 0.8, shift), // green dims
+        mix(1.0, 1.2, shift)  // blue boosts
+    );
+
+    return color * purkinje;
+}
+
+#ifdef TONEMAP
+    int maxIdx(vec3 c, out float maxVal) {
+        if(c.r > c.g && c.r > c.b) { maxVal = c.r; return 0; }
+        else if(c.g > c.b) { maxVal = c.g; return 1; }
+        maxVal = c.b; return 2;
+    }
+
+    // Helper to get min index and min value in vec3
+    int minIdx(vec3 c, out float minVal) {
+        if(c.r < c.g && c.r < c.b) { minVal = c.r; return 0; }
+        else if(c.g < c.b) { minVal = c.g; return 1; }
+        minVal = c.b; return 2;
+    }
+
+    float maxOf(vec3 c) {
+        return max(max(c.r, c.g), c.b);
+    }
+
+    float minOf(vec3 c) {
+        return min(min(c.r, c.g), c.b);
+    }
+
+    //float pow2(float x) { return x*x; }
+
+    // ACES tonemap constants
+    const mat3 ACESInputMat = mat3(
         0.59719, 0.07600, 0.02840,
         0.35458, 0.90834, 0.13383,
         0.04823, 0.01566, 0.83777
     );
-    const mat3 m2 = mat3(
+
+    const mat3 ACESOutputMat = mat3(
         1.60475, -0.10208, -0.00327,
-        -0.53108,  1.10813, -0.07276,
-        -0.07367, -0.00605,  1.07602
+        -0.53108, 1.10813, -0.07276,
+        -0.07367, -0.00605, 1.07602
     );
 
-    vec3 v = m1 * color;
-    vec3 a = v * (v + 0.0245786) - 0.000090537;
-    vec3 b = v * (0.983729 * v + 0.4329510) + 0.238081;
-    vec3 tonemapped = m2 * (a / b);
+    // ACES approximation curve
+    vec3 RRTAndODTFit(vec3 v)
+    {
+        vec3 a = v * (v + 0.0245786) - 0.000090537;
+        vec3 b = v * (0.983729 * v + 0.4329510) + 0.238081;
+        return a / b;
+    }
 
-    float luminance = dot(tonemapped, vec3(0.2126, 0.7152, 0.0722));
-    tonemapped = mix(vec3(luminance), tonemapped, saturation);
+    vec3 ACESTonemap(vec3 color)
+    {
+        // Apply exposure and black offset
+        #ifdef PURKINJE
+            float sceneBrightness = getAverageSceneBrightness();
+            vec3 purkinje = applyPurkinjeEffect(color, sceneBrightness);
+            color = max(purkinje * EXPOSURE - BLACK_DEPTH, 0.0);
+        #else
+            color = max(color / getSceneBrightness() * EXPOSURE - BLACK_DEPTH, 0.0);
+        #endif
 
-    tonemapped = mix(vec3(0.5), tonemapped, contrast);
+        // Transform to ACES color space
+        vec3 acesColor = ACESInputMat * color;
 
-    return pow(clamp(tonemapped, 0.0, 1.0), vec3(1.0 / gamma));
-}
+        // Apply the ACES RRT + ODT fit curve
+        acesColor = RRTAndODTFit(acesColor);
+
+        // Transform back to linear sRGB space
+        acesColor = ACESOutputMat * acesColor;
+
+        // Optional white clipping (clamp high values)
+        if (WHITE_CLIP < 1.0) {
+            acesColor = min(acesColor, vec3(WHITE_CLIP));
+        }
+
+        // Contrast adjustment: interpolate between middle gray and color
+        acesColor = mix(vec3(0.5), acesColor, CONTRAST);
+
+        // Saturation adjustment
+        float luminance = dot(acesColor, vec3(0.2126, 0.7152, 0.0722));
+        acesColor = mix(vec3(luminance), acesColor, SATURATION);
+
+        // Clamp to [0,1] and apply gamma correction for display
+        acesColor = pow(clamp(acesColor, 0.0, 1.0), vec3(1.0 / GAMMA));
+
+        return acesColor;
+    }
+
+    // Tech's ResaturatedTonemap in shaderLabs #snippets channel
+    vec3 ResaturatedTonemap(vec3 color)
+    {
+        // Find max and min channels and values
+        float maxC; int maxI = maxIdx(color, maxC);
+        float minC; int minI = minIdx(color, minC);
+        int midI = 3 - (maxI + minI);
+        float midC = color[midI];
+
+        // Compute saturation target S (difference ratio)
+        float S = (maxC - minC) / (maxC + 1e-5); 
+
+        // Apply desaturation on very bright areas
+        S *= 1.0 / sqrt(pow(maxC * RESATURATION_DESATURATION_AMOUNT, 2.0) + 1.0);
+
+        // Calculate interpolation factor for mid channel
+        float k = (midC - minC) / (maxC - minC + 1e-5);
+
+        // Resaturate channels
+        color[maxI] = maxC;
+        color[minI] = (1.0 - S) * maxC;
+        color[midI] = maxC * (1.0 - S * (1.0 - k));
+
+        // Apply saturation multiplier (blend between grayscale and resaturated color)
+        float luminance = dot(color, vec3(0.2126, 0.7152, 0.0722));
+        color = mix(vec3(luminance), color, RESATURATION_SATURATION);
+
+        // Apply contrast adjustment around middle gray (0.5)
+        color = mix(vec3(0.5), color, RESATURATION_CONTRAST);
+
+        // Clamp result to valid color range
+        return clamp(color, 0.0, 1.0);
+    }
+#endif
 
 #define clamp01(x) clamp(x, 0.0, 1.0)
 
@@ -132,6 +265,9 @@ void OverworldLookup(inout vec3 color) {
     newColor1 = texture2D(colortex8, texPos.xy * correctGrid[0] + correctGrid[1]).rgb;
     newColor2 = texture2D(colortex8, texPos.zw * correctGrid[0] + correctGrid[1]).rgb;
     #endif
+
+    //#if Overworld_Lut == 2
+    
     
     color = mix(newColor1, newColor2, fract(blueColor));
 }
@@ -266,7 +402,7 @@ void main() {
     // Calculate noise and sample texture
     float noise = (fract(sin(dot(texCoord * sin(frameTimeCounter) + 1.0, vec2(12.9898,78.233) * 2.0)) * 43758.5453));
 
-    #define FILM_GRAIN_I 2  // [0 1 2 3 4 5 6 7 8 9 10]
+    #define FILM_GRAIN_I 3  // [0 1 2 3 4 5 6 7 8 9 10]
     
     color.rgb *= max(noise, 1.0 - (float(FILM_GRAIN_I) / 10));
     color *= 1.3;
@@ -311,14 +447,18 @@ void main() {
         color *= 0.01;
     #endif
 
-    //float filmGrain = dither;
-    //color += vec3((filmGrain - 0.25) / 128.0);
+    float filmGrain = dither;
+    color += vec3((filmGrain - 0.25) / 128.0);
 
     //DoBSLTonemap(color);
     float ignored = dot(color * vec3(0.15, 0.50, 0.35), vec3(0.1, 0.65, 0.6));
     float desaturated = dot(color, vec3(0.15, 0.50, 0.35));
     color = mix(color, vec3(ignored), exp2((-64) * desaturated));
-    color = AcesTonemap(color);
+
+    #ifdef TONEMAP
+        vec3 tonemappedColor = ACESTonemap(color);
+        color = ResaturatedTonemap(tonemappedColor);
+    #endif
 
     #if defined GREEN_SCREEN_LIME || SELECT_OUTLINE == 4
         int materialMaskInt = int(texelFetch(colortex6, texelCoord, 0).g * 255.1);

@@ -197,6 +197,7 @@ void main() {
     vec3 worldGeoNormal = normalize(ViewToPlayer(geoNormal * 10000.0));
     vec3 shadowMult = vec3(1.0);
     float fresnel = clamp(1.0 + dot(normalM, nViewPos), 0.0, 1.0);
+
     #ifdef IPBR
         #include "/lib/materials/materialHandling/translucentMaterials.glsl"
 
@@ -234,7 +235,7 @@ void main() {
     if (!translucentMultCalculated)
         translucentMult = vec4(mix(vec3(0.666), color.rgb * (1.0 - pow2(pow2(color.a))), color.a), 1.0);
 
-    translucentMult.rgb = mix(translucentMult.rgb, vec3(1.0), min1(pow2(pow2(lViewPos / far))));
+    translucentMult.rgb = mix(translucentMult.rgb, vec3(2.0), min1(pow2(pow2(lViewPos / far))));
 
     // Lighting
     DoLighting(color, shadowMult, playerPos, viewPos, lViewPos, geoNormal, normalM, dither,

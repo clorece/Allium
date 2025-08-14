@@ -12,7 +12,7 @@
         #ifdef GBUFFERS_WATER
             translucentMultCalculated = true;
             translucentMult.rgb = normalize(sqrt2(glColor.rgb));
-            translucentMult.g *= 0.88;
+            translucentMult.g *= 1.2;
         #endif
 
         glColorM = sqrt1(glColorM) * vec3(1.0, 0.85, 0.8);
@@ -225,7 +225,7 @@
         } else { // Underwater
             noDirectionalShading = true;
 
-            reflectMult = 0.5;
+            reflectMult = 0.85;
 
             #if MC_VERSION < 11300 && WATER_STYLE >= 3
                 color.a = 0.7;

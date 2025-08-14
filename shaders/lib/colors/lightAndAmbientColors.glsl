@@ -4,7 +4,7 @@
     #if defined OVERWORLD
 
         #ifndef COMPOSITE //ground and cloud color
-            vec3 noonClearLightColor = vec3(0.75, 0.7, 0.6);
+            vec3 noonClearLightColor = vec3(0.75, 0.62, 0.5);
 
 
 
@@ -15,7 +15,7 @@
 
         // noonAmbientColor
         //vec3 noonClearAmbientColor = pow(skyColor, vec3(0.65)) * 0.85;
-        vec3 noonClearAmbientColor = vec3(0.51, 0.545, 0.52);
+        vec3 noonClearAmbientColor = vec3(0.45, 0.495, 0.58);
 
 
 
@@ -25,23 +25,23 @@
 
 
         #else //light shaft color
-            vec3 sunsetClearLightColor = pow(vec3(0.51, 0.43, 0.32), vec3(1.5 + invNoonFactor)) * 6.8;
+            vec3 sunsetClearLightColor = pow(vec3(0.61, 0.43, 0.33), vec3(1.5 + invNoonFactor)) * 6.8;
         #endif
 
 
 
         // sunset ambient
-        vec3 sunsetClearAmbientColor   = vec3(0.51, 0.545, 0.52);
+        vec3 sunsetClearAmbientColor   = vec3(0.45, 0.495, 0.58) * 0.8;
 
 
         #if !defined COMPOSITE && !defined DEFERRED1 //ground color
-            vec3 nightClearLightColor = vec3(0.15, 0.14, 0.20) * (0.4 + vsBrightness * 0.4);
+            vec3 nightClearLightColor = vec3(0.15, 0.185, 0.239) * 1.45 * (0.4 + vsBrightness * 0.4);
         #elif defined DEFERRED1
             vec3 nightClearLightColor = vec3(0.11, 0.14, 0.20); //cloud color
         #else
             vec3 nightClearLightColor = vec3(0.07, 0.12, 0.27); //light shaft color
         #endif
-        vec3 nightClearAmbientColor   = vec3(0.09, 0.12, 0.17) * (1.55 + vsBrightness * 0.77);
+        vec3 nightClearAmbientColor   = vec3(0.09, 0.12, 0.17) * 0.5 * (1.55 + vsBrightness * 0.77);
 
         #ifdef SPECIAL_BIOME_WEATHER
             vec3 drlcSnowM = inSnowy * vec3(-0.06, 0.0, 0.04);
@@ -61,13 +61,13 @@
         #endif
 
         // day rain colors
-        vec3 dayRainLightColor   = vec3(0.7, 0.7, 0.6) * 0.3 + noonFactor * vec3(0.0, 0.02, 0.06)
+        vec3 dayRainLightColor   = vec3(0.7, 0.73, 0.75) * 0.3 + noonFactor * vec3(0.0, 0.02, 0.06)
                                 + rainFactor * (drlcRainM + drlcSnowM + drlcDryM);
-        vec3 dayRainAmbientColor = vec3(0.2, 0.2, 0.25) * (1.8 + 0.5 * vsBrightness);
+        vec3 dayRainAmbientColor = vec3(0.21, 0.215, 0.225) * (1.8 + 0.5 * vsBrightness);
 
         // night rain colors
-        vec3 nightRainLightColor   = vec3(0.01, 0.02, 0.03) * (0.5 + 0.5 * vsBrightness);
-        vec3 nightRainAmbientColor = vec3(0.051, 0.0545, 0.052) * (0.75 + 0.6 * vsBrightness);
+        vec3 nightRainLightColor   = vec3(0.01, 0.02, 0.03) * 1.5 * (0.5 + 0.5 * vsBrightness);
+        vec3 nightRainAmbientColor = vec3(0.053, 0.0575, 0.060) * 2.0 * (0.75 + 0.6 * vsBrightness);
 
         #ifndef COMPOSITE
             float noonFactorDM = noonFactor; //ground and cloud factor
@@ -81,20 +81,23 @@
         vec3 dayAmbientColor = mix(sunsetClearAmbientColor, noonClearAmbientColor, noonFactorDM);
 
         vec3 clearLightColor   = mix(nightClearLightColor, dayLightColor, sunVisibility2);
-        vec3 clearAmbientColor = mix(nightClearAmbientColor, dayAmbientColor, sunVisibility2);
+        vec3 clearAmbientColor = mix(nightClearAmbientColor, dayAmbientColor, sunVisibility2) * 1.5;
 
         vec3 rainLightColor   = mix(nightRainLightColor, dayRainLightColor, sunVisibility2) * 1.5;
         vec3 rainAmbientColor = mix(nightRainAmbientColor, dayRainAmbientColor, sunVisibility2);
 
         vec3 lightColor   = mix(clearLightColor, rainLightColor, rainFactor) * 0.7;
+
         vec3 ambientColor = mix(clearAmbientColor, rainAmbientColor, rainFactor) * 1.5;
+
+
     #elif defined NETHER
         vec3 lightColor   = vec3(0.0);
         vec3 ambientColor = (netherColor + 2.5 * lavaLightColor) * (0.9 + 0.45 * vsBrightness);
     #elif defined END
-        vec3 endLightColor = vec3(0.68, 0.51, 1.07) * 1.5;
+        vec3 endLightColor = vec3(1.0, 1.0, 1.0) * 1.5;
         float endLightBalancer = 0.2 * vsBrightness;
-        vec3 lightColor    = endLightColor * (0.35 - endLightBalancer);
+        vec3 lightColor    = endLightColor * (1.0 - endLightBalancer);
         vec3 ambientColor  = endLightColor * (0.2 + endLightBalancer);
     #endif
 

@@ -75,7 +75,7 @@ vec4 GetVolumetricLight(inout vec3 color, inout float vlFactor, vec3 translucent
               VdotUM = smoothstep1(VdotUM);
               VdotUM = pow(VdotUM, min(lViewPos1 / far, 1.0) * (3.0 - 2.0 * vlSceneIntensity));
         vlMult *= mix(VdotUM * VdotLM, 1.0, 0.4 * rainyNight) * vlTime;
-        vlMult *= mix(invNoonFactor2 * 0.875 + 0.125, 1.0, max(vlSceneIntensity, rainFactor2));
+        vlMult *= mix(invNoonFactor2 * 2.875 + 0.125, 1.0, max(vlSceneIntensity, rainFactor2));
 
         #if LIGHTSHAFT_QUALI == 4
             int sampleCount = vlSceneIntensity < 0.5 ? 30 : 50;
@@ -147,8 +147,9 @@ vec4 GetVolumetricLight(inout vec3 color, inout float vlFactor, vec3 translucent
             #ifdef DISTANT_HORIZONS
                 playerPos *= sqrt(renderDistance / far);
             #endif
-            vec4 enderBeamSample = vec4(DrawEnderBeams(VdotU, playerPos), 1.0);
-            enderBeamSample /= sampleCount;
+           //vec4 enderBeamSample = vec4(DrawEnderBeams(VdotU, playerPos), 1.0);
+           vec4 enderBeamSample = vec4(0.0);
+            //enderBeamSample /= sampleCount;
         #endif
 
         float shadowSample = 1.0;
@@ -327,15 +328,19 @@ vec4 GetVolumetricLight(inout vec3 color, inout float vlFactor, vec3 translucent
                     viewPosDH /= viewPosDH.w;
                     lViewPosM = length(viewPosDH.xyz);
                 }
-                lViewPosM = min(lViewPosM, renderDistance * 0.6);
+                lViewPosM = min(lViewPosM, renderDistance * 0.1);
 
                 float dhVlStillIntense = max(max(vlSceneIntensity, rainFactor), nightFactor * 0.5);
 
-                volumetricLight *= mix(0.0003 * lViewPosM, 1.0, dhVlStillIntense);
+                volumetricLight *= mix(0.0003 * lViewPosM, 1.0, dhVlStillIntense) * 3.0;
             #else
                 volumetricLight *= min1(lViewPos1 * 3.0 / renderDistance);
             #endif
         }
+    #endif
+
+    #ifndef DISTANT_HORIZONS
+    volumetricLight *= 0.25;
     #endif
 
     return volumetricLight;

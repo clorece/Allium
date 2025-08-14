@@ -1,6 +1,6 @@
 #include "/lib/colors/skyColors.glsl"
 
-#define SHOOTING_STARS
+//#define SHOOTING_STARS
 #define PLANETARY_STARS_CONDITION 2 // [0 1 2]
 
 float GetStarNoise(vec2 pos) {
@@ -82,7 +82,7 @@ vec2 GetStarCoord(vec3 viewPos, float sphereness) {
             trailStar *= min1(VdotU * 3.0) * max0(1.0 - pow(abs(VdotS) * 1.002, 100.0));
             trailStar *= invRainFactor * pow2(pow2(invNoonFactor2)) * (1.0 - 0.5 * sunVisibility);
 
-            trailColor += 4096.0 * trailStar * vec3(1.0, 0.9, 0.7);
+            trailColor += 2048.0 * trailStar * vec3(1.0, 0.9, 0.7);
         }
 
         return (shootingStarColor + trailColor) * 6.0;
@@ -93,7 +93,7 @@ vec3 GetStars(vec2 starCoord, float VdotU, float VdotS) {
     if (VdotU < 0.0) return vec3(0.0);
 
     vec2 baseCoord = starCoord * 0.5;
-    float starFactor = 2046.0;
+    float starFactor = 1536.0;
     vec2 staticCoord = floor(baseCoord * starFactor) / starFactor;
 
     float star = 1.05;
@@ -107,7 +107,7 @@ vec3 GetStars(vec2 starCoord, float VdotU, float VdotS) {
     float fade = min1(VdotU * 3.0) * max0(1.0 - pow(abs(VdotS) * 1.002, 100.0));
     fade *= invRainFactor * pow2(pow2(invNoonFactor2)) * (1.0 - 0.5 * sunVisibility);
 
-    vec3 staticStars = 40.0 * star * vec3(0.38, 0.4, 0.5) * fade;
+    vec3 staticStars = 30.0 * star * vec3(0.38, 0.4, 0.5) * fade;
 
     #if PLANETARY_STARS_CONDITION == 2
         float planetFactor = 768.0;
@@ -117,14 +117,14 @@ vec3 GetStars(vec2 starCoord, float VdotU, float VdotS) {
         float p2 = GetStarNoise(planetCoord + vec2(0.12, 0.21));
         float p3 = GetStarNoise(planetCoord + vec2(0.33, 0.77));
         float pNoise = p1 * p2 * p3;
-        pNoise -= 0.92;
+        pNoise -= 0.93;
         float planetMask = max0(pNoise);
         planetMask *= planetMask;
 
         float hue = fract(sin(dot(planetCoord, vec2(17.23, 48.73))) * 43758.5453);
         vec3 planetColor = hsv2rgb(vec3(hue, 0.6, 1.0));
 
-        vec3 planetStars = 4096.0 * planetMask * planetColor * fade;
+        vec3 planetStars = 2048.0 * planetMask * planetColor * fade;
 
         float flicker = 0.9 + 0.1 * sin(syncedTime * 2.5 + dot(planetCoord, vec2(23.0, 19.0)) * 10.0);
         planetStars *= flicker;

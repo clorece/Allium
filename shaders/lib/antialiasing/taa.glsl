@@ -120,6 +120,7 @@ void DoTAA(inout vec3 color, inout vec3 temp, float z1) {
         }
     #endif
 
+
     if (materialMask == 254) { // No SSAO, No TAA
         #ifndef CUSTOM_PBR
             if (z1 <= 0.56) return; // The edge pixel trick doesn't look nice on hand
@@ -155,6 +156,7 @@ void DoTAA(inout vec3 color, inout vec3 temp, float z1) {
     if (materialMask == 253) // Reduced Edge TAA
         edge *= extraEdgeMult;
 
+    /*
     #ifdef DISTANT_HORIZONS
         if (z0 == 1.0) {
             blendMinimum = 0.75;
@@ -163,6 +165,7 @@ void DoTAA(inout vec3 color, inout vec3 temp, float z1) {
             edge = 1.0;
         }
     #endif
+    */
 
     vec2 velocity = (texCoord - prvCoord.xy) * view;
     float blendFactor = float(prvCoord.x > 0.0 && prvCoord.x < 1.0 &&

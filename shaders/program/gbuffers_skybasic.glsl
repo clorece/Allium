@@ -12,7 +12,7 @@ flat in vec3 upVec, sunVec;
 
 flat in vec4 glColor;
 
-#ifdef OVERWORLD
+#ifdef OVERWORLD || END
     flat in float vanillaStars;
 #endif
 
@@ -21,20 +21,27 @@ flat in vec4 glColor;
 //Common Variables//
 float SdotU = dot(sunVec, upVec);
 float sunFactor = SdotU < 0.0 ? clamp(SdotU + 0.375, 0.0, 0.75) / 0.75 : clamp(SdotU + 0.03125, 0.0, 0.0625) / 0.0625;
+float MdotU = -dot(sunVec, upVec);
+float moonFactor = MdotU < 0.0 ? clamp(MdotU + 0.375, 0.0, 0.75) / 0.75 : clamp(MdotU + 0.03125, 0.0, 0.0625) / 0.0625;
 float sunVisibility = clamp(SdotU + 0.0625, 0.0, 0.125) / 0.125;
 float sunVisibility2 = sunVisibility * sunVisibility;
 float shadowTimeVar1 = abs(sunVisibility - 0.5) * 2.0;
 float shadowTimeVar2 = shadowTimeVar1 * shadowTimeVar1;
 float shadowTime = shadowTimeVar2 * shadowTimeVar2;
 
+vec3 lightVec = sunVec * ((timeAngle < 0.5325 || timeAngle > 0.9675) ? 1.0 : -1.0);
+
 //Common Functions//
+//#include "/lib/commonFunctions.glsl"
+//#include "/lib/util/spaceConversion.glsl"
+#include "/lib/util/spaceConversion.glsl"
 
 //Includes//
 #include "/lib/util/dither.glsl"
 
-#ifdef OVERWORLD
+#ifdef OVERWORLD || END
     #include "/lib/atmospherics/sky.glsl"
-    //#include "/lib/atmospherics/clouds/planarClouds.glsl"
+    #include "/lib/atmospherics/clouds/planarClouds.glsl"
     #include "/lib/atmospherics/stars.glsl"
 #endif
 
@@ -53,15 +60,11 @@ float shadowTime = shadowTimeVar2 * shadowTimeVar2;
     #include "/lib/misc/colorCodedPrograms.glsl"
 #endif
 
-#if SUN_MOON_STYLE >= 2
-    #include "/lib/util/spaceConversion.glsl"
-#endif
-
 //Program//
 void main() {
     vec4 color = vec4(glColor.rgb, 1.0);
 
-    #ifdef OVERWORLD
+    #ifdef OVERWORLD || END
         if (vanillaStars > 0.5) {
             discard;
         }
@@ -93,8 +96,8 @@ void main() {
         vec2 starCoord = GetStarCoord(viewPos.xyz, 0.5);
         color.rgb += GetStars(starCoord, VdotU, VdotS);
 
-        //vec2 cloudCoord = GetCloudCoord(viewPos.xyz, 0.5);
-        //color.rgb += GetPlanarClouds(cloudCoord, VdotU, VdotS);
+        //vec2 cloudCoord = GetCloudCoords(viewPos.xyz);
+        color.rgb += GetPlanarClouds(viewPos.xyz, VdotU, VdotS, dither);
 
         #if SUN_MOON_STYLE >= 2
             float absVdotS = abs(VdotS) * 0.9980;
@@ -189,7 +192,7 @@ flat out vec3 upVec, sunVec;
 
 flat out vec4 glColor;
 
-#ifdef OVERWORLD
+#ifdef OVERWORLD || END
     flat out float vanillaStars;
 #endif
 
@@ -210,7 +213,7 @@ void main() {
     upVec = normalize(gbufferModelView[1].xyz);
     sunVec = GetSunVector();
 
-    #ifdef OVERWORLD
+    #ifdef OVERWORLD || END
         //Vanilla Star Dedection by Builderb0y
         vanillaStars = float(glColor.r == glColor.g && glColor.g == glColor.b && glColor.r > 0.0 && glColor.r < 0.51);
     #endif

@@ -200,16 +200,6 @@ vec4 GetReflection(vec3 normalM, vec3 viewPos, vec3 nViewPos, vec3 playerPos, fl
                         
                         vec2 starCoord = GetStarCoord(nViewPosR, 0.5);
                         skyReflection += GetStars(starCoord, RVdotU, RVdotS);
-
-                        #ifdef VL_CLOUDS_ACTIVE
-                            vec3 worldNormalMR = normalize(mat3(gbufferModelViewInverse) * normalMR);
-                            vec3 RCameraPos = cameraPosition + 2.0 * worldNormalMR * dot(playerPos, worldNormalMR);
-                            vec3 RPlayerPos = normalize(mat3(gbufferModelViewInverse) * nViewPosR);
-                            float RlViewPos = 100000.0;
-
-                            vec4 clouds = GetCloudReflection(cloudLinearDepth, skyFade, RCameraPos, RPlayerPos,
-                                                    RlViewPos, RVdotS, RVdotU, dither, auroraBorealis, nightNebula);
-                        #endif
                     #endif
 
                     skyReflection = mix(color * 0.5, skyReflection, skyLightFactor);

@@ -8,10 +8,10 @@
         #endif
 
         #if LIGHTSHAFT_QUALI > 0 && SHADOW_QUALITY > -1
-            float fog = lViewPos / 48.0;
+            float fog = lViewPos / 96.0;
             fog *= fog;
         #else
-            float fog = lViewPos / 32.0;
+            float fog = lViewPos / 52.0;
         #endif
 
         return 1.0 - exp(-fog);

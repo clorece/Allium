@@ -68,7 +68,8 @@ vec3 GetNightNebula(vec3 viewPos, float VdotU, float VdotS) {
     float nebulaFactor = 1.0;
 
     vec2 UV = GetStarCoord(viewPos, 0.75);
-    vec2 centeredUV = UV - 0.25;
+    vec2 centeredUV = UV + 0.25;
+    centeredUV.x *= 1.2;
 
     float band = smoothstep(0.3, 0.0, abs(centeredUV.y));
     float noise = fbmCloud2(UV * 12.0, 0.2);
@@ -97,7 +98,7 @@ vec3 GetNightNebula(vec3 viewPos, float VdotU, float VdotS) {
         float p2 = GetStarNoise(planetCoord + vec2(0.12, 0.21));
         float p3 = GetStarNoise(planetCoord + vec2(0.33, 0.77));
         float pNoise = p1 * p2 * p3;
-        pNoise -= 0.82;
+        pNoise -= 0.81;
         float planetMask = max0(pNoise);
         planetMask *= planetMask;
 
@@ -108,7 +109,7 @@ vec3 GetNightNebula(vec3 viewPos, float VdotU, float VdotS) {
 
         float nebulaDensityBoost = bandCenterFalloff;
 
-        vec3 planetStars = 768.0 * nebulaDensityBoost * planetMask * flicker * planetColor;
+        vec3 planetStars = 128.0 * nebulaDensityBoost * planetMask * flicker * planetColor;
     #else
         vec3 planetStars = vec3(0.0);
     #endif

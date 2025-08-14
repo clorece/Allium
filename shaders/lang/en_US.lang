@@ -6,6 +6,7 @@ profile.VERYLOW=§aVery Low
 profile.LOW=§aLow
 profile.MEDIUM=§aMedium
 profile.HIGH=§eHigh (Default)
+profile.VERYHIGH=§eVery High
 profile.ULTRA=§cUltra
 profile.CINEMATIC=§4§lScreenshot
 profile.COMPLEMENTARY=§4§l§n§oComplementary
@@ -202,7 +203,7 @@ value.BLOCK_REFLECT_QUALITY.1=§eLow
 value.BLOCK_REFLECT_QUALITY.2=§cMedium
 value.BLOCK_REFLECT_QUALITY.3=§cHigh
 
-option.SHADOW_QUALITY=Real-Time Shadows
+option.SHADOW_QUALITY=Shadow Quality
 option.SHADOW_QUALITY.comment=Adjusts the quality of shadows. Every tier further reduces the shadow noise artifacts, options lower than §eHigh§r enable optimised shadows on leaves, §eVery Low§r significantly downgrades shadows in multiple ways, §aOFF§r completely disables shadows and light shafts.
 value.SHADOW_QUALITY.-1=§aOFF
 value.SHADOW_QUALITY.0=§eVery Low
@@ -261,12 +262,6 @@ option.FXAA_DEFINE=Anti-Aliasing (FXAA)
 option.FXAA_DEFINE.comment=Enables Fast Approximate Anti-Aliasing (FXAA), which is basically an effect that produces smoother image.
 value.FXAA_DEFINE.-1=§aOFF
 value.FXAA_DEFINE.1=§eON
-
-option.SSAO_QUALI_DEFINE=Ambient Occlusion Method
-option.SSAO_QUALI_DEFINE.comment=Changes the method of ambient occlusion between off, SSAO, and SSRAO. §e[*]§r SSRAO recommended for screenshots, not really for gameplay.
-value.SSAO_QUALI_DEFINE.0=§aOFF
-value.SSAO_QUALI_DEFINE.2=§eSSAO
-value.SSAO_QUALI_DEFINE.3=§cSSRAO
 
 option.ANISOTROPIC_FILTER=Texture Filtering
 option.ANISOTROPIC_FILTER.comment=Improves the quality of mipmapped textures using Anisotropic Filtering. §e[*]§r Make sure your "Mipmap Levels" video setting is set to Maximum (4) or you won't get good results.
@@ -497,9 +492,6 @@ option.WATER_SIZE_MULT.comment=Adjusts how big the surface-direction waves (norm
 
 option.SUN_ANGLE=Sun/Moon Angle
 option.SUN_ANGLE.comment=Adjusts the angle of sun/moon relative to the world during noon. §a[+]§r Reimagined's lighting model is specially designed to make the "0" sun angle work just as well as others.
-value.SUN_ANGLE.-1=Set by Style
-value.SUN_ANGLE.0=0 §r(§bReimagined§r)
-value.SUN_ANGLE.-40=-40 §r(§dUnbound§r)
 
 option.SUN_MOON_STYLE_DEFINE=Sun/Moon Style
 option.SUN_MOON_STYLE_DEFINE.comment=Determines the style of sun/moon. §e[*]§r This setting might interact incorrectly with some resource packs due to the limitations of sun/moon/skybox differentiation.
@@ -558,7 +550,7 @@ option.WEATHER_TEX_OPACITY=Weather Texture Opacity
 option.WEATHER_TEX_OPACITY.comment=Adjusts the opacity of the rainfall/snowfall weather textures.
 
 option.SHADOW_SMOOTHING=Shadow Smoothing
-option.SHADOW_SMOOTHING.comment=Determines the sharpness of shadows. §c[-]§r Lowering this setting will increase shadow flickering and impact performance. §e[*]§r This setting only works if "Real-Time Shadows" is set to Low or higher.
+option.SHADOW_SMOOTHING.comment=Determines the sharpness of shadows. §c[-]§r Lowering this setting will increase shadow flickering and impact performance. §e[*]§r This setting only works if "Shadow Quality" is set to Low or higher.
 value.SHADOW_SMOOTHING.4=Very Smooth
 value.SHADOW_SMOOTHING.3=Smooth
 value.SHADOW_SMOOTHING.2=Sharp §c[-]
@@ -740,8 +732,10 @@ option.GLOWING_COLORED_PARTICLES.comment=Makes all particles that are technicall
 option.CAVE_LIGHTING=Cave Lighting Multiplier
 option.CAVE_LIGHTING.comment=Adds extra lighting to areas that don't have skylight. §e[*]§r Cave lighting is also affected by the "Brightness" slider in Video Settings. §c[-]§r Drastically changing this setting can break the lighting balance.
 
-option.AMBIENT_MULT=Shadow Light Multiplier
-option.AMBIENT_MULT.comment=Determines the amount of ambient lighting seen in shadows. §c[-]§r Drastically changing this setting can break the lighting balance.
+option.AMBIENT_MULT=Ambient Light Multiplier
+    option.AMBIENT_MULT.comment=Determines the amount of ambient lighting seen in shadows.
+option.SUNLIGHT_AMOUNT=Light Multiplier
+    option.SUNLIGHT_AMOUNT.comment=Determines the amount of light is casted from the sun and moon.
 
 option.PLAYER_SHADOW=Player Shadow §e[*]§r
 option.PLAYER_SHADOW.comment=Determines if the player will cast a shadow or not. §e[*]§r This setting only works on Iris. §e[*]§r This setting will be disabled if "Real-Time Shadows" is OFF.
@@ -1087,30 +1081,39 @@ screen.LUT.comment=Lookup tables (LUTs) are used to change the colors of an imag
         value.End_Lut.7=Autumn 2.0
         value.End_Lut.8=Faded Rustic
         value.End_Lut.9=Esther Default
- 
+
+screen.DIRECT_LIGHTING=Direct Lighting
 screen.INDIRECT_LIGHTING=Indirect Lighting
-    option.SSRAO_QUALITY=SSRAO Quality
-        value.SSRAO_QUALITY.2=Reflection View
-        value.SSRAO_QUALITY.8=§aLow
-        value.SSRAO_QUALITY.12=§eMedium
-        value.SSRAO_QUALITY.16=§cHigh
-        value.SSRAO_QUALITY.20=§4§lUltra
-    option.SSRAO_I=SSRAO Intensity
-    option.SSRAO_RADIUS=SSRAO Radius
-    option.DEPTH_TOLERANCE=SSRAO Gap Threshold
+    option.SSAO_QUALI_DEFINE=Ambient Occlusion Method
+        option.SSAO_QUALI_DEFINE.comment=Changes the method of ambient occlusion between off, SSAO, and RTAO. §e[*]§r RTAO recommended for screenshots, not really for gameplay.
+    option.RTAO_SAMPLES=SSRTAO Samples
+        value.RTAO_SAMPLES.32=§4§lOVERDRIVE
+    option.AO_I=Ambient Occlusion Intensity
+    option.AO_RADIUS=Ambient Occlusion Radius
+    option.DEPTH_TOLERANCE=RTAO Gap Threshold
         option.DEPTH_TOLERANCE.comment=Determines how wide much occlusioning needs to be done depending on the gap. Lower values will make smaller gaps (e.g. gaps in fences) less occluded, higher values will make them more occluded in the gaps.
-    option.GLOBAL_ILLUMINATION=Global Illumination
-        option.GLOBAL_ILLUMINATION.comment=Screenspaced indirect lighting, filling and illuminating surfaces.
-            value.GLOBAL_ILLUMINATION.0=§aOff
-            value.GLOBAL_ILLUMINATION.1=§cOn
-    option.GI_SAMPLES=Ray Sample Quality
+    option.GLOBAL_ILLUMINATION=Indirect Lighting Method
+        option.GLOBAL_ILLUMINATION.comment=Changes the method of indirect lighting. §eSSRT§r - SSRTAO and SSRTGI are combined for SSRTAO to fill in spots and finer details that SSRTGI cannot. §lSetting temporal filter to intense is recommended!§r
+            value.GLOBAL_ILLUMINATION.0=§aOFF
+            value.GLOBAL_ILLUMINATION.1=§eSSAO
+            value.GLOBAL_ILLUMINATION.2=§cSSRTAO
+            value.GLOBAL_ILLUMINATION.3=§cSSRTGI
+            value.GLOBAL_ILLUMINATION.4=§4§lSSRT
+    option.GI_SAMPLES=SSRTGI Samples
         option.GI_SAMPLES.comment=Controls how many rays are cast per pixel for global illumination. Higher = smoother, better GI, but more expensive.
+        value.GI_SAMPLES.32=§4§lOVERDRIVE
     option.GI_STEPS=Ray Distance
         option.GI_STEPS.comment=Scales the total ray length for each ray. Affects performance and range; more steps = longer, denser rays, but more costly.
     option.GI_RADIUS=Illumination Radius 
         option.GI_RADIUS.comment=This determines how far rays can reach in a scene. Larger radius = more distant lighting, but also risk of hitting irrelevant surfaces or sky.
     option.GI_INTENSITY=GI Intensity
     option.GI_INTENSITY.comment=Adjusts overall visibility of the Global Illumination contribution.
+    option.GI_BOUNCE=GI Bounces
+        option.GI_BOUNCE.comment=Adjust the amount of bounces GI will make. §cHuge Performance Impact
+    option.EXCLUDE_ENTITIES_IN_RT=Exclude Entities in RT
+        option.EXCLUDE_ENTITIES_IN_RT.comment=Prevents entity (includes player and hand) raytracing contribution. Disabling will make entities very noisy at low SSRTAO / SSRGI Samples.
+    option.PREVENT_ACCUMULATION_IN_FOLIAGE=Prevent Foliage in GI
+    option.PREVENT_ACCUMULATION_IN_FOLIAGE.comment=Prevents GI contribution when it comes to foliage blocks. Disabling may make GI look wrong on foliage in many cases but not all.
     option.GLOBAL_ILLUMINATION_VIEW=GI View
         option.GLOBAL_ILLUMINATION_VIEW.comment=Debug View for Global Illumination
 
@@ -1179,3 +1182,17 @@ option.PLANETARY_STARS_CONDITION=Planetary Star Condition
     value.PLANETARY_STARS_CONDITION.0=Off
     value.PLANETARY_STARS_CONDITION.1=Milky Way Only
     value.PLANETARY_STARS_CONDITION.2=Full
+
+screen.ANTIALIASING=Antialiasing
+screen.TONEMAPPING=Tonemapping
+    option.TONEMAP=Tonemap
+    option.EXPOSURE=Exposure
+        option.EXPOSURE.comment=Controls the overall scene brightness
+    option.SATURATION=Saturation
+        option.SATURATION.comment=Adjusts how vivid or muted the colors appear
+    option.GAMMA=Gamma
+        option.GAMMA.comment=Applies gamma correction to balance midtones and prevent banding
+    option.CONTRAST=Contrast
+        option.CONTRAST.comment=Modifies the difference between dark and light areas for visual clarity
+
+screen.COLORED_LIGHTS=Colored Lighting

@@ -29,23 +29,7 @@ uniform vec2 pixel;
 //Pipeline Constants//
 const bool colortex0MipmapEnabled = true;
 
-//Common Variables//
-float SdotU = dot(sunVec, upVec);
-float sunFactor = SdotU < 0.0 ? clamp(SdotU + 0.375, 0.0, 0.75) / 0.75 : clamp(SdotU + 0.03125, 0.0, 0.0625) / 0.0625;
-float sunVisibility = clamp(SdotU + 0.0625, 0.0, 0.125) / 0.125;
-float sunVisibility2 = sunVisibility * sunVisibility;
-float shadowTimeVar1 = abs(sunVisibility - 0.5) * 2.0;
-float shadowTimeVar2 = shadowTimeVar1 * shadowTimeVar1;
-float shadowTime = shadowTimeVar2 * shadowTimeVar2;
-float farMinusNear = far - near;
-
-vec2 view = vec2(viewWidth, viewHeight);
-
-#ifdef OVERWORLD
-    vec3 lightVec = sunVec * ((timeAngle < 0.5325 || timeAngle > 0.9675) ? 1.0 : -1.0);
-#else
-    vec3 lightVec = sunVec;
-#endif
+#include "/lib/commonVariables.glsl"
 
 #if defined LIGHTSHAFTS_ACTIVE && (LIGHTSHAFT_BEHAVIOUR == 1 && SHADOW_QUALITY >= 1 || defined END)
 #else
@@ -122,6 +106,40 @@ float GetInverseLinearDepth(float linearDepth) {
 
 #ifdef END
     #include "/lib/atmospherics/enderStars.glsl"   
+
+    vec3 GetEndSun(vec3 viewDir, float VdotS) {
+        float sunAngularSize = 0.009; // ~0.53 degrees
+        float cosAngle = cos(sunAngularSize);
+
+        // Sun disc (sharp)
+        float disc = smoothstep(cosAngle - 0.0003, cosAngle + 0.0003, VdotS);
+
+        // Subtle glare just around the disc (tight power falloff)
+        float glare = pow(max(VdotS, 0.0), 500.0);
+        glare *= 1.0 - disc; // Remove glare inside the disc
+
+        // Final color
+        vec3 sunColor = vec3(1.0, 0.97, 0.9); // white with warmth
+        vec3 sun = sunColor * (disc * 40.0 + glare * 0.5); // Bright core, soft faint glow
+
+        return sun;
+    }
+
+    vec3 GetEndBackgroundColor(vec3 viewDir, float VdotS) {
+        //float VdotS = dot(viewDir, sunDir);
+
+        // Base dark space color (very dark gray)
+        vec3 baseColor = vec3(0.02);
+
+        // Glow intensity around sun direction
+        float glow = smoothstep(0.9, 1.0, -VdotS); // glow fades off before 25° from sun
+
+        // Neutral light tint
+        vec3 glowColor = vec3(0.15, 0.15, 0.15);
+
+        // Final background color = base + glow * glowColor
+        return baseColor + glow * glowColor;
+    }
 #endif
 
 #ifdef WORLD_OUTLINE
@@ -143,7 +161,7 @@ float GetInverseLinearDepth(float linearDepth) {
     #include "/lib/misc/distantLightBokeh.glsl"
 #endif
 
-#include "/lib/lighting/AO.glsl"
+//#include "/lib/lighting/AO.glsl"
 
 #ifdef NETHER
 vec3 ambientColor = vec3(0.5, 0.21, 0.01);
@@ -151,11 +169,58 @@ vec3 ambientColor = vec3(0.5, 0.21, 0.01);
 
 #define MIN_LIGHT_AMOUNT 1.0
 
+vec3 fakeBounceLight(vec3 normal, vec3 worldPos, vec3 lightPos, vec3 lightColor) {
+    // Direction from point to light
+    vec3 toLight = normalize(lightPos - worldPos);
 
-#ifdef OVERWORLD || END // GI ONLY AVAILABLE FOR OVERWORLD, for now...
-        #include "/lib/lighting/GI.glsl"
-#endif
+    // Simulate bounce intensity based on how much the normal faces the light
+    float bounceStrength = max(dot(normal, toLight), 0.0);
 
+    // Fake falloff (optional for distance attenuation)
+    float distance = length(lightPos - worldPos);
+    float attenuation = 1.0 / (distance * distance + 1.0);
+
+    // Final bounced light color
+    vec3 bouncedLight = lightColor * bounceStrength * attenuation * 0.5; // 0.5 is bounce scale
+
+    return bouncedLight;
+}
+
+#include "/lib/lighting/indirectLighting.glsl"
+
+vec3 GetShadowPosition(vec3 tracePos, vec3 cameraPos) {
+    vec3 wpos = PlayerToShadow(tracePos - cameraPos);
+    float distb = sqrt(wpos.x * wpos.x + wpos.y * wpos.y);
+    float distortFactor = 1.0 - shadowMapBias + distb * shadowMapBias;
+    vec3 shadowPosition = vec3(vec2(wpos.xy / distortFactor), wpos.z * 0.2);
+    return shadowPosition * 0.5 + 0.5;
+}
+
+bool GetShadow(vec3 tracePos, vec3 cameraPos, int cloudAltitude, float lowerPlaneAltitude, float higherPlaneAltitude) {
+    const float cloudShadowOffset = 0.5;
+
+    vec3 shadowPosition0 = GetShadowPosition(tracePos, cameraPos);
+    if (length(shadowPosition0.xy * 2.0 - 1.0) < 1.0) {
+        float shadowsample0 = shadow2D(shadowtex0, shadowPosition0).z;
+
+        if (shadowsample0 == 0.0) return true;
+    }
+
+    return false;
+}
+
+vec3 sampleSurfaceAlbedo(vec3 worldPos) {
+    // Scale factor: controls tiling density — adjust to fit your scene scale
+    float tileScale = 0.1;
+
+    // Map world XZ coordinates into [0,1] range via fract (repeat)
+    vec2 uv = fract(worldPos.xz * tileScale);
+
+    // Sample albedo color from colortex9
+    vec3 albedo = texture(colortex9, uv).rgb;
+
+    return albedo;
+}
 
 //Program//
 void main() {
@@ -169,6 +234,7 @@ void main() {
     float lViewPos = length(viewPos);
     vec3 nViewPos = normalize(viewPos.xyz);
     vec3 playerPos = ViewToPlayer(viewPos.xyz);
+    vec3 worldPos = playerPos + cameraPosition;
 
     float dither = texture2D(noisetex, texCoord * vec2(viewWidth, viewHeight) / 128.0).b;
     vec3 dither2 = texture2D(noisetex, texCoord * vec2(viewWidth, viewHeight) / 128.0).xyz;
@@ -186,6 +252,7 @@ void main() {
 
     float VdotU = dot(nViewPos, upVec);
     float VdotS = dot(nViewPos, sunVec);
+    float VdotM = dot(nViewPos, -sunVec);
     float skyFade = 0.0;
     vec3 waterRefColor = vec3(0.0);
     vec3 auroraBorealis = vec3(0.0);
@@ -208,11 +275,11 @@ void main() {
             color = mix(color, dlbColor, dlbMix);
         #endif
 
-        #if SSAO_QUALI > 0 || defined WORLD_OUTLINE || defined TEMPORAL_FILTER
+        #if GLOBAL_ILLUMINATION >= 0 || defined WORLD_OUTLINE || defined TEMPORAL_FILTER
             float linearZ0 = GetLinearDepth(z0);
         #endif
 
-        vec3 texture6 = texelFetch(colortex6, texelCoord, 0).rgb;
+        vec4 texture6 = texelFetch(colortex6, texelCoord, 0);
         bool entityOrHand = z0 < 0.56;
         int materialMaskInt = int(texture6.g * 255.1);
         float intenseFresnel = 0.0;
@@ -220,19 +287,17 @@ void main() {
         vec3 reflectColor = vec3(1.0);
 
         float skyLightFactor = texture6.b;
+        //int foliage = int(texture6.a * 1.1);
         vec3 texture5 = texelFetch(colortex5, texelCoord, 0).rgb;
         vec3 normalM = mat3(gbufferModelView) * texture5;
 
+        float foliage = texelFetch(colortex6, texelCoord, 0).a;
+        bool isFoliage = foliage > 0.5;
+        
+        //color.rgb = foliage > 1.0 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0);
+        //if (isFoliage) color.rgb = vec3(0.0, 1.0, 0.0);
+
         float ao = 1.0;
-        #if SSAO_QUALI == 2
-            ao = SSAO(normalM, viewPos.xyz, depthtex0, dither);
-            ao = clamp( 1.0 - (1.0 - ao) * SSAO_I, 0.0, 1.0 );
-        #elif SSAO_QUALI == 3
-            float aoDarkness = 5.0;
-            ao = SSRAO(color.rgb, normalM, viewPos.xyz, depthtex0, dither);
-        #else
-            ao = 1.0;
-        #endif
 
         if (materialMaskInt <= 240) {
             #ifdef IPBR
@@ -255,23 +320,24 @@ void main() {
                 entityOrHand = true;
             }
         }
-                float darkness = 0.5 - dot(color.rgb, vec3(ambientColor));
 
-        color.rgb *= ao;
-
-    
-        #ifdef OVERWORLD || END
-                vec3 skyIndirect = GetSkyIllumination(normalM, viewPos.xyz, nViewPos, dither, skyLightFactor, vec3(0.0), VdotU, VdotS);
-                color.rgb = mix(color.rgb, min(color.rgb, skyIndirect), darkness);  
-            #if GLOBAL_ILLUMINATION == 1 
-                color.rgb += mix(color.rgb, GITonemap(GlobalIllumination(viewPos.xyz, playerPos, normalM, nViewPos, skyLightFactor, linearZ0, dither)), vec3(1.0));
-    
-                // SAMPLE GI FOR BLISS SHADERS, MUST NOT USE
-                //vec3 indirect = GITonemap(applySSRT(Indirect_lighting, minLightColor, viewPos.xyz, dither2, skyLightFactor, entityOrHand));
-                //color.rgb += mix(color.rgb * vec3(0.1), min(color.rgb, indirect), darkness);  
+        
+        #if GLOBAL_ILLUMINATION == 0
+            ao = 1.0;
+            if (!entityOrHand) color.rgb *= ao;
+        #elif GLOBAL_ILLUMINATION == 1
+            ao = SSAO(z0, linearZ0, dither);
+            ao = clamp( 1.0 - (1.0 - ao) * AO_I, 0.0, 1.0 );
+            if (!entityOrHand) color.rgb *= ao;
+        #elif GLOBAL_ILLUMINATION > 1
+            color.rgb = DoRT(color.rgb, viewPos.xyz, playerPos, normalM, skyLightFactor, linearZ0, dither, entityOrHand, isFoliage);
+            #if GLOBAL_ILLUMINATION == 3
+                ao = SSAO(z0, linearZ0, dither);
+                ao = clamp( 1.0 - (1.0 - ao) * AO_I, 0.0, 1.0 );
+                if (!entityOrHand) color.rgb *= ao;
             #endif
         #endif
-        
+        // Add soft up-bounce light under the block based on skyLightFactor
 
         #ifdef PBR_REFLECTIONS
 
@@ -402,7 +468,9 @@ void main() {
             waterRefColor = color;
         #endif
 
-        DoFog(color, skyFade, lViewPos, playerPos, VdotU, VdotS, dither);
+        #ifndef END
+            DoFog(color, skyFade, lViewPos, playerPos, VdotU, VdotS, dither);
+        #endif
     } else { // Sky
         #ifdef DISTANT_HORIZONS
             float z0DH = texelFetch(dhDepthTex, texelCoord, 0).r;
@@ -418,8 +486,9 @@ void main() {
                 #else
                     waterRefColor = color;
                 #endif
-                
-                DoFog(color.rgb, skyFade, lViewPos, playerPos, VdotU, VdotS, dither);
+                #ifndef END
+                    DoFog(color.rgb, skyFade, lViewPos, playerPos, VdotU, VdotS, dither);
+                #endif
             } else { // Start of Actual Sky
         #endif
 
@@ -443,11 +512,10 @@ void main() {
             #endif
         #endif
         #ifdef END
-            //color
-            //color.rgb = endSkyColor;
+            color.rgb += GetEndSky(viewPos.xyz, VdotU);
+            color.rgb += GetEndSun(viewPos.xyz, VdotS);
+            color.rgb += GetEndBackgroundColor(viewPos.xyz, VdotM); // this is optional, just really like the look with the sun in the end
 
-            color.rgb += GetEnderStars(viewPos.xyz, VdotU);
-            color.rgb = mix(endSkyColor, color, VdotU) * 0.8;
             color.rgb *= 1.0 - maxBlindnessDarkness;
 
             #ifdef ATM_COLOR_MULTS

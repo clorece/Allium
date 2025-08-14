@@ -152,16 +152,16 @@ void main() {
                     #endif
 
                     vec2 waterWind = vec2(syncedTime * 0.01, 0.0);
-                    float waterNoise = texture2D(gaux4, worldPosM.xz * 0.012 - causticWind).g;
-                          waterNoise += texture2D(gaux4, worldPosM.xz * 0.05 + causticWind).g;
+                    float waterNoise = texture2D(gaux4, worldPosM.xz * 0.012 - causticWind * 15.0).g;
+                          waterNoise += texture2D(gaux4, worldPosM.xz * 0.05 + causticWind * 15.0).g;
 
                     float factor = max(2.5 - 0.025 * length(position.xz), 0.8333) * 1.3;
-                    waterNoise = pow(waterNoise * 0.5, factor) * factor * 1.3;
+                    waterNoise = pow(waterNoise * 0.5, factor) * factor * 1.0;
 
                     #if MC_VERSION >= 11300 && WATERCOLOR_MODE >= 2
-                        color2.rgb = normalize(sqrt1(glColor.rgb)) * vec3(0.24, 0.22, 0.26);
+                        color2.rgb = normalize(sqrt1(glColor.rgb)) * vec3(0.24, 0.29, 0.26);
                     #else
-                        color2.rgb = vec3(0.08, 0.12, 0.195);
+                        color2.rgb = vec3(0.08, 0.12, 0.195) * 0.5;
                     #endif
                     color2.rgb *= waterNoise * (1.0 + sunVisibility - rainFactor);
                     ////
