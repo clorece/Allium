@@ -4,7 +4,7 @@
     #if defined OVERWORLD
 
         #ifndef COMPOSITE //ground and cloud color
-            vec3 noonClearLightColor = vec3(0.75, 0.62, 0.5);
+            vec3 noonClearLightColor = vec3(0.98, 0.83, 0.6);
 
 
 
@@ -15,33 +15,33 @@
 
         // noonAmbientColor
         //vec3 noonClearAmbientColor = pow(skyColor, vec3(0.65)) * 0.85;
-        vec3 noonClearAmbientColor = vec3(0.45, 0.495, 0.58);
+        vec3 noonClearAmbientColor = vec3(0.58, 0.63, 0.78);
 
 
 
         #ifndef COMPOSITE //ground and cloud color
-            vec3 sunsetClearLightColor = pow(vec3(0.58, 0.43, 0.22), vec3(1.5 + invNoonFactor)) * 3.0;
+            vec3 sunsetClearLightColor = pow(vec3(0.97, 0.86, 0.67) * 0.65, vec3(1.5 + invNoonFactor)) * 3.0;
 
 
 
         #else //light shaft color
-            vec3 sunsetClearLightColor = pow(vec3(0.61, 0.43, 0.33), vec3(1.5 + invNoonFactor)) * 6.8;
+            vec3 sunsetClearLightColor = pow(vec3(0.97, 0.86, 0.67) * 0.65, vec3(1.5 + invNoonFactor)) * 6.8;
         #endif
 
 
 
         // sunset ambient
-        vec3 sunsetClearAmbientColor   = vec3(0.45, 0.495, 0.58) * 0.8;
+        vec3 sunsetClearAmbientColor   = vec3(0.58, 0.63, 0.78) * 0.8;
 
 
         #if !defined COMPOSITE && !defined DEFERRED1 //ground color
-            vec3 nightClearLightColor = vec3(0.15, 0.185, 0.239) * 1.45 * (0.4 + vsBrightness * 0.4);
+            vec3 nightClearLightColor = vec3(0.15, 0.185, 0.239) * 1.5 * (0.4 + vsBrightness * 0.4);
         #elif defined DEFERRED1
-            vec3 nightClearLightColor = vec3(0.11, 0.14, 0.20); //cloud color
+            vec3 nightClearLightColor = vec3(0.6, 0.54, 0.51) * 0.2; //cloud color
         #else
-            vec3 nightClearLightColor = vec3(0.07, 0.12, 0.27); //light shaft color
+            vec3 nightClearLightColor = vec3(0.12, 0.14, 0.17); //light shaft color
         #endif
-        vec3 nightClearAmbientColor   = vec3(0.09, 0.12, 0.17) * 0.5 * (1.55 + vsBrightness * 0.77);
+        vec3 nightClearAmbientColor   = vec3(0.52, 0.63, 0.825) * 0.2 * (1.55 + vsBrightness * 0.77);
 
         #ifdef SPECIAL_BIOME_WEATHER
             vec3 drlcSnowM = inSnowy * vec3(-0.06, 0.0, 0.04);
@@ -61,7 +61,7 @@
         #endif
 
         // day rain colors
-        vec3 dayRainLightColor   = vec3(0.7, 0.73, 0.75) * 0.3 + noonFactor * vec3(0.0, 0.02, 0.06)
+        vec3 dayRainLightColor   = vec3(0.7, 0.7, 0.7) * 0.3 + noonFactor * vec3(0.0, 0.02, 0.06)
                                 + rainFactor * (drlcRainM + drlcSnowM + drlcDryM);
         vec3 dayRainAmbientColor = vec3(0.21, 0.215, 0.225) * (1.8 + 0.5 * vsBrightness);
 
@@ -81,10 +81,15 @@
         vec3 dayAmbientColor = mix(sunsetClearAmbientColor, noonClearAmbientColor, noonFactorDM);
 
         vec3 clearLightColor   = mix(nightClearLightColor, dayLightColor, sunVisibility2);
-        vec3 clearAmbientColor = mix(nightClearAmbientColor, dayAmbientColor, sunVisibility2) * 1.5;
+        vec3 clearAmbientColor = mix(nightClearAmbientColor, dayAmbientColor, sunVisibility2);
 
-        vec3 rainLightColor   = mix(nightRainLightColor, dayRainLightColor, sunVisibility2) * 1.5;
-        vec3 rainAmbientColor = mix(nightRainAmbientColor, dayRainAmbientColor, sunVisibility2);
+        #ifndef CLOUD_SHADOWS
+            vec3 rainLightColor   = mix(nightRainLightColor, dayLightColor * 0.5, sunVisibility2);
+            vec3 rainAmbientColor = mix(nightRainAmbientColor, dayAmbientColor, sunVisibility2);
+        #else
+            vec3 rainLightColor   = clearLightColor;
+            vec3 rainAmbientColor = clearAmbientColor;
+        #endif
 
         vec3 lightColor   = mix(clearLightColor, rainLightColor, rainFactor) * 0.7;
 

@@ -20,6 +20,7 @@ flat in vec3 upVec, sunVec;
 
 #include "/lib/commonVariables.glsl"
 #include "/lib/commonFunctions.glsl"
+#include "/lib/util/spaceConversion.glsl"
 
 //Common Functions//
 
@@ -40,7 +41,7 @@ flat in vec3 upVec, sunVec;
 #endif
 
 //#if WATER_MAT_QUALITY >= 3 || defined NETHER_STORM || defined COLORED_LIGHT_FOG
-    #include "/lib/util/spaceConversion.glsl"
+    
 //#endif
 
 vec2 GetCombinedWaves(vec2 uv, vec2 wind) {
@@ -201,7 +202,12 @@ void main() {
     vec4 screenPos1 = vec4(texCoord, z1, 1.0);
     vec4 viewPos1 = gbufferProjectionInverse * (screenPos1 * 2.0 - 1.0);
     viewPos1 /= viewPos1.w;
+
+    vec3 nViewPos = normalize(viewPos1.xyz);
     float lViewPos1 = length(viewPos1.xyz);
+    float VdotL = dot(nViewPos, lightVec);
+    float VdotU = dot(nViewPos, upVec);
+    float VdotS = dot(nViewPos, sunVec);
 
     #if defined DISTANT_HORIZONS && !defined OVERWORLD
         float z1DH = texelFetch(dhDepthTex1, texelCoord, 0).r;
@@ -211,10 +217,7 @@ void main() {
         lViewPos1 = min(lViewPos1, length(viewPos1DH.xyz));
     #endif
 
-    #if defined LIGHTSHAFTS_ACTIVE || RAINBOWS > 0 && defined OVERWORLD
-        vec3 nViewPos = normalize(viewPos1.xyz);
-        float VdotL = dot(nViewPos, lightVec);
-    #endif
+        
 
     //#if defined NETHER_STORM || defined COLORED_LIGHT_FOG
         vec3 playerPos = ViewToPlayer(viewPos1.xyz);
@@ -227,7 +230,6 @@ void main() {
 
     #ifdef LIGHTSHAFTS_ACTIVE
         float vlFactorM = vlFactor;
-        float VdotU = dot(nViewPos, upVec);
 
         volumetricEffect = GetVolumetricLight(color, vlFactorM, translucentMult, lViewPos, lViewPos1, nViewPos, VdotL, VdotU, texCoord, z0, z1, dither);
     #endif
@@ -301,6 +303,10 @@ void main() {
 
         
         color += volumetricEffect.rgb;
+    #endif
+
+    #ifdef CREPUSCULAR_RAYS
+        color += GetCrepuscularRays(VdotU, VdotS, z0, z1, dither).rgb;
     #endif
 
     #ifdef BLOOM_FOG_COMPOSITE

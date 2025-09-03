@@ -296,8 +296,9 @@ option.ATM_FOG_MULT=Atmospheric Fog
 option.ATM_FOG_MULT.comment=Adjusts the intensity of altitude-based fog.
 value.ATM_FOG_MULT.0.50=Very Subtle
 value.ATM_FOG_MULT.0.65=Subtle
-value.ATM_FOG_MULT.0.80=Normal
-value.ATM_FOG_MULT.0.95=Intense
+value.ATM_FOG_MULT.0.75=Normal
+value.ATM_FOG_MULT.0.80=Intense
+value.ATM_FOG_MULT.0.95=Very Intense
 
 option.ATM_FOG_DISTANCE=Atmospheric Fog Distance
 option.ATM_FOG_DISTANCE.comment=Adjusts the distance from the camera that the atmospheric fog starts to appear. §e[*]§r Note that the fog distance also gets automatically adjusted by the Render Distance setting in Video Settings.
@@ -334,7 +335,7 @@ value.CLOUD_STYLE_DEFINE.3=Unbound
 value.CLOUD_STYLE_DEFINE.50=Vanilla §e[*]
 
 option.CLOUD_SHADOWS=Cloud Shadows
-option.CLOUD_SHADOWS.comment=Enables shadows that are cast from the clouds. §e[*]§r This setting only works with the "Reimagined" or "Unbound" Cloud Styles. §e[*]§r Cloud shadows will be randomly generated if Cloud Style is set to "Unbound", because of the extra complexity of Unbound clouds.
+option.CLOUD_SHADOWS.comment=Enables shadows that are cast from the clouds. §e[*]§r This setting will change the lighting system drastically, as the amount of light that will light the world will be dependent on cloud shadows, especially for rainy weather and light shafts.
 
 option.CLOUD_CLOSED_AREA_CHECK=Prevent Clouds in Interiors
 option.CLOUD_CLOSED_AREA_CHECK.comment=Does additional checks to remove clouds in closed areas. §e[*]§r This setting only works with the "Reimagined" or "Unbound" Cloud Styles. §e[*]§r This setting will be disabled if "Real-Time Shadows" is OFF.
@@ -1117,44 +1118,18 @@ screen.INDIRECT_LIGHTING=Indirect Lighting
     option.GLOBAL_ILLUMINATION_VIEW=GI View
         option.GLOBAL_ILLUMINATION_VIEW.comment=Debug View for Global Illumination
 
-screen.CUMULONIMBUS_SETTINGS=Lower Layer Clouds
-    screen.CUMULONIMBUS_SETTINGS.comment=Lower layer cloud settings.
-    option.CUMULONIMBUS=Toggle
-    option.CUMULONIMBUS_MULT=Noise Amount
-    option.CUMULONIMBUS_SIZE_MULT=Size Amount
-    option.CUMULONIMBUS_COVERAGE=Coverage
+    option.LOWER_CLOUD_LAYER=Cloud Toggle
+    option.LOWER_CLOUD_LAYER_MULT=Noise Amount
+    option.LOWER_CLOUD_LAYER_SIZE_MULT=Size Amount
+    option.LOWER_CLOUD_LAYER_COVERAGE=Coverage
     option.CUMULONIMBUS_GRANULARITY=Granularity
         option.CUMULONIMBUS_GRANULARITY.comment=Adjusts how granular clouds can be.
-    option.CUMULONIMBUS_ALT=Cloud Altitude
-        option.CUMULONIMBUS_ALT.comment=Determines the world height which the clouds will appear at.
-    option.CUMULONIMBUS_HEIGHT=Height
-        option.CUMULONIMBUS_HEIGHT.comment=Determines how high clouds can reach. 
+    option.LOWER_CLOUD_LAYER_ALT=Cloud Altitude
+        option.LOWER_CLOUD_LAYER_ALT.comment=Determines the world height which the clouds will appear at.
+    option.LOWER_CLOUD_LAYER_HEIGHT=Height
+        option.LOWER_CLOUD_LAYER_HEIGHT.comment=Determines how high clouds can reach. 
 
-screen.CUMULUS_SETTINGS=Middle Layer Clouds
-    screen.CUMULUS_SETTINGS.comment=Middle layer cloud settings.
-    option.CUMULUS=Toggle
-    option.CUMULUS_MULT=Noise Amount
-    option.CUMULUS_SIZE_MULT=Size Amount
-    option.CUMULUS_COVERAGE=Coverage
-    option.CUMULUS_GRANULARITY=Granularity
-        option.CUMULUS_GRANULARITY.comment=Adjusts how granular clouds can be.
-    option.CUMULUS_ALT=Cloud Altitude
-        option.CUMULUS_ALT.comment=Determines the world height which the clouds will appear at.
-    option.CUMULUS_HEIGHT=Cloud Height
-        option.CUMULUS_HEIGHT.comment=Determines how high clouds can reach. 
-
-screen.ALTOCUMULUS_SETTINGS=Top Layer Clouds
-    screen.ALTOCUMULUS_SETTINGS.comment=Top layer cloud settings.
-    option.ALTOCUMULUS=Toggle
-    option.ALTOCUMULUS_MULT=Noise Amount
-    option.ALTOCUMULUS_SIZE_MULT=Size Amount
-    option.ALTOCUMULUS_COVERAGE=Coverage
-    option.ALTOCUMULUS_GRANULARITY=Granularity
-        option.ALTOCUMULUS_GRANULARITY.comment=Adjusts how granular clouds can be.
-    option.ALTOCUMULUS_ALT=Cloud Altitude
-        option.ALTOCUMULUS_ALT.comment=Determines the world height which the clouds will appear at.
-    option.ALTOCUMULUS_HEIGHT=Cloud Height
-        option.ALTOCUMULUS_HEIGHT.comment=Determines how high clouds can reach. 
+LOWER_CLOUD_LAYER_MULT LOWER_CLOUD_LAYER_HEIGHT LOWER_CLOUD_LAYER_COVERAGE LOWER_CLOUD_LAYER_ALT
 
 option.CLOUD_RENDER_DISTANCE=Cloud Render Distance
     option.CLOUD_RENDER_DISTANCE.comment=Render distance for both cloud layers.
@@ -1196,3 +1171,6 @@ screen.TONEMAPPING=Tonemapping
         option.CONTRAST.comment=Modifies the difference between dark and light areas for visual clarity
 
 screen.COLORED_LIGHTS=Colored Lighting
+
+option.CREPUSCULAR_RAYS=Crepuscular Rays
+option.CREPUSCULAR_RAYS.comment=Rays that appear below the clouds.

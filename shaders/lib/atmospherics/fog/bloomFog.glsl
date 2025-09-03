@@ -2,7 +2,7 @@
     #include "/lib/atmospherics/fog/caveFactor.glsl"
 #endif
 
-const float rainBloomAdd   = 8.0;
+const float rainBloomAdd   = 4.0;
 const float nightBloomAdd  = 3.0;
 const float caveBloomAdd   = 14.0;
 const float waterBloomAdd  = 14.0;

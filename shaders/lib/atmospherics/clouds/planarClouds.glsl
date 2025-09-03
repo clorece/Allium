@@ -34,11 +34,12 @@ vec3 GetPlanarClouds(vec3 viewPos, float VdotU, float VdotS, float dither) {
     float frequency = 0.0005;
     float swirliness = 1.5;
     cloudCoord.x *= 1.2;
-    for (int i = 0; i < 10; i++) {
-        cloudPattern += amplitude * texture2D(noisetex, (cloudCoord - cloudPattern * swirliness) * frequency).r;
-        frequency *= 1.5;
+    for (int i = 0; i < 12; i++) {
+        //cloudCoord.x *= sin(cloudCoord.y * 0.05) * 0.001;
+        cloudPattern += amplitude * texture2D(noisetex, (cloudCoord - cloudPattern * swirliness) * 0.5 * frequency).r;
+        frequency *= 1.6;
         amplitude *= 0.75;
-        swirliness *= 1.2;
+        swirliness *= 1.15;
     }
 
     cloudPattern -= moonFactor * 0.1;
@@ -59,13 +60,13 @@ vec3 GetPlanarClouds(vec3 viewPos, float VdotU, float VdotS, float dither) {
     vec3 baseCloudColor = vec3(1.0);
 
     // Lighting phase
-    float phase = PhaseHG(dot(normalize(mat3(gbufferModelViewInverse) * lightVec), normalize(wpos)), 0.5 - moonFactor);
+    float phase = PhaseHG(dot(normalize(mat3(gbufferModelViewInverse) * lightVec), normalize(wpos)), 0.1);
 
-    vec3 sunLightColor = lightColor * phase * (1.0 - rainFactor);
+    vec3 sunLightColor = cloudLightColor * phase * (1.0 - rainFactor);
 
     vec3 skyColor = GetSky(VdotU, VdotS, dither, false, false);
 
-    vec3 color = (sunLightColor) * 100.0;
+    vec3 color = (sunLightColor) * 50.0;
 
     color += (dither - 0.5) / 64.0;
     color *= cloudAlpha * cloudDistance;

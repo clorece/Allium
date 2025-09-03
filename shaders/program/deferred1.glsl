@@ -291,8 +291,7 @@ void main() {
         vec3 texture5 = texelFetch(colortex5, texelCoord, 0).rgb;
         vec3 normalM = mat3(gbufferModelView) * texture5;
 
-        float foliage = texelFetch(colortex6, texelCoord, 0).a;
-        bool isFoliage = foliage > 0.5;
+        float albedoS = texelFetch(colortex6, texelCoord, 0).a;
         
         //color.rgb = foliage > 1.0 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0);
         //if (isFoliage) color.rgb = vec3(0.0, 1.0, 0.0);
@@ -330,7 +329,7 @@ void main() {
             ao = clamp( 1.0 - (1.0 - ao) * AO_I, 0.0, 1.0 );
             if (!entityOrHand) color.rgb *= ao;
         #elif GLOBAL_ILLUMINATION > 1
-            color.rgb = DoRT(color.rgb, viewPos.xyz, playerPos, normalM, skyLightFactor, linearZ0, dither, entityOrHand, isFoliage);
+            color.rgb = DoRT(color.rgb, viewPos.xyz, playerPos, normalM, skyLightFactor, linearZ0, dither, entityOrHand, smoothnessD);
             #if GLOBAL_ILLUMINATION == 3
                 ao = SSAO(z0, linearZ0, dither);
                 ao = clamp( 1.0 - (1.0 - ao) * AO_I, 0.0, 1.0 );

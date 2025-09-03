@@ -100,7 +100,8 @@ void main() {
         color.rgb += GetPlanarClouds(viewPos.xyz, VdotU, VdotS, dither);
 
         #if SUN_MOON_STYLE >= 2
-            float absVdotS = abs(VdotS) * 0.9980;
+            float absVdotS = abs(VdotS) * 0.9977;
+            float absVdotS2 = abs(VdotS) * 0.9977;
             #if SUN_MOON_STYLE == 2
                 float sunSizeFactor1 = 0.9975;
                 float sunSizeFactor2 = 1000.0;
@@ -116,6 +117,7 @@ void main() {
             #endif
             if (absVdotS > sunSizeFactor1) {
                 float sunMoonMixer = sqrt1(sunSizeFactor2 * (absVdotS - sunSizeFactor1));
+                float sunMoonMixer2 = sqrt1(sunSizeFactor2 * (absVdotS - sunSizeFactor1));
 
                 #ifdef SUN_MOON_DURING_RAIN
                     sunMoonMixer *= 1.0 - 0.4 * rainFactor2;
@@ -130,7 +132,7 @@ void main() {
                         sunMoonMixer *= 1.0 - 0.65 * GetCaveFactor();
                     #endif
 
-                    color.rgb = mix(color.rgb, lightColor * 64.0, sunMoonMixer);
+                    color.rgb = mix(color.rgb, lightColor * 768.0, sunMoonMixer);
                     //color.rgb = pow(color.rgb, vec3(2.2)) * 0.3;
                 } else {
                     float horizonFactor = GetHorizonFactor(-SdotU);
@@ -141,7 +143,7 @@ void main() {
                                     + texture2D(noisetex, starCoord * 2.5).g * 0.7
                                     + texture2D(noisetex, starCoord * 5.0).g * 0.5;
                     moonNoise = max0(moonNoise - 0.75) * 1.5;
-                    vec3 moonColor = vec3(0.5) * (1.2 - (0.2 + 0.2 * sqrt1(nightFactor)) * moonNoise) * 0.75;
+                    vec3 moonColor = vec3(0.54, 0.485, 0.444) * (1.2 - (0.2 + 0.2 * sqrt1(nightFactor)) * moonNoise) * 0.75;
 
                     if (moonPhase >= 1) {
                         float moonPhaseOffset = 0.0;
@@ -161,7 +163,7 @@ void main() {
                         float moonPhaseVdosS = dot(nViewPos, normalize(rawSunVec2.xyz));
 
                         sunMoonMixer *= pow2(1.0 - min1(pow(abs(moonPhaseVdosS), moonPhaseFactor2) * moonPhaseFactor1));
-                    } else moonColor *= 4.0;
+                    } else moonColor *= 25.0;
 
                     #ifdef CAVE_FOG
                         sunMoonMixer *= 1.0 - 0.5 * GetCaveFactor();

@@ -140,7 +140,7 @@ void main() {
                             color1.rgb *= vec3(0.3, 0.45, 0.9);
                         #endif
                     #endif
-                    color1.rgb *= vec3(0.6, 0.8, 1.1);
+                    color1.rgb *= vec3(0.7, 0.9, 0.9) * 0.75;
                     ////
 
                     // Underwater Light Shafts
@@ -161,9 +161,18 @@ void main() {
                     #if MC_VERSION >= 11300 && WATERCOLOR_MODE >= 2
                         color2.rgb = normalize(sqrt1(glColor.rgb)) * vec3(0.24, 0.29, 0.26);
                     #else
-                        color2.rgb = vec3(0.08, 0.12, 0.195) * 0.5;
+                        color2.rgb = vec3(0.08, 0.12, 0.195);
                     #endif
-                    color2.rgb *= waterNoise * (1.0 + sunVisibility - rainFactor);
+                    color2.rgb *= waterNoise * (1.0 + sunVisibility - rainFactor) * 0.5;
+
+                    #ifdef CLOUD_SHADOWS
+                    if (isEyeInWater == 1) {
+                        color2.rgb *= 2.5;
+                        color2.rgb = max(color2.rgb, vec3(0.0));
+                    }
+                    #else
+                    if (isEyeInWater == 1) color2.rgb *= 3.5;
+                    #endif
                     ////
 
                     #ifdef UNDERWATERCOLOR_CHANGED

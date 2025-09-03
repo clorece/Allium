@@ -216,7 +216,7 @@ void main() {
     vec2 lmCoordM = lmCoord;
     vec3 normalM = normal, geoNormal = normal, shadowMult = vec3(1.0);
     vec3 worldGeoNormal = normalize(ViewToPlayer(geoNormal * 10000.0));
-    int foliage = 0;
+    float albedoS = 1.0;
     #ifdef IPBR
         vec3 maRecolor = vec3(0.0);
         #include "/lib/materials/materialHandling/terrainMaterials.glsl"
@@ -358,7 +358,7 @@ void main() {
     #ifdef WHITE_WORLD
         gl_FragData[0] = vec4(1.0, 1.0, 1.0, 1.0);    // white world debug
     #endif 
-    gl_FragData[1] = vec4(smoothnessD, materialMask, skyLightFactor, foliage);
+    gl_FragData[1] = vec4(smoothnessD, materialMask, skyLightFactor, albedoS);
     gl_FragData[2] = vec4(flux, 1.0);
 
     #if BLOCK_REFLECT_QUALITY >= 2 && RP_MODE != 0

@@ -95,11 +95,12 @@
         #endif
 
         vec3 GetAtmFogColor(float altitudeFactorRaw, float VdotS) {
+            vec3 dayFogColor = vec3(0.52, 0.66, 0.75);
             float nightFogMult = 2.5 - 0.625 * max(pow2(pow2(altitudeFactorRaw)), rainFactor);
             float dayNightFogBlend = pow(invNightFactor, 4.0 - VdotS - 2.5 * sunVisibility2);
             return mix(
                 nightClearLightColor * 0.5 * (nightFogMult - dayNightFogBlend * nightFogMult),
-                mix((ambientColor * 0.5) * (invNoonFactor2 * 1.875 + 0.825), (ambientColor * 0.5) * (1.9 + 0.2 * noonFactor), vec3(0.5)),
+                mix((ambientColor * 0.5 + lightColor * 0.25) * 2.0 * (invNoonFactor2 * 1.575 + 0.825), (ambientColor * 0.5 + lightColor * 0.25) * 1.5 * (1.5 + 0.5 * noonFactor), vec3(0.5)),
                 dayNightFogBlend
             );
         }
@@ -195,8 +196,8 @@
 
 #include "/lib/atmospherics/fog/waterFog.glsl"
 
-void DoWaterFog(inout vec3 color, float lViewPos) {
-    float fog = GetWaterFog(lViewPos);
+void DoWaterFog(inout vec3 color, float lViewPos, vec3 playerPos, vec3 worldPos) {
+    float fog = GetWaterFog(lViewPos, playerPos);
 
     color = mix(color * 1.5, waterFogColor - nightFactor, fog);
 }
@@ -257,7 +258,8 @@ void DoFog(inout vec3 color, inout float skyFade, float lViewPos, vec3 playerPos
         DoBorderFog(color, skyFade, max(length(playerPos.xz), abs(playerPos.y)), VdotU, VdotS, dither);
     #endif
 
-    if (isEyeInWater == 1) DoWaterFog(color, lViewPos);
+    vec3 worldPos = playerPos + cameraPosition;
+    if (isEyeInWater == 1) DoWaterFog(color, lViewPos, playerPos, worldPos);
     else if (isEyeInWater == 2) DoLavaFog(color, lViewPos);
     else if (isEyeInWater == 3) DoPowderSnowFog(color, lViewPos);
 

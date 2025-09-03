@@ -21,6 +21,7 @@ vec3 ScreenToView(vec3 pos) {
     return viewPos.xyz / viewPos.w;
 }
 
+
 vec3 ViewToPlayer(vec3 pos) {
     return mat3(gbufferModelViewInverse) * pos + gbufferModelViewInverse[3].xyz;
 }

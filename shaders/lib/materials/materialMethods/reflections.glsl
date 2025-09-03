@@ -14,6 +14,8 @@
 
 vec3 refPos = vec3(0.0);
 
+#define LQ_CLOUD
+
 vec4 GetReflection(vec3 normalM, vec3 viewPos, vec3 nViewPos, vec3 playerPos, float lViewPos, float z0,
                    sampler2D depthtex, float dither, float skyLightFactor, float fresnel,
                    float smoothness, vec3 geoNormal, vec3 color, vec3 shadowMult, float highlightMult) {
@@ -181,14 +183,13 @@ vec4 GetReflection(vec3 normalM, vec3 viewPos, vec3 nViewPos, vec3 playerPos, fl
             #else
                 float specularHighlight = GGX(normalM, nViewPos, lightVec, max(dot(normalM, lightVec), 0.0), smoothness);
                 skyReflection += specularHighlight * highlightColor * shadowMult * highlightMult * invRainFactor;
+                float cloudLinearDepth = 1.0;
+                float skyFade = 1.0;
+                vec3 auroraBorealis = vec3(0.0);
+                vec3 nightNebula = vec3(0.0);
                 
                 #if WATER_REFLECT_QUALITY >= 1
                     #ifdef SKY_EFFECT_REFLECTION
-                        float cloudLinearDepth = 1.0;
-                        float skyFade = 1.0;
-                        vec3 auroraBorealis = vec3(0.0);
-                        vec3 nightNebula = vec3(0.0);
-
                         #if AURORA_STYLE > 0
                             auroraBorealis = GetAuroraBorealis(nViewPosR, RVdotU, dither);
                             skyReflection += auroraBorealis;
@@ -201,6 +202,18 @@ vec4 GetReflection(vec3 normalM, vec3 viewPos, vec3 nViewPos, vec3 playerPos, fl
                         vec2 starCoord = GetStarCoord(nViewPosR, 0.5);
                         skyReflection += GetStars(starCoord, RVdotU, RVdotS);
                     #endif
+
+                            vec3 worldNormalMR = normalize(mat3(gbufferModelViewInverse) * normalMR);
+                            vec3 RCameraPos = cameraPosition + 2.0 * worldNormalMR * dot(playerPos, worldNormalMR);
+                            vec3 RPlayerPos = normalize(mat3(gbufferModelViewInverse) * nViewPosR);
+                            float RlViewPos = 100000.0;
+
+                            //vec4 GetClouds(inout float cloudLinearDepth, float skyFade, vec3 cameraPos, vec3 playerPos, float lViewPos, float VdotS, float VdotU, float dither, vec3 auroraBorealis, vec3 nightNebula) {
+
+                            vec4 clouds = GetClouds(cloudLinearDepth, skyFade, RCameraPos, RPlayerPos,
+                                                    RlViewPos, RVdotS, RVdotU, dither, auroraBorealis, nightNebula);
+
+                            skyReflection = mix(skyReflection, clouds.rgb, clouds.a);
 
                     skyReflection = mix(color * 0.5, skyReflection, skyLightFactor);
                 #else

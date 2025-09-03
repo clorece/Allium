@@ -11,7 +11,7 @@ if (mat < 11024) {
                                     noDirectionalShading = true;
                                 }
                                 else /*if (mat < 10008)*/ { // Grounded Waving Foliage
-                                    subsurfaceMode = 1, noSmoothLighting = true, noDirectionalShading = true; foliage = 1;
+                                    subsurfaceMode = 1, noSmoothLighting = true, noDirectionalShading = true; albedoS = 0.0;
 
                                     #ifdef GBUFFERS_TERRAIN
                                         DoFoliageColorTweaks(color.rgb, shadowMult, snowMinNdotU, viewPos, nViewPos, lViewPos, dither);
@@ -29,11 +29,11 @@ if (mat < 11024) {
                             } else {
                                 if (mat < 10012) { // Leaves
                                     #include "/lib/materials/specificMaterials/terrain/leaves.glsl"
-                                    foliage = 1;
+                                    albedoS = 1.0;
                                 }
                                 else /*if (mat < 10016)*/ { // Vine
                                     subsurfaceMode = 3, centerShadowBias = true; noSmoothLighting = true;
-                                    foliage = 1;
+                                    albedoS = 0.5;
 
                                     #if defined COATED_TEXTURES && defined GBUFFERS_TERRAIN
                                         doTileRandomisation = false;
@@ -49,10 +49,10 @@ if (mat < 11024) {
                         } else {
                             if (mat < 10024) {
                                 if (mat < 10020) { // Non-waving Foliage
-                                    subsurfaceMode = 1, noSmoothLighting = true, noDirectionalShading = true; foliage = 1;
+                                    subsurfaceMode = 1, noSmoothLighting = true, noDirectionalShading = true; albedoS = 0.5;
                                 }
                                 else /*if (mat < 10024)*/ { // Upper Waving Foliage
-                                    subsurfaceMode = 1, noSmoothLighting = true, noDirectionalShading = true; foliage = 1;
+                                    subsurfaceMode = 1, noSmoothLighting = true, noDirectionalShading = true; albedoS = 0.5;
 
                                     #ifdef GBUFFERS_TERRAIN
                                         DoFoliageColorTweaks(color.rgb, shadowMult, snowMinNdotU, viewPos, nViewPos, lViewPos, dither);
@@ -340,6 +340,7 @@ if (mat < 11024) {
                                     #endif
                                 }
                                 else /*if (mat < 10128)*/ { // Snowy Variants of Grass Block, Podzol, Mycelium
+                                albedoS = 1.0;
                                     float dotColor = dot(color.rgb, color.rgb);
                                     if (dotColor > 1.5) { // Snowy Variants:Snowy Part
                                         #include "/lib/materials/specificMaterials/terrain/snow.glsl"
@@ -360,7 +361,9 @@ if (mat < 11024) {
                                     #include "/lib/materials/specificMaterials/terrain/dirt.glsl"
                                 }
                                 else /*if (mat < 10136)*/ { // Grass Block:Normal
+                                    albedoS = 0.5;
                                     if (glColor.b < 0.999) { // Grass Block:Normal:Grass Part
+                                        albedoS = 0.75;
                                         smoothnessG = pow2(color.g);
 
                                         #ifdef SNOWY_WORLD
@@ -368,11 +371,13 @@ if (mat < 11024) {
                                             color.rgb = color.rgb * 0.5 + 0.5 * (color.rgb / glColor.rgb);
                                         #endif
                                     } else { //Grass Block:Normal:Dirt Part
+                                        albedoS = 0.5;
                                         #include "/lib/materials/specificMaterials/terrain/dirt.glsl"
                                     }
                                 }
                             } else {
                                 if (mat < 10140) { // Farmland:Wet
+                                    albedoS = 0.45;
                                     if (NdotU > 0.99) { // Farmland:Wet:Top Part
                                         #if MC_VERSION >= 11300
                                             smoothnessG = clamp(pow2(pow2(1.0 - color.r)) * 2.5, 0.5, 1.0);
@@ -914,6 +919,7 @@ if (mat < 11024) {
                                     }
                                 }
                                 else /*if (mat < 10352)*/ { // Azalea, Flowering Azalea
+                                    subsurfaceMode = 3;
                                     #include "/lib/materials/specificMaterials/terrain/cobblestone.glsl"
                                 }
                             }

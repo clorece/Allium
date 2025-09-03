@@ -53,7 +53,7 @@
     lol
 */
 
-#define GI_RENDER_DISTANCE 2.0
+#define GI_RENDER_DISTANCE 512.0
 #define GI_BOUNCE 1 //[1 2 3]
 #define PREVENT_ACCUMULATION_IN_FOLIAGE
 #define EXCLUDE_ENTITIES_IN_RT
@@ -102,12 +102,19 @@ vec3 CalculateFlux(vec3 incidentLight, vec3 normal, vec3 lightDir, float visibil
 }
 
 vec3 RayDirection(vec3 normal, float dither, int i, float roughness) {
+    /*
     vec3 up = abs(normal.y) < 0.999 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0);
+    vec3 tangent = normalize(cross(up, normal));
+    vec3 bitangent = cross(normal, tangent);
+    */
+
+    vec3 up = abs(normal.z) < 0.999 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
     vec3 tangent = normalize(cross(up, normal));
     vec3 bitangent = cross(normal, tangent);
 
     vec2 Xi = vec2(rand(dither, i));
     vec3 hemi = normalize(cosineHemisphereSampleRough(Xi, roughness));
+    //return tangent * hemi.x + bitangent * hemi.y + normal * hemi.z;
     return ((tangent * hemi.x) + (bitangent * hemi.y) + (normal * hemi.z));
 }
 
@@ -185,11 +192,13 @@ vec3 RayDirection(vec3 normal, float dither, int i, float roughness) {
         float dither,
         out bool hitFound,
         out vec3 hitColor,
-        out bool hitIsFoliage,
+        //out bool hitIsFoliage,
+        float smoothnessD,
         float maxStepsMul
     ) {
-        float dist = 1.0 + clamp(dir.z*dir.z/50.0,0,2);
-        float stepSize = STEP_SCALE / dist;
+        vec3 worldPos = mat3(gbufferModelViewInverse) * origin;
+        float distFactor = 1.0 + length(worldPos) / far;
+        float stepSize = STEP_SCALE / distFactor;
 
         float rayLength = ((origin.z + dir.z * sqrt(3.0) * far) > -sqrt(3.0) * near)
                         ? (-sqrt(3.0) * near - origin.z) / dir.z
@@ -216,11 +225,10 @@ vec3 RayDirection(vec3 normal, float dither, int i, float roughness) {
         hitFound = false;
         hitColor = vec3(0.0);
 
-        float foliageFlag = texelFetch(colortex6, texelCoord, 0).a; // or any channel you use
-        hitIsFoliage = foliageFlag > 0.5;
-
         for (int k = 0; k < maxSteps; ++k) {
-            if (tracePos.x < 0.0 || tracePos.y < 0.0 || tracePos.z < 0.0 || tracePos.x > 1.0 || tracePos.y > 1.0 || tracePos.z > 1.0) return vec3(1.1);
+            //tracePos += 2.0;
+            if (k >= maxSteps) break;
+            if (any(lessThan(tracePos, vec3(0.0))) || any(greaterThan(tracePos, vec3(1.0)))) break;
 
             ivec2 texelCoord = ivec2(tracePos.xy / texelSize);
             float depthSample = texelFetch(depthtex1, texelCoord, 0).r;
@@ -228,10 +236,18 @@ vec3 RayDirection(vec3 normal, float dither, int i, float roughness) {
             float depthScene = GetLinearDepth(depthSample);
 
             if (depthScene < depthCurrent && depthSample >= minZ && depthSample <= maxZ) {
-                hitColor = toLinear(texture2D(colortex2, tracePos.xy).rgb) * 2.5 * GI_INTENSITY;
 
-                if (hitIsFoliage) hitColor *= 0.75;
-                
+                hitColor = toLinear(texture2D(colortex2, tracePos.xy).rgb) * GI_INTENSITY;
+
+                // adjust intensity from bounce
+                #if GI_BOUNCE == 1
+                    hitColor *= 6.0 * GI_INTENSITY;
+                #elif GI_BOUNCE == 2 
+                    hitColor *= 3.0 * GI_INTENSITY;
+                #elif GI_BOUNCE == 3
+                    hitColor *= 2.5 * GI_INTENSITY;
+                #endif
+
                 hitFound = true;
                 break;
             }
@@ -239,7 +255,7 @@ vec3 RayDirection(vec3 normal, float dither, int i, float roughness) {
             float bias = 0.0005;
             minZ = maxZ - bias / max(depthCurrent, 0.0005); 
             maxZ += stepVec.z;
-            tracePos += stepVec * 6.0 * dither;
+            tracePos += stepVec * 2.0 * dither;
         }
 
         return tracePos;
@@ -281,11 +297,12 @@ vec3 RayDirection(vec3 normal, float dither, int i, float roughness) {
         }
 
         ao /= float(samples);
-        return pow(ao, AO_I);
+        return pow(ao, AO_I * 0.5);
     }
 #endif
 
 #if GLOBAL_ILLUMINATION == 2 || GLOBAL_ILLUMINATION == 4
+
     float RTAO(vec3 viewPos, vec3 normal, float skyLightFactor, float dither) {
         const float r = 1.0;
         float occlusion = 0.0;
@@ -296,9 +313,8 @@ vec3 RayDirection(vec3 normal, float dither, int i, float roughness) {
             vec3 rayOrigin = viewPos + normal * SURFACE_BIAS;
 
             bool hitFound;
-            bool hitIsFoliage;
             vec3 hitColor;
-            vec3 tracePos = Raytrace(rayOrigin, rayDir, dither, hitFound, hitColor, hitIsFoliage, float(RTAO_STEP));
+            vec3 tracePos = Raytrace(rayOrigin, rayDir, dither, hitFound, hitColor, 0.0, float(RTAO_STEP));
 
             if (hitFound) {
                 float dz = GetLinearDepth(tracePos.z) - GetLinearDepth(toClipSpace(viewPos).z);
@@ -309,6 +325,77 @@ vec3 RayDirection(vec3 normal, float dither, int i, float roughness) {
 
         return clamp(1.0 - occlusion * invSamples, 0.0, 1.0);
     }
+    
+
+    /* OLD RTAO
+    float check(vec3 surfaceNormal, vec3 viewDir, vec3 hitPos, vec3 viewPos) {
+        vec3 hitNormal = normalize(cross(dFdx(hitPos), dFdy(hitPos)));
+        float facing = dot(hitNormal, surfaceNormal);
+        if (facing < 0.3) return 0.0;
+
+        return smoothstep(0.3, 1.0, facing);
+    }
+
+    float RTAO(vec3 viewPos, vec3 normal, float skyLightFactor, float dither) {
+
+        float occlusion = 0.0;
+
+        // Tangent space basis
+        vec3 up = abs(normal.y) < 0.999 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0);
+        vec3 tangent = normalize(cross(up, normal));
+        vec3 bitangent = cross(normal, tangent);
+
+        float invSamples = 1.0 / float(RTAO_SAMPLES);
+        float stepSize = AO_RADIUS / float(4);
+
+        for (int i = 0; i < RTAO_SAMPLES; ++i) {
+            
+            float fi = float(i);
+            float rand = fract(fi * 0.73 + dither * 4);
+            float phi = 6.2831 * (rand);
+            float cosTheta = sqrt(1.0 - fi * invSamples);
+            float sinTheta = sqrt(1.0 - cosTheta * cosTheta);
+
+            vec3 hemiDir = sinTheta * cos(phi) * tangent +
+                        sinTheta * sin(phi) * bitangent +
+                        cosTheta * normal;
+
+            vec3 rayDir = hemiDir * stepSize;
+            vec3 rayPos = viewPos + normal * 0.01 * texture2D(colortex2, texCoord).rgb;
+
+            for (int j = 0; j < 4; ++j) {
+                rayPos += rayDir;
+
+                vec4 projected = gbufferProjection * vec4(rayPos, 1.0);
+                if (projected.w <= 0.0) break;
+
+                vec2 screenUV = projected.xy / projected.w * 0.5 + 0.5;
+                if (abs(screenUV.x - 0.5) > view.x || abs(screenUV.y - 0.5) > view.y) break;
+
+                float sceneZ = texture2D(depthtex1, screenUV).r;
+                vec4 hitClip = vec4(screenUV * 2.0 - 1.0, sceneZ * 2.0 - 1.0, 1.0);
+                vec4 hitPos4 = gbufferProjectionInverse * hitClip;
+                vec3 hitPos = hitPos4.xyz / hitPos4.w;
+
+                float dz = hitPos.z - rayPos.z;
+                float depthDiff = abs(hitPos.z - viewPos.z);
+
+                if (dz > 0.001 && dz < stepSize * 12.0 && depthDiff < AO_RADIUS * 12.0) {
+                    float geomFactor = check(normal, rayDir, hitPos, viewPos);
+                    float weight = (1.0 - smoothstep(0.0, stepSize * 12.0, dz));
+                    //occlusion -= geomFactor;
+                    occlusion += weight * AO_I;
+                    break;
+                }
+            }
+        }
+        occlusion *= 0.5;
+
+        float ao = 1.0 - (occlusion * invSamples);
+        return clamp(ao, 0.0, 1.0);
+
+    }
+    */
 #endif
 
 // ------------------------------- Global Illumination ------------------------------- //
@@ -322,46 +409,52 @@ vec3 RayDirection(vec3 normal, float dither, int i, float roughness) {
         float skyLightFactor,
         float linearZ0,
         float dither,
-        bool isFoliage
+        float smoothnessD
     ) {
-        const float r = 1.0;        // Hemisphere spread
-
         vec3 totalGI = vec3(0.0);
-        vec3 contribution = vec3(0.0);
+        float r = 0.7;
+
+        vec3 bounceOrigin = viewPos + normal * SURFACE_BIAS;
 
         for (int i = 0; i < GI_SAMPLES; ++i) {
-            vec3 bounceOrigin = viewPos + normal * SURFACE_BIAS;
+            vec3 throughput = vec3(1.0);
+            vec3 accumulatedLight = vec3(0.0);
 
-            // R2-style random hemisphere direction
-            vec3 rayDir = RayDirection(normal, dither + float(i), i, r);
+            vec3 bounceNormal = normal;
+            vec3 rayDir = RayDirection(bounceNormal, dither, i, r);
 
-            bool hitFound = false;
-            bool hitIsFoliage = false;
-            vec3 hitColor = vec3(0.0);
+            for (int j = 0; j < GI_BOUNCE; ++j) {
+                bool hitFound = false;
+                vec3 hitColor = vec3(0.0);
+                
+                vec3 tracePos = Raytrace(bounceOrigin, rayDir, dither, hitFound, hitColor, smoothnessD, 10.0);
 
-            // R1's Raytrace (shared with RTAO)
-            vec3 tracePos = Raytrace(bounceOrigin, rayDir, dither, hitFound, hitColor, hitIsFoliage, 10.0);
+                if (!hitFound) {
+                    #ifdef OVERWORLD
+                        accumulatedLight += throughput + (GetSky(VdotU, VdotS, dither, false, true) * 0.5 * skyLightFactor);
+                    #endif
+                    break;
+                }
 
-            if (hitFound) {
-                // R2’s fade for soft falloff
-                float depthCurrent = GetLinearDepth(toClipSpace(bounceOrigin).z);
-                float depthHit = GetLinearDepth(tracePos.z);
-                float fade = exp(-clamp((depthCurrent - depthHit) / 4.0, 0.0, 1.0));
+                float depthFade = GetLinearDepth(tracePos.z) - GetLinearDepth(texelFetch(depthtex1, ivec2(tracePos.xy / texelSize), 0).r);
+                float fade = exp(-clamp(depthFade / 4.0, 0.0, 1.0));
 
-                hitColor += CalculateFlux(hitColor, normal, rayDir, r, length(rayDir), 0.5);
+                // Use the hitColor as linear space from bilateralBlur (already handled inside Raytrace)
+                vec3 flux = CalculateFlux(hitColor, bounceNormal, rayDir, r, length(rayDir), 0.1);
+                accumulatedLight += throughput * hitColor + lightColor * fade;
 
-                // Simple energy transfer
-                contribution = clamp(hitColor, 0.0, 1.0) * fade;
+                throughput *= clamp(hitColor, 0.0, 1.0);
+                bounceOrigin += rayDir * sqrt(3.0) * far + bounceNormal * SURFACE_BIAS;
+
+                rayDir = RayDirection(bounceNormal, dither + j, j, r);
+
+                accumulatedLight *= float(GI_SAMPLES) * 0.5;
             }
-            else {
-                // R2’s soft sky fallback
-                #ifdef OVERWORLD
-                    contribution = GetSky(VdotU, VdotS, dither, false, true) * 0.15 * skyLightFactor;
-                #endif
-            }
-            totalGI += contribution / float(GI_SAMPLES);
+
+            totalGI += accumulatedLight / 5.0;
         }
 
+        totalGI /= float(GI_SAMPLES);
         return totalGI;
     }
 
@@ -369,12 +462,12 @@ vec3 RayDirection(vec3 normal, float dither, int i, float roughness) {
     vec3 GITonemap(vec3 color) {
         color = clamp(color, 0.0, 10.0);
 
-        float exposure = 0.6 - (rainFactor * 0.05);
+        float exposure = 0.5 - (rainFactor * 0.05);
         exposure -= nightFactor * 0.1;
 
-        float saturation = 1.0;
+        float saturation = 1.4;
         float gamma = 1.0;
-        float contrast = 1.4;
+        float contrast = 1.3;
 
         color *= exposure;
 
@@ -403,6 +496,27 @@ vec3 RayDirection(vec3 normal, float dither, int i, float roughness) {
     }
 #endif
 
+vec3 GetShadowPos(vec3 tracePos, vec3 cameraPos) {
+    vec3 wpos = PlayerToShadow(tracePos - cameraPos);
+    float distb = sqrt(wpos.x * wpos.x + wpos.y * wpos.y);
+    float distortFactor = 1.0 - shadowMapBias + distb * shadowMapBias;
+    vec3 shadowPosition = vec3(vec2(wpos.xy / distortFactor), wpos.z * 0.2);
+    return shadowPosition * 0.5 + 0.5;
+}
+
+bool GetShadow(vec3 tracePos, vec3 cameraPos) {
+    const float cloudShadowOffset = 0.5;
+
+    vec3 shadowPosition0 = GetShadowPos(tracePos, cameraPos);
+    if (length(shadowPosition0.xy * 2.0 - 1.0) < 1.0) {
+        float shadowsample0 = shadow2D(shadowtex0, shadowPosition0).z;
+
+        if (shadowsample0 == 0.0) return true;
+    }
+
+    return false;
+}
+
 // ------------------------------- Apply ------------------------------- //
 #ifdef GLOBAL_ILLUMINATION > 1
     vec3 DoRT(
@@ -414,7 +528,7 @@ vec3 RayDirection(vec3 normal, float dither, int i, float roughness) {
         float linearZ0, 
         float dither, 
         bool entityOrHand,
-        bool isFoliage
+        float smoothnessD
     ) {
         float VdotU = dot(normal, upVec);
         float VdotS = dot(normal, sunVec);
@@ -424,16 +538,11 @@ vec3 RayDirection(vec3 normal, float dither, int i, float roughness) {
         if (!entityOrHand) {
         #endif
 
-            //bool shadow = GetShadow(viewPos, cameraPosition);
-            //float rts = RaytraceShadow(lightVec, viewPos, dither, shadow);
-
             #if GLOBAL_ILLUMINATION == 3
-                color += GITonemap(GlobalIllumination(viewPos, playerPos, normal, VdotU, VdotS, skyLightFactor, linearZ0, dither, isFoliage)) * 1.0;
+                color += GITonemap(GlobalIllumination(viewPos, playerPos, normal, VdotU, VdotS, skyLightFactor, linearZ0, dither, smoothnessD)) * 1.0;
             #elif GLOBAL_ILLUMINATION == 4
-                color += GITonemap(GlobalIllumination(viewPos, playerPos, normal, VdotU, VdotS, skyLightFactor, linearZ0, dither, isFoliage)) * 1.35;
+                color += GITonemap(GlobalIllumination(viewPos, playerPos, normal, VdotU, VdotS, skyLightFactor, linearZ0, dither, smoothnessD)) * 1.35;
             #endif
-
-            //color += mix(color, vec3(rts), vec3(0.5)) * 0.1;
 
             #if GLOBAL_ILLUMINATION == 2 || GLOBAL_ILLUMINATION == 4
                 color *= RTAO(viewPos, normal, skyLightFactor, dither);

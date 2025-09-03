@@ -81,9 +81,9 @@ mat4 gbufferProjectionInverse = dhProjectionInverse;
             #include "/lib/atmospherics/stars.glsl"
         #endif
 
-        #ifdef VL_CLOUDS_ACTIVE 
-            #include "/lib/atmospherics/clouds/mainClouds.glsl"
-        #endif
+        //#ifdef VL_CLOUDS_ACTIVE 
+        //    #include "/lib/atmospherics/clouds/mainClouds.glsl"
+        //#endif
     #endif
 
     #include "/lib/materials/materialMethods/reflections.glsl"

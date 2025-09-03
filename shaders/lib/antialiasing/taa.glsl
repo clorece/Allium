@@ -1,3 +1,5 @@
+//#define TAA_TWEAKS
+
 #if TAA_MODE == 1
     float blendMinimum = 0.3;
     float blendVariable = 0.2;
@@ -6,7 +8,7 @@
     float regularEdge = 20.0;
     float extraEdgeMult = 3.0;
 #elif TAA_MODE == 2
-    float blendMinimum = 0.6;
+    float blendMinimum = 0.7;
     float blendVariable = 0.2;
     float blendConstant = 0.7;
 
@@ -121,18 +123,20 @@ void DoTAA(inout vec3 color, inout vec3 temp, float z1) {
     #endif
 
 
-    if (materialMask == 254) { // No SSAO, No TAA
-        #ifndef CUSTOM_PBR
-            if (z1 <= 0.56) return; // The edge pixel trick doesn't look nice on hand
-        #endif
-        int i = 0;
-        while (i < 4) {
-            int mms = int(texelFetch(colortex6, texelCoord + neighbourhoodOffsets[i], 0).g * 255.1);
-            if (mms != materialMask) break;
-            i++;
-        } // Checking edge-pixels prevents flickering
-        if (i == 4) return;
-    }
+    #ifdef TAA_TWEAKS
+        if (materialMask == 254) { // No SSAO, No TAA
+            #ifndef CUSTOM_PBR
+                if (z1 <= 0.56) return; // The edge pixel trick doesn't look nice on hand
+            #endif
+            int i = 0;
+            while (i < 4) {
+                int mms = int(texelFetch(colortex6, texelCoord + neighbourhoodOffsets[i], 0).g * 255.1);
+                if (mms != materialMask) break;
+                i++;
+            } // Checking edge-pixels prevents flickering
+            if (i == 4) return;
+        }
+    #endif
 
     float z0 = texelFetch(depthtex0, texelCoord, 0).r;
 
@@ -156,7 +160,7 @@ void DoTAA(inout vec3 color, inout vec3 temp, float z1) {
     if (materialMask == 253) // Reduced Edge TAA
         edge *= extraEdgeMult;
 
-    /*
+    
     #ifdef DISTANT_HORIZONS
         if (z0 == 1.0) {
             blendMinimum = 0.75;
@@ -165,7 +169,7 @@ void DoTAA(inout vec3 color, inout vec3 temp, float z1) {
             edge = 1.0;
         }
     #endif
-    */
+    
 
     vec2 velocity = (texCoord - prvCoord.xy) * view;
     float blendFactor = float(prvCoord.x > 0.0 && prvCoord.x < 1.0 &&

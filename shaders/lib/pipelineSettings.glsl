@@ -20,7 +20,7 @@ const bool colortex6Clear = true;
 const bool colortex7Clear = false;
 //
 
-const int noiseTextureResolution = 256;
+const int noiseTextureResolution = 128;
 
 const bool shadowHardwareFiltering = true;
 const float shadowDistanceRenderMul = 1.0;

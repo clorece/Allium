@@ -1,15 +1,18 @@
 #define SUNLIGHT_AMOUNT 1.0 // [0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0 3.0 4.0 5.0]
+//#define FAKE_SUNLIGHT_BOUNCE
+#define LQ_CLOUD
 
 //Lighting Includes//
 #include "/lib/colors/lightAndAmbientColors.glsl"
+#include "/lib/colors/skyColors.glsl"
 #include "/lib/lighting/ggx.glsl"
+
+#include "/lib/atmospherics/clouds/cloudCoord.glsl"
+#include "/lib/atmospherics/clouds/mainClouds.glsl"
 
 #if SHADOW_QUALITY > -1 && (defined OVERWORLD || defined END)
     #include "/lib/lighting/shadowSampling.glsl"
 #endif
-
-#include "/lib/atmospherics/clouds/cloudCoord.glsl"
-
 
 #ifdef LIGHT_COLOR_MULTS
     #include "/lib/colors/colorMultipliers.glsl"
@@ -29,109 +32,86 @@
 
 vec3 highlightColor = normalize(pow(lightColor, vec3(0.37))) * (0.3 + 1.5 * sunVisibility2) * (1.0 - 0.85 * rainFactor);
 
-/*
-#define GI_INTENSITY 100.0
-#define GOLDEN_ANGLE 2.39996323
-#define SHADOW_Z_STRETCH 2.5
-const float PI = 3.14159265359;
-const float inversePI = 0.31830988618;
+// start of cloud shadow code, there should be more optimal/cheap ways to do this, if anyone wants to improve this, let me know.
 
-vec3 toLinear(vec3 color) {
-	return mix(color / 12.92, pow((color + 0.055) / 1.055, vec3(2.4)), vec3(greaterThan(color, vec3(0.04045))));
+#ifndef PI
+#define PI 3.141592653589793
+#endif
+
+#ifndef sunAngularSize
+const float sunAngularSize = 0.533333;
+#endif
+const float SUN_ANGULAR_RADIUS_RAD = (sunAngularSize * 0.5) * (PI / 180.0);
+
+
+int CloudShadowStepsLOD(float distCamToPoint) {
+    int base = min(2 + 2, 4);
+
+    float denom = max(shadowDistance, 1.0);
+    float t = clamp(distCamToPoint / denom, 0.0, 1.0);
+
+    int reduce = (t > 0.66) ? 1 : 0;
+    return max(2, base - reduce);
 }
 
-vec2 fermatsSpiralGoldenS(float index, float total) {
-	float theta = index * GOLDEN_ANGLE;
-	return vec2(sin(theta), cos(theta)) * pow2(index / total);
-}
+float LightRayCloudShadow(vec3 worldPos, vec3 cameraPos, vec3 sunDir, float dither)
+{
+    float y0 = float(lowerLayerAlt);
+    float h  = lowerLayerStretch;
 
-vec3 getDiffuse(vec3 albedo, vec3 viewVector, vec3 direction, vec3 normal, float roughness) {
-        // Replace diffuse_hammon with your GGX, assuming it returns float specular
-        float diffTerm = GGX(normal, viewVector, direction, max(dot(normal, direction), 0.0), roughness);
-        return albedo * diffTerm;  // Multiply by albedo to get a color
+    float ry = sunDir.y;
+    if (abs(ry) < 1e-4) return 0.0;
 
-}
+    float tToTop    = ((y0 + h) - worldPos.y) / ry;
+    float tToBottom = ((y0 - h) - worldPos.y) / ry;
+    float tNear = min(tToTop, tToBottom);
+    float tFar  = max(tToTop, tToBottom);
+    float tEnter = (tNear > 0.0) ? tNear : ((tFar > 0.0) ? 0.0 : -1.0);
+    if (tEnter < 0.0) return 0.0;
 
-vec3 calculateGlobalIllumination(
-    vec3 normalM, 
-    vec3 albedo, 
-    float roughness,
-    vec3 worldPos, 
-    vec3 viewPos, 
-    vec2 pattern
-) {
-    #ifndef Global_Illumination
-        return vec3(0.0);
-    #endif
+    float thickness = max(tFar - max(tEnter, 0.0), 0.0);
+    if (thickness <= 1e-4) return 0.0;
 
-    if (worldTime >= 12500) return vec3(0.0);
+    int steps = CloudShadowStepsLOD(distance(cameraPos, worldPos));
+    float stepLen = thickness / float(steps);
+    vec3  p = worldPos + sunDir * (tEnter + stepLen * (0.25 + 0.5 * dither));
 
-    //float hand = float(texture2D(depthtex1, texCoord.xy).r < 0.56);
-    //if (hand >= 1.0) return vec3(-35.0);
+    float sum = 0.0;
 
-    #ifdef GI_Bleeding_Fix
-    if (eyeBrightnessSmooth.y <= 30) return vec3(0.0);
-    #endif
+    int sampleCount = 3;
 
-    // Spiral sampling with dithered offset
-    float ditherOffset = fract((pattern.y * 128.0 + float(frameCounter) * 7.0) / 128.0);
-    float dither = 64.0 * ditherOffset; // Assuming 8x8 spiral grid
+    for (int i=0; i < sampleCount; ++i) {
+        if (i >= steps) break;
+        float dens = GetLowerLayerCloud(p, steps, lowerLayerAlt, length(p.xz - cameraPos.xz), p.y - y0, 0.6, 1.0, LOWER_CLOUD_LAYER_SIZE_MULT_M);
 
-    int RSMQuality = 6;
-    float GIRadius = 1.0;
-
-    float radius = GIRadius * (1.0 / shadowMapResolution);
-    float lod = 0.0;
-    float indoors = 1.0 - clamp((-float(eyeBrightnessSmooth.y) + 230.0) / 100.0, 0.0, 1.0);
-
-    vec3 shadowNormal = normalize(mat3(shadowModelView) * normalM);
-    vec3 light = vec3(0.0);
-    float weight = 1.0;
-
-    vec4 stainedColor = glColor; // Placeholder — replace if mat.land used to tint
-
-    vec3 shadowSpace = GetShadowPos(worldPos); // Uses your system
-
-    for (int i = 0; i < RSMQuality; i++) {
-        vec2 offset = fermatsSpiralGoldenS(i * 64.0 + dither, RSMQuality * 64.0) * radius;
-        if (dot(shadowNormal.xy, offset) <= 0.0) offset = -offset;
-
-        vec3 offsetPos = shadowSpace + vec3(offset, 0.0);
-
-        float shadowDepth = shadow2D(shadowtex1, vec3(offsetPos.xy, offsetPos.z)).x;
-                shadowDepth = (((shadowDepth * 2.0 - 1.0) * SHADOW_Z_STRETCH) * 0.5 + 0.5);
-
-        vec3 samplePosition = vec3(offsetPos.xy, shadowDepth) - shadowSpace;
-        float sampleLength = length(samplePosition);
-        vec3 sampleDir = normalize(samplePosition) * vec3(1.0, 1.0, -1.0);
-
-        if (sampleLength > radius) continue;
-        weight++;
-
-        float falloff = 1.0 / (1.0 + sampleLength * sampleLength * shadowMapResolution);
-
-        vec3 diffuse = getDiffuse(albedo, -viewPos, sampleDir, shadowNormal, roughness) * PI;
-        if (any(lessThanEqual(diffuse, vec3(0.0)))) continue;
-
-        vec3 normalSample = texture2D(shadowcolor1, offsetPos.xy).rgb * 2.0 - 1.0;
-                normalSample = -normalSample;
-
-        vec3 bounceDiffuse = getDiffuse(albedo, -viewPos, sampleDir, normalSample, 1.0) * PI;
-        if (any(lessThanEqual(bounceDiffuse, vec3(0.2)))) continue;
-
-        vec3 lightSample = toLinear(texture2D(shadowcolor0, offsetPos.xy).rgb)
-                         * falloff * diffuse * bounceDiffuse;
-
-        if (any(isnan(lightSample))) lightSample = vec3(1.0);
-
-        light += lightSample;
+        if (dens < 0.05) { p += sunDir * stepLen; continue; }
+        sum += dens;
+        p   += sunDir * stepLen;
     }
 
-    float rainDamp = 1.0 - rainStrength * 0.96;
+    float occ = clamp(sum / float(steps), 0.0, 1.0);
+    float sunUp = max(dot(sunDir, upVec), 0.0);
+    occ += invNoonFactor * 0.2;
 
-    return light / weight * 134.0 * GI_INTENSITY * rainDamp * stainedColor.rgb;
+    return occ;
 }
-*/
+
+
+void ApplyCloudShadows(vec3 worldPos, vec3 cameraPos, float dither, int subsurfaceMode, inout vec3 shadowMult)
+{
+
+    vec3 sunDir = normalize(mat3(gbufferModelViewInverse) * lightVec);
+    float occ = LightRayCloudShadow(worldPos, cameraPos, sunDir, dither) * 4.25;
+        //if(subsurfaceMode == 3) occ = LightRayCloudShadow(worldPos, cameraPos, sunDir, dither) * 6.0;
+
+    float k = clamp(CLOUD_SHADING_STRENGTH, 0.0, 1.0);
+    float lightMul = mix(1.0, 1.0 - occ, 0.5);
+    if (k > 1.0) lightMul = pow(lightMul, 1.0 + min(k - 1.0, 3.0));
+
+    shadowMult *= vec3(lightMul);
+    shadowMult = max(shadowMult, vec3(0.0));
+}
+
 
 //Lighting//
 void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 viewPos, float lViewPos, vec3 geoNormal, vec3 normalM, float dither,
@@ -166,7 +146,7 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
     float lightmapYM = smoothstep1(lightmap.y);
     float subsurfaceHighlight = 0.0;
     float ambientMult = 1.0;
-    vec3 lightColorM = lightColor * 2.0 * SUNLIGHT_AMOUNT;
+    vec3 lightColorM = lightColor * 5.0 * SUNLIGHT_AMOUNT;
     vec3 ambientColorM = ambientColor * 1.2 * AMBIENT_AMOUNT;
     vec3 nViewPos = normalize(viewPos);
 
@@ -337,7 +317,7 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
                                 float VdotL = dot(nViewPos, lightVec);
                                 float lightFactor = pow(max(VdotL, 0.0), 10.0) * float(isEyeInWater == 0);
                                 if (subsurfaceMode == 1) {
-                                    offset = 0.010235 * lightmapYM + 0.0009765;
+                                    offset = 0.0050235 * lightmapYM + 0.0009765;
                                     shadowPos.z -= max(NdotL * 0.0001, 0.0) * lightmapYM;
                                     subsurfaceHighlight = lightFactor * 0.8;
                                     #ifndef SHADOW_FILTERING
@@ -345,19 +325,22 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
                                     #endif
                                 } else if (subsurfaceMode == 2) {
                                     leaves = true;
-                                    offset = 0.005235 * lightmapYM + 0.0009765;
+                                    offset = 0.001235 * lightmapYM + 0.0009765;
                                     shadowPos.z -= 0.000175 * lightmapYM;
                                     subsurfaceHighlight = lightFactor * 0.6;
                                     #ifndef SHADOW_FILTERING
                                         NdotLM = mix(NdotL, NdotLM, 0.5);
                                     #endif
-                                } else if (subsurfaceMode == 3 && NdotL < 0.1) {
-                                    offset = 0.005235 * lightmapYM + 0.0009765;
-                                    shadowPos.z -= 0.00000175 * lightmapYM;
-                                    subsurfaceHighlight = lightFactor * 0.6;
-                                    #ifndef SHADOW_FILTERING
-                                        NdotLM = mix(NdotL, NdotLM, 0.5);
-                                    #endif
+                                } else if (subsurfaceMode == 3) {
+                                    //lightColorM *= 0.75; // alt subsurface blocks tend to be brighter than usual so scale down lightColorM
+                                    if (NdotL < 0.1) {
+                                        offset = 0.005235 * lightmapYM + 0.0009765;
+                                        shadowPos.z -= 0.000175 * lightmapYM;
+                                        //subsurfaceHighlight = lightFactor * 0.001;
+                                        #ifndef SHADOW_FILTERING
+                                            NdotLM = mix(NdotL, NdotLM, 0.5);
+                                        #endif
+                                    }
                                 } else {
                                     
                                 }
@@ -390,30 +373,14 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
             #endif
 
             #ifdef CLOUD_SHADOWS
+                // world position of shaded point (you already compute this in your old block)
                 vec3 worldPos = playerPos + cameraPosition;
-                #if defined DO_PIXELATION_EFFECTS && defined PIXELATED_SHADOWS
-                    worldPos = playerPosPixelated + cameraPosition;
-                #endif
-                
-                    vec2 csPos = worldPos.xz + worldPos.y * 0.25;
-                    csPos.x += syncedTime;
-                    csPos *= 0.0000005 * CLOUD_UNBOUND_SIZE_MULT;
 
-                    vec2 shadowoffsets[8] = vec2[8](
-                        vec2( 0.0   , 1.0   ),
-                        vec2( 0.7071, 0.7071),
-                        vec2( 1.0   , 0.0   ),
-                        vec2( 0.7071,-0.7071),
-                        vec2( 0.0   ,-1.0   ),
-                        vec2(-0.7071,-0.7071),
-                        vec2(-1.0   , 0.0   ),
-                        vec2(-0.7071, 0.7071));
-                    float cloudSample = 0.0;
-                    for (int i = 0; i < 8; i++) {
-                        cloudSample += texture2D(noisetex, csPos + 0.005 * shadowoffsets[i]).b;
-                    }
+                // Sun direction in world space (consistent with your volumetric code)
+                vec3 sunDir = normalize(mat3(gbufferModelViewInverse) * lightVec);
 
-                    shadowMult *= smoothstep1(pow2(min1(cloudSample * 0.2)));
+                // Apply brand-new cloud shadows
+                ApplyCloudShadows(worldPos, cameraPosition, dither, subsurfaceMode, shadowMult);
             #endif
 
             shadowMult *= max(NdotLM * shadowTime, 0.0);
@@ -590,6 +557,7 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
 
     // Directional Shading
     float directionShade = 1.0;
+    /*
     #ifdef DIRECTIONAL_SHADING
         if (!noDirectionalShading) {
             float NdotE = dot(normalM, eastVec);
@@ -606,7 +574,7 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
             directionShade = NdotUM * NdotEM * NdotNM;
 
             #ifdef OVERWORLD
-                lightColorM *= 1.0 + absNdotE2 * 0.75;
+                lightColorM *= 1.0 + absNdotE2;
             #elif defined NETHER
                 directionShade *= directionShade;
                 ambientColorM += lavaLightColor * pow2(absNdotN * 0.5 + max0(-NdotU)) * (0.7 + 0.35 * vsBrightness);
@@ -628,7 +596,7 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
             #endif
         }
     #endif
-
+    */
     #ifdef DREAM_TWEAKED_LIGHTING
         ambientColorM = mix(ambientColorM, lightColorM, 0.25) * 1.5;
         lightColorM = lightColorM * 0.3;
@@ -709,36 +677,26 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
     #endif
 
     // Mix Colors
-    vec3 finalDiffuse = pow2(directionShade * vanillaAO) * (blockLighting + pow2(sceneLighting) + minLighting) + pow2(emission * 0.5);
+    vec3 finalDiffuse = pow2(directionShade * vanillaAO) * (blockLighting + pow2(sceneLighting) + minLighting) + pow2(emission * 3.0);
 
     
-    // --- Enhanced Fake Bounce Lighting for Bottom Faces ---
-    float bounceIntensity = 1.0 - nightFactor;  // base intensity (increase for stronger effect)
-    vec3 bounceColor = ambientColorM * 0.5 + lightColorM * 0.5; // fake bounce is mostly ambient
+    #ifdef FAKE_SUNLIGHT_BOUNCE
+        float bounceIntensity = 0.5 - nightFactor;
+        vec3 bounceColor = ambientColorM * 2.0;
 
-    // How much the normal faces downward
-    float downFacingFactor = max(dot(normalM, vec3(0.0, -1.0, 0.0)), 0.0);
+        float downFacingFactor = max(dot(normalM, vec3(0.0, -1.0, 0.0)), 0.0);
+        float lightAwayFactor = max(dot(normalM, -lightVec), 0.0);
+        float bounceVisibility = vanillaAO * (1.0 - max(shadowMult.r, 0.5));
+        float bounceStrength = bounceIntensity * (0.25 + 0.5 * downFacingFactor) * lightAwayFactor * bounceVisibility;
 
-    // How much it faces away from the sun
-    float lightAwayFactor = max(dot(normalM, -lightVec), 0.0);
-
-    // AO/shadow modulate bounce visibility
-    float bounceVisibility = vanillaAO * (1.0 - max(shadowMult.r, 0.5));
-
-    // Combine it all
-    float bounceStrength = bounceIntensity * (0.25 + 0.5 * downFacingFactor) * lightAwayFactor * bounceVisibility;
-
-    // Final fake bounce light color
-    vec3 fakeBounceLight = bounceColor * bounceStrength;
-
-    // Add to final light
-    finalDiffuse += fakeBounceLight * lightmapYM;
-
+        vec3 fakeBounceLight = bounceColor * bounceStrength;
+        finalDiffuse += fakeBounceLight * lightmapYM;
+    #endif
     finalDiffuse = sqrt(max(finalDiffuse, vec3(0.0))); // sqrt() for a bit more realistic light mix, max() to prevent NaNs
 
     // Apply Lighting
     color.rgb *= finalDiffuse;
-    color.rgb += lightHighlight;
+    color.rgb += lightHighlight * 2.5;
     color.rgb *= pow2(1.0 - darknessLightFactor);
 }
 
