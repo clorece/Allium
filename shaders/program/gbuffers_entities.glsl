@@ -103,6 +103,7 @@ void main() {
     float smoothnessD = 0.0, skyLightFactor = 0.0, materialMask = OSIEBCA * 254.0; // No SSAO, No TAA
     int foliage = 0;
     vec3 normalM = normal;
+    float albedoS = 1.0;
 
     float alphaCheck = color.a;
     #ifdef DO_PIXELATION_EFFECTS
