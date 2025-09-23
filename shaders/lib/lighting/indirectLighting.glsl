@@ -58,7 +58,7 @@
 #define PREVENT_ACCUMULATION_IN_FOLIAGE
 #define EXCLUDE_ENTITIES_IN_RT
 
-vec2 texelSize = vec2(1.0 / viewWidth, 1.0 / viewHeight);
+vec2 texelSize = 1.0 / vec2(viewWidth, viewHeight);
 
 float rand(float dither, int i) {
     return fract(dither + float(i) * 0.61803398875);

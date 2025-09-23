@@ -99,7 +99,7 @@
             float nightFogMult = 2.5 - 0.625 * max(pow2(pow2(altitudeFactorRaw)), rainFactor);
             float dayNightFogBlend = pow(invNightFactor, 4.0 - VdotS - 2.5 * sunVisibility2);
             return mix(
-                nightClearLightColor * 0.5 * (nightFogMult - dayNightFogBlend * nightFogMult),
+                ambientColor * 0.5 * (nightFogMult - dayNightFogBlend * nightFogMult),
                 mix((ambientColor * 0.5 + lightColor * 0.25) * 2.0 * (invNoonFactor2 * 1.575 + 0.825), (ambientColor * 0.5 + lightColor * 0.25) * 1.5 * (1.5 + 0.5 * noonFactor), vec3(0.5)),
                 dayNightFogBlend
             );

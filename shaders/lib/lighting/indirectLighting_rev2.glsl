@@ -398,8 +398,7 @@ vec3 RayDirection(vec3 normal, float dither, int i, float roughness) {
         float VdotS,
         float skyLightFactor,
         float linearZ0,
-        float dither,
-        bool isFoliage
+        float dither
     ) {
         const float r = 0.9;
 
@@ -477,6 +476,7 @@ vec3 RayDirection(vec3 normal, float dither, int i, float roughness) {
 
 // ------------------------------- Apply ------------------------------- //
 #ifdef GLOBAL_ILLUMINATION > 1
+/*
     vec3 DoRT(
         vec3 color, 
         vec3 viewPos, 
@@ -487,6 +487,18 @@ vec3 RayDirection(vec3 normal, float dither, int i, float roughness) {
         float dither, 
         bool entityOrHand,
         bool isFoliage
+    ) {
+    */
+    vec3 DoRT(
+        vec3 color, 
+        vec3 viewPos, 
+        vec3 playerPos, 
+        vec3 normal, 
+        float skyLightFactor, 
+        float linearZ0, 
+        float dither, 
+        bool entityOrHand,
+        float smoothnessD
     ) {
         float VdotU = dot(normal, upVec);
         float VdotS = dot(normal, sunVec);
@@ -500,9 +512,9 @@ vec3 RayDirection(vec3 normal, float dither, int i, float roughness) {
             //float rts = RaytraceShadow(lightVec, viewPos, dither, shadow);
 
             #if GLOBAL_ILLUMINATION == 3
-                color += GITonemap(GlobalIllumination(viewPos, playerPos, normal, VdotU, VdotS, skyLightFactor, linearZ0, dither, isFoliage)) * 1.0;
+                color += GITonemap(GlobalIllumination(viewPos, playerPos, normal, VdotU, VdotS, skyLightFactor, linearZ0, dither)) * 1.0;
             #elif GLOBAL_ILLUMINATION == 4
-                color += GITonemap(GlobalIllumination(viewPos, playerPos, normal, VdotU, VdotS, skyLightFactor, linearZ0, dither, isFoliage)) * 1.35;
+                color += GITonemap(GlobalIllumination(viewPos, playerPos, normal, VdotU, VdotS, skyLightFactor, linearZ0, dither)) * 1.35;
             #endif
 
             //color += mix(color, vec3(rts), vec3(0.5)) * 0.1;

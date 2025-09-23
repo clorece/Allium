@@ -1,8 +1,9 @@
 // Volumetric tracing from Robobo1221, highly modified
 
-#define CREPUSCULAR_RAYS // lightshafts under clouds clouds ty chatgpt again...
+//#define CREPUSCULAR_RAYS // lightshafts under clouds clouds ty chatgpt again...
 
 #define LQ_CLOUD
+#define LQ_SKY
 
 #include "/lib/colors/lightAndAmbientColors.glsl"
 
@@ -235,7 +236,7 @@ float CloudVLTransmittanceAt(vec3 worldPos, vec3 sunDir_ws, vec3 cameraPos, floa
             outRay.a   += ray * sampleMult;
         }
 
-        outRay *= 2.0; // for screenshot usage
+        outRay *= 4.0; // for screenshot usage
         return outRay;
     }
 #endif
@@ -447,7 +448,7 @@ vec4 GetVolumetricLight(inout vec3 color, inout float vlFactor, vec3 translucent
                 vec3 sunDir_ws = normalize(mat3(gbufferModelViewInverse) * lightVec);
                 float cloudT   = CloudVLTransmittanceAt(worldPos, sunDir_ws, cameraPosition, dither);
 
-                //cloudT *= 2.0; // for screenshots
+                //cloudT *= 1.0; // for screenshots
 
                 vlSample     *= cloudT;
                 //shadowSample *= cloudT;

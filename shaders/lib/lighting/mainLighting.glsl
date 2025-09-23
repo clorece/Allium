@@ -78,7 +78,7 @@ float LightRayCloudShadow(vec3 worldPos, vec3 cameraPos, vec3 sunDir, float dith
 
     float sum = 0.0;
 
-    int sampleCount = 3;
+    int sampleCount = 4;
 
     for (int i=0; i < sampleCount; ++i) {
         if (i >= steps) break;
@@ -101,7 +101,7 @@ void ApplyCloudShadows(vec3 worldPos, vec3 cameraPos, float dither, int subsurfa
 {
 
     vec3 sunDir = normalize(mat3(gbufferModelViewInverse) * lightVec);
-    float occ = LightRayCloudShadow(worldPos, cameraPos, sunDir, dither) * 4.25;
+    float occ = LightRayCloudShadow(worldPos, cameraPos, sunDir, dither) * 3.0;
         //if(subsurfaceMode == 3) occ = LightRayCloudShadow(worldPos, cameraPos, sunDir, dither) * 6.0;
 
     float k = clamp(CLOUD_SHADING_STRENGTH, 0.0, 1.0);
@@ -146,7 +146,7 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
     float lightmapYM = smoothstep1(lightmap.y);
     float subsurfaceHighlight = 0.0;
     float ambientMult = 1.0;
-    vec3 lightColorM = lightColor * 5.0 * SUNLIGHT_AMOUNT;
+    vec3 lightColorM = lightColor * 3.5 * SUNLIGHT_AMOUNT;
     vec3 ambientColorM = ambientColor * 1.2 * AMBIENT_AMOUNT;
     vec3 nViewPos = normalize(viewPos);
 

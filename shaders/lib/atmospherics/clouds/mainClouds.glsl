@@ -2,17 +2,24 @@
 // if anybody knows sees this and would like to change the way i make the effects mentioned, for optimization, please let me know!
 
 #define LOWER_CLOUD_LAYER
-#define CLOUD_STEP_QUALITY 2.0 //[1.0 1.5 2.0 4.0]
-#define CLOUD_SHADING_STRENGTH 2.0
-#define CLOUD_RENDER_DISTANCE 2048 //[1024 1536 2048]
+#define CLOUD_STEP_QUALITY 1.5 //[1.0 1.5 2.0 2.5 3.0 3.5 4.0]
+#define CLOUD_SHADING_QUALITY 9 //[6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24]
+
+#define CLOUD_SHADING_STRENGTH 3.0 //[1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0 2.1 2.2 2.3 2.4 2.5 2.6 2.7 2.8 2.9 3.0 3.1 3.2 3.3 3.4 3.5 3.6 3.7 3.8 3.9 4.0 4.1 4.2 4.3 4.4 4.5 4.6 4.7 4.8 4.9 5.0]
+
+#define CLOUD_RENDER_DISTANCE 2048 //[1024 2048 4096]
+
+#define CURVED_CLOUDS           //[0 off, 1 on]
+#define PLANET_RADIUS 60000      //[30000 45000 60000 80000 100000]  // in blocks
+#define CURVATURE_STRENGTH 1.0     //[0.0 0.5 1.0 1.25 1.5 2.0]
 
 #define LOWER_CLOUD_LAYER_MULT       0.4   //[0.4 0.45 0.5 0.55 0.6 0.65 0.7]
-#define LOWER_CLOUD_LAYER_SIZE_MULT  2.0    //[0.5 0.75 1.0 1.25 1.5 1.75 2.0 2.25 2.5 2.75 3.0 3.25 3.5 3.75 4.0]
+#define LOWER_CLOUD_LAYER_SIZE_MULT  3.25    //[0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0 1.25 1.5 1.75 2.0 2.25 2.5 2.75 3.0 3.25 3.5 3.75 4.0]
 #define LOWER_CLOUD_LAYER_SIZE_MULT_M (200.0 * 0.01)
 #define LOWER_CLOUD_LAYER_GRANULARITY 0.4 //[0.1 0.2 0.3 0.4 0.475 0.5 0.6 0.7 0.8 0.9 1.0]
-#define LOWER_CLOUD_LAYER_ALT        164   //[-96 -92 -88 -84 -80 -76 -72 -68 -64 -60 -56 -52 -48 -44 -40 -36 -32 -28 -24 -20 -16 -10 -8 -4 0 4 8 12 16 20 22 24 28 32 36 40 44 48 52 56 60 64 68 72 76 80 84 88 92 96 100 104 108 112 116 120 124 128 132 136 140 144 148 152 156 160 164 168 172 176 180 184 188 192 196 200 204 208 212 216 220 224 228 232 236 240 244 248 252 256 260 264 268 272 276 280 284 288 292 296 300 304 308 312 316 320 324 328 332 336 340 344 348 352 356 360 364 368 372 376 380 384 388 392 396 400 404 408 412 416 420 424 428 432 436 440 444 448 452 456 460 464 468 472 476 480 484 488 492 496 500 510 520 530 540 550 560 570 580 590 600 610 620 630 640 650 660 670 680 690 700 710 720 730 740 750 760 770 780 790 800]
-#define LOWER_CLOUD_LAYER_HEIGHT     32.0   //[6.0 8.0 10.0 12.0 14.0 16.0 18.0 20.0 24.0 32.0 48.0 54.0 64.0]
-#define LOWER_CLOUD_LAYER_COVERAGE   0.5   //[0.3 0.35 0.4 0.45 0.5 0.55 0.6 0.65 0.7]
+#define LOWER_CLOUD_LAYER_ALT        180   //[-96 -92 -88 -84 -80 -76 -72 -68 -64 -60 -56 -52 -48 -44 -40 -36 -32 -28 -24 -20 -16 -10 -8 -4 0 4 8 12 16 20 22 24 28 32 36 40 44 48 52 56 60 64 68 72 76 80 84 88 92 96 100 104 108 112 116 120 124 128 132 136 140 144 148 152 156 160 164 168 172 176 180 184 188 192 196 200 204 208 212 216 220 224 228 232 236 240 244 248 252 256 260 264 268 272 276 280 284 288 292 296 300 304 308 312 316 320 324 328 332 336 340 344 348 352 356 360 364 368 372 376 380 384 388 392 396 400 404 408 412 416 420 424 428 432 436 440 444 448 452 456 460 464 468 472 476 480 484 488 492 496 500 510 520 530 540 550 560 570 580 590 600 610 620 630 640 650 660 670 680 690 700 710 720 730 740 750 760 770 780 790 800]
+#define LOWER_CLOUD_LAYER_HEIGHT     48.0   //[6.0 8.0 10.0 12.0 14.0 16.0 18.0 20.0 24.0 32.0 48.0 54.0 64.0 96.0 128.0]
+#define LOWER_CLOUD_LAYER_COVERAGE   0.42   //[0.4 0.41 0.42 0.43 0.44 0.45 0.46 0.47 0.48 0.49 0.5]
 
 #ifndef DISTANT_HORIZONS
     #define CLOUD_BASE_ADD 0.65
@@ -28,6 +35,11 @@ const int   lowerLayerAlt = int(LOWER_CLOUD_LAYER_ALT);
 float       lowerLayerStretch = LOWER_CLOUD_LAYER_HEIGHT;
 float       lowerLayerHeight  = lowerLayerStretch * 2.0;
 
+#ifdef LQ_CLOUD
+    #define CLOUD_SHADING_STRENGTH_MULT ((CLOUD_SHADING_STRENGTH * 0.85) / CLOUD_SHADING_STRENGTH)
+#else
+    #define CLOUD_SHADING_STRENGTH_MULT CLOUD_SHADING_STRENGTH
+#endif
 
 #include "/lib/colors/lightAndAmbientColors.glsl"
 #include "/lib/colors/cloudColors.glsl"
@@ -69,7 +81,7 @@ float Noise3D(vec3 p) {
     return mix(a, b, fz);
 }
 
-/*
+
 float Noise3D2(vec3 p) {
     p.z = fract(p.z) * 20.0;
     float iz = floor(p.z);
@@ -80,7 +92,7 @@ float Noise3D2(vec3 p) {
     float b = texture2D(colortex3, p.xy + b_off).b;
     return mix(a, b, fz);
 }
-*/
+
 
 float GetWind() {
     float wind = 0.0004;
@@ -144,7 +156,7 @@ float GetLowerLayerDetail(vec3 pos, vec3 offset, float persistence) {
 float LC_Coverage2D(vec2 xz, float windTick) {
     float n  = texture2D(noisetex, xz * 0.0012 + vec2(windTick)).r;
             n += texture2D(noisetex, xz * 0.0040 + vec2(windTick * 1.7)).r * 0.5;
-            n  = n * (1.0 + rainFactor * 0.25) - nightFactor;
+            n  = n * (1.0 + rainFactor * 0.1) - nightFactor;
 
     float cov = smoothstep(0.35, 0.85, n) * LOWER_CLOUD_LAYER_COVERAGE;
     return clamp(cov, 0.0, 1.0);
@@ -163,26 +175,44 @@ float LC_DensityGain(float y, int cloudAltitude, float stretch) {
     return g;
 }
 
+float curvatureDrop(float dx) {
+#ifdef CURVED_CLOUDS
+    // Sagitta approximation: how much the horizon "falls" after dx blocks
+    return CURVATURE_STRENGTH * (dx * dx) / max(2.0 * PLANET_RADIUS, 1.0);
+#else
+    return 0.0;
+#endif
+}
+
+float curvedY(vec3 pos, vec3 cam) {
+    // Apply curvature only by distance in XZ from the camera
+    float dx = length((pos - cam).xz);
+    return pos.y - curvatureDrop(dx);
+}
+
 float GetLowerLayerCloud(vec3 tracePos, int steps, int cloudAltitude, float lTracePosXZ, float cloudPlayerPosY,
                          float noisePersistence, float mult, float size) {
     vec3 tracePosM = shearMatrix * tracePos * (0.00018 * size);
             //tracePosM.y *= 0.85;
 
     float shearAmount = 0.25;
-    tracePosM.x += tracePosM.y * windDir.x * shearAmount;
+    //tracePosM.x += tracePosM.y * windDir.x * shearAmount;
+    tracePosM.z *= 1.25;
 
     vec3 offset = Offset(GetWind() * size);
 
     float base = Noise3D(tracePosM * 0.71 / lowerLayerCloudSizeMult + offset) * 12.0;
-            base+= Noise3D(tracePosM * 0.82 / lowerLayerCloudSizeMult + offset) * 6.0;
-            //base+= Noise3D(tracePosM * 2.34 / lowerLayerCloudSizeMult + offset) * 4.0;
-            //base+= Noise3D(tracePosM * 3.13 / lowerLayerCloudSizeMult + offset) * 2.0;
-            base/= 12.0 / LOWER_CLOUD_LAYER_COVERAGE;
-            base+= rainFactor * 0.1;
-            base-= nightFactor * 0.075 - rainFactor * 0.2;
+            base+= Noise3D(tracePosM * 0.85 / lowerLayerCloudSizeMult + offset) * 6.0;
+
+            base+= Noise3D(tracePosM * 1.24 / lowerLayerCloudSizeMult + offset) * 3.0;
+            base+= Noise3D(tracePosM * 1.53 / lowerLayerCloudSizeMult + offset) * 1.0;
+            base /= 12.0 / LOWER_CLOUD_LAYER_COVERAGE;
+            base += rainFactor * 0.0001;
+            //base-= nightFactor * 0.075 - rainFactor * 0.2;
+            //base -= invNoonFactor * 0.025;
 
     float detail   = GetLowerLayerDetail(tracePosM, offset, noisePersistence);
-    float combined = mix(base, base * detail, 0.55);
+    float combined = mix(base, base * detail, 0.475);
             combined = max(combined - 0.2, 0.0);
             combined = pow(combined, 1.35) * mult;
 
@@ -190,7 +220,7 @@ float GetLowerLayerCloud(vec3 tracePos, int steps, int cloudAltitude, float lTra
     float baseAlt   = float(cloudAltitude) - lowerLayerStretch;
     float topAlt    = float(cloudAltitude) + lowerLayerStretch;
     float thick     = max(topAlt - baseAlt, 1e-3);
-    float y         = tracePos.y;
+    float y = tracePos.y + curvatureDrop(lTracePosXZ);
 
     float lowFade   = smoothstep(baseAlt,            baseAlt + thick * 0.075, y);
     float highFade  = 1.0 - smoothstep(baseAlt + thick * 0.60, topAlt,        y);
@@ -218,17 +248,16 @@ float GetLowerLayerCloud(vec3 tracePos, int steps, int cloudAltitude, float lTra
     combined *= covMul;
     combined  = max(combined - (1.0 - coverage) * 0.125, 0.0);
 
-    float carve = Noise3D(tracePosM * 3.9 + offset * 0.5);
+    float carve = Noise3D2(tracePosM * 3.9 + offset * 0.5);
     combined    = max(combined - (1.0 - carve) * 0.25, 0.0);
 
     float densityGain = LC_DensityGain(y, cloudAltitude, lowerLayerStretch);
     combined *= densityGain;
 
-    float thicknessVF   = lowerLayerStretch * 2.0;
+    float thicknessVF   = lowerLayerStretch * 1.25;
     float fadeThickness = max(thicknessVF, 24.0);
-    float bottomAlt     = float(cloudAltitude) - 0.15 * fadeThickness; // changing 0.2 will affect how flat the bottom of clouds will apear, lower values = flatter, higher values = rounder, default is 0.5
-
-    float tv = clamp((y - bottomAlt) / fadeThickness, 0.0, 1.0);
+    float bottomAlt = float(cloudAltitude) - 0.0001 * fadeThickness;
+    float tv = clamp((y - bottomAlt) / fadeThickness, 0.0, 1.0); // y is already curved
           tv = 1.0 - tv; // 1 at top
 
     float shoulder   = 0.25;
@@ -270,9 +299,14 @@ float SampleCloudShadow(vec3 tracePos, vec3 lightDir, float dither, int steps, i
 
     for (int i = 0; i < steps; ++i) {
         samplePos += lightDir * 6.0 + dither;
-        if (abs(samplePos.y - cloudAltitude) > stretch * 3.0) break;
+        
+        float dxShadow = length((samplePos - cameraPosition).xz);
+        float yCurvedS = samplePos.y + curvatureDrop(dxShadow);
+        if (abs(yCurvedS - float(cloudAltitude)) > stretch * 3.0) break;
 
-        density = clamp(GetLowerLayerCloud(samplePos, steps, cloudAltitude, length(samplePos.xz), samplePos.y - cloudAltitude, 0.6, 1.0, size), 0.0, 1.0);
+        float density = clamp(GetLowerLayerCloud(samplePos, steps, cloudAltitude,
+                                                dxShadow, yCurvedS - float(cloudAltitude),
+                                                0.6, 1.0, size), 0.0, 1.0);
 
         density *= shadowDensityScale;
         shadow += density / float(i + 1);
@@ -326,9 +360,9 @@ vec4 GetVolumetricClouds(int cloudAltitude,
 
         // cloud steps are used for the shadow sampling on clouds for directional lighting, not for shadows and crepuscular rays, so we dont need itterate through so many again
         #ifndef LQ_CLOUD
-            int   cloudSteps = 6;
+            int   cloudSteps = CLOUD_SHADING_QUALITY;
         #else
-            int   cloudSteps = 6;
+            int   cloudSteps = 2;
         #endif
 
         #ifdef FIX_AMD_REFLECTION_CRASH
@@ -348,7 +382,7 @@ vec4 GetVolumetricClouds(int cloudAltitude,
         float phaseHG = vc_phase(mu, 0.85);
 
         const float BREAK_THRESHOLD = 0.08;
-        float sigma_s = 0.25 * mult;  // scattering
+        float sigma_s = 0.2 * mult;  // scattering
         float sigma_t = 0.1 * mult;  // extinction
 
         float transmittance = 1.0;
@@ -362,7 +396,8 @@ vec4 GetVolumetricClouds(int cloudAltitude,
 
             tracePos += rayStep;
 
-            if (abs(tracePos.y - cloudAltitude) > lowerLayerStretch * 3.0) break;
+            float yCurved = tracePos.y + curvatureDrop(length((tracePos - cameraPos).xz));
+            if (abs(yCurved - float(cloudAltitude)) > lowerLayerStretch * 3.0) break;
 
             vec3  toPos      = tracePos - cameraPos;
             float lTracePos  = length(toPos);
@@ -381,10 +416,10 @@ vec4 GetVolumetricClouds(int cloudAltitude,
 
             float shadow     = SampleCloudShadow(tracePos, sunDir, dither, cloudSteps,
                                                  cloudAltitude, lowerLayerStretch, size, 1);
-            float lightTrans = 1.0 - clamp(shadow * CLOUD_SHADING_STRENGTH, 0.0, 1.0);
+            float lightTrans = 1.0 - clamp(shadow * CLOUD_SHADING_STRENGTH_MULT, 0.0, 1.0);
 
-            float skylight = clamp((tracePos.y - lowerPlaneAltitude) /
-                                   max(higherPlaneAltitude - lowerPlaneAltitude, 1e-3), 0.0, 1.0);
+            float skylight = clamp((yCurved - lowerPlaneAltitude) /
+                       max(higherPlaneAltitude - lowerPlaneAltitude, 1e-3), 0.0, 1.0);
 
             float extinction = density * sigma_t;
             float stepT      = exp2(-extinction * stepLen * 1.442695041);

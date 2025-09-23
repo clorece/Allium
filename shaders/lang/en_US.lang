@@ -1119,6 +1119,12 @@ screen.INDIRECT_LIGHTING=Indirect Lighting
         option.GLOBAL_ILLUMINATION_VIEW.comment=Debug View for Global Illumination
 
     option.LOWER_CLOUD_LAYER=Cloud Toggle
+    option.CLOUD_STEP_QUALITY=Cloud Quality
+    option.CLOUD_SHADING_QUALITY=Cloud Shading Quality
+    option.CLOUD_SHADING_STRENGTH=Cloud Shading Strength
+    option.CURVED_CLOUDS=Cloud Curvature
+    option.PLANET_RADIUS=Planet Radius
+    option.CURVATURE_STRENGTH=Curvature Strength
     option.LOWER_CLOUD_LAYER_MULT=Noise Amount
     option.LOWER_CLOUD_LAYER_SIZE_MULT=Size Amount
     option.LOWER_CLOUD_LAYER_COVERAGE=Coverage
@@ -1132,10 +1138,10 @@ screen.INDIRECT_LIGHTING=Indirect Lighting
 LOWER_CLOUD_LAYER_MULT LOWER_CLOUD_LAYER_HEIGHT LOWER_CLOUD_LAYER_COVERAGE LOWER_CLOUD_LAYER_ALT
 
 option.CLOUD_RENDER_DISTANCE=Cloud Render Distance
-    option.CLOUD_RENDER_DISTANCE.comment=Render distance for both cloud layers.
+    option.CLOUD_RENDER_DISTANCE.comment=Render distance for both cloud layers. Dependent on your Minecraft's render distance. If there are any performance issues with distant horizons, try lowering it to near since clouds will still render really far away.
         value.CLOUD_RENDER_DISTANCE.1024=§aNear
-        value.CLOUD_RENDER_DISTANCE.1536=§eFar
-        value.CLOUD_RENDER_DISTANCE.2048=§cFarthest
+        value.CLOUD_RENDER_DISTANCE.2048=§eNormal
+        value.CLOUD_RENDER_DISTANCE.4096=§cFar
 
 option.WHITE_WORLD=White World
     option.WHITE_WORLD.comment=Ambient Occlusion Debug View.

@@ -204,7 +204,7 @@ vec4 GetReflection(vec3 normalM, vec3 viewPos, vec3 nViewPos, vec3 playerPos, fl
                     #endif
 
                             vec3 worldNormalMR = normalize(mat3(gbufferModelViewInverse) * normalMR);
-                            vec3 RCameraPos = cameraPosition + 2.0 * worldNormalMR * dot(playerPos, worldNormalMR);
+                            vec3 RCameraPos = cameraPosition + 1.0 * worldNormalMR * dot(playerPos, worldNormalMR);
                             vec3 RPlayerPos = normalize(mat3(gbufferModelViewInverse) * nViewPosR);
                             float RlViewPos = 100000.0;
 

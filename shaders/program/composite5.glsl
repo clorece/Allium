@@ -18,7 +18,7 @@
 
 // Per-hue saturation multipliers
 #define SAT_RED      0.985
-#define SAT_ORANGE   0.65
+#define SAT_ORANGE   0.75
 #define SAT_YELLOW   1.00
 #define SAT_GREEN    1.2
 #define SAT_CYAN     1.15
