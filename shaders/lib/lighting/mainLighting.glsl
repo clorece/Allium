@@ -112,7 +112,6 @@ void ApplyCloudShadows(vec3 worldPos, vec3 cameraPos, float dither, int subsurfa
     shadowMult = max(shadowMult, vec3(0.0));
 }
 
-
 //Lighting//
 void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 viewPos, float lViewPos, vec3 geoNormal, vec3 normalM, float dither,
                 vec3 worldGeoNormal, vec2 lightmap, bool noSmoothLighting, bool noDirectionalShading, bool noVanillaAO,
@@ -146,7 +145,7 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
     float lightmapYM = smoothstep1(lightmap.y);
     float subsurfaceHighlight = 0.0;
     float ambientMult = 1.0;
-    vec3 lightColorM = lightColor * 3.5 * SUNLIGHT_AMOUNT;
+    vec3 lightColorM = lightColor * 4.0 * SUNLIGHT_AMOUNT;
     vec3 ambientColorM = ambientColor * 1.2 * AMBIENT_AMOUNT;
     vec3 nViewPos = normalize(viewPos);
 
@@ -692,6 +691,7 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
         vec3 fakeBounceLight = bounceColor * bounceStrength;
         finalDiffuse += fakeBounceLight * lightmapYM;
     #endif
+
     finalDiffuse = sqrt(max(finalDiffuse, vec3(0.0))); // sqrt() for a bit more realistic light mix, max() to prevent NaNs
 
     // Apply Lighting

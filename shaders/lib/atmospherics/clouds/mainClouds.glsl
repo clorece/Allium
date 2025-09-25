@@ -207,7 +207,7 @@ float GetLowerLayerCloud(vec3 tracePos, int steps, int cloudAltitude, float lTra
             base+= Noise3D(tracePosM * 1.24 / lowerLayerCloudSizeMult + offset) * 3.0;
             base+= Noise3D(tracePosM * 1.53 / lowerLayerCloudSizeMult + offset) * 1.0;
             base /= 12.0 / LOWER_CLOUD_LAYER_COVERAGE;
-            base += rainFactor * 0.0001;
+            base += rainFactor * 0.125;
             //base-= nightFactor * 0.075 - rainFactor * 0.2;
             //base -= invNoonFactor * 0.025;
 

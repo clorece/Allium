@@ -59,7 +59,7 @@
     const vec3  bMs  = vec3(2e-5);
     const vec3  bMe  = bMs * 1.0;
     const float SunI = 200.0;
-    const float seaLevel = -1000.0;
+    const float seaLevel = 70.0;
 
     const float R_PHASE = 0.0597;
     const float M_PHASE = 0.0196; 
@@ -80,95 +80,103 @@
     }
 
     // please help
-    float tauToTOA(float H, float h, float muSunZ) {
-        // this is just bad
-        if (muSunZ <= 0.0) return 0.0;
-        float Ls = (Ha - h) / sqrt(muSunZ * muSunZ + 0.01);
-        return tauFlat(H, h, Ls, muSunZ);
+    float tauToTOA(float H, float h, float muSunZ)
+    {
+        const float eps = 0.015;
+
+        float hh = clamp(h, 0.0, Ha - 1.0);
+        float mu = clamp(muSunZ, -1.0, 1.0);
+        float muEff = sqrt(mu*mu + eps*eps);
+        float Ls = (Ha - hh) / muEff;
+        float tau = tauFlat(H, hh, Ls, muEff);
+        float below = smoothstep(-0.20, 0.0, -mu);
+
+        tau += 80.0 * below;                    
+
+        return tau;
     }
 
     // im going insane
     vec3 GetSky(float VdotU, float VdotS, float dither, bool doGlare, bool doGround)
-    {
-        vec3 Up  = normalize(upVec);
-        vec3 Sun = normalize(sunVec);
+{
+    vec3 Up  = normalize(upVec);
+    vec3 Sun = normalize(sunVec);
 
-        float muV  = clamp(VdotU, -1.0, 1.0);
-        float muS  = clamp(VdotS, -1.0, 1.0);
-        float cameraHeight = cameraPosition.y;
-        float horizonOffset = seaLevel - cameraHeight;
+    float muV  = clamp(VdotU, -1.0, 1.0);
+    float muS  = clamp(VdotS, -1.0, 1.0);
+    float cameraHeight = cameraPosition.y;
 
-        if (doGround && muV <= 0.0) {
-            float groundFade = smoothstep(0.0, 1.0, pow(1.0 + muV, 2.0));
-            vec3 gcol = vec3(0.0);
-            gcol += (dither - 0.5) / 32.0;
-            return sqrt(max(gcol * groundFade, 0.0));
-        }
+    float muV_soft = max(0.05, muV + 0.15);
+    float L        = Ha * safe_rcp(muV_soft);
 
-        float muV_soft = max(0.05, muV + 0.15);
-        float L        = Ha * safe_rcp(muV_soft);
+    const int STEPS = 2;
+    float horizonW = saturate(1.0 - muV);
+    float tExp = mix(1.0, 2.0, horizonW);
 
-        const int STEPS = 2;
-        float horizonW = saturate(1.0 - muV);
-        float tExp = mix(1.0, 2.0, horizonW);
-        float ds = L / float(STEPS);
+    vec3 I_R = vec3(0.0);
+    vec3 I_M = vec3(0.0);
 
-        vec3 I_R = vec3(0.0);
-        vec3 I_M = vec3(0.0);
+    float muPhase = muS;
+    vec3 phaseR   = vec3(R_PHASE * (1.0 + muPhase * muPhase));
+    float mieDen  = hgDen(muPhase);
+    vec3 phaseM   = vec3(M_PHASE / mieDen);
 
-        float muPhase = muS;
-        vec3 phaseR   = vec3(R_PHASE * (1.0 + muPhase * muPhase));
-        float mieDen  = hgDen(muPhase);
-        vec3 phaseM   = vec3(M_PHASE / mieDen);
+    for (int i = 0; i < STEPS; ++i) {
+        float t0   = pow(float(i)   / float(STEPS), tExp);
+        float t1   = pow(float(i+1) / float(STEPS), tExp);
+        float sMid = L * 0.5 * (t0 + t1);
+        float ds   = L * (t1 - t0);
 
-        for (int i = 0; i < STEPS; ++i) {
-            float t0   = pow(float(i)   / float(STEPS), tExp);
-            float t1   = pow(float(i+1) / float(STEPS), tExp);
-            float sMid = L * 0.5 * (t0 + t1);
-            float ds   = L * (t1 - t0);
+        float h  = max(0.0, sMid * muV + cameraHeight - seaLevel);
 
-            // shifted altitude
-            float h  = max(0.0, sMid * muV + cameraHeight - seaLevel);
+        float rhoR = exp(-h / HR);
+        float rhoM = exp(-h / HM);
 
-            float rhoR = exp(-h / HR);
-            float rhoM = exp(-h / HM);
+        float tauVR = tauFlat(HR, seaLevel, sMid, muV);
+        float tauVM = tauFlat(HM, seaLevel, sMid, muV);
+        vec3  Tview = exp(-bR * tauVR - bMe * tauVM);
 
-            float tauVR = tauFlat(HR, seaLevel, sMid, muV);
-            float tauVM = tauFlat(HM, seaLevel, sMid, muV);
-            vec3  Tview = exp(-bR * tauVR - bMe * tauVM);
+        float tauSR = tauToTOA(HR, h, dot(Sun, Up));
+        float tauSM = tauToTOA(HM, h, dot(Sun, Up));
+        vec3  Tsun  = exp(-bR * tauSR - bMe * tauSM);
 
-            float tauSR = tauToTOA(HR, h, dot(Sun, Up));
-            float tauSM = tauToTOA(HM, h, dot(Sun, Up));
-            vec3  Tsun  = exp(-bR * tauSR - bMe * tauSM);
-
-            vec3 A = Tview * Tsun;
-            I_R += A * rhoR * ds;
-            I_M += A * rhoM * ds;
-        }
-
-        float tauR_full = tauFlat(HR, seaLevel, L, muV);
-        float tauM_full = tauFlat(HM, seaLevel, L, muV);
-        vec3  transV    = exp(-bR * tauR_full - bMe * tauM_full);
-        vec3  col       = vec3(0.0) * transV;
-
-        vec3 rayleigh = I_R * bR * phaseR;
-        vec3 mie      = I_M * bMs * phaseM * lightColor * 2.5;
-        col += SunI * (rayleigh + mie) + lightColor * 0.75;
-
-        if (doGround) {
-            float groundFade = smoothstep(0.0, 1.0, pow(1.0 + min(muV, 0.0), 2.0));
-            col *= groundFade;
-        }
-
-        if (doGlare) {
-            float glare = pow(max(0.0, muS), 64.0);
-            col += lightColor * glare * 2;
-        }
-
-        col /= (1.0 + nightFactor * 12.0); // this has been the most irritating thing that ive dealt with so far
-
-        col += (dither - 0.5) / 16.0;
-        col  = sqrt(max(col, 0.0));
-        return max(col, 0.0);
+        vec3 A = Tview * Tsun;
+        I_R += A * rhoR * ds;
+        I_M += A * rhoM * ds;
     }
+
+    float tauR_full = tauFlat(HR, seaLevel, L, muV);
+    float tauM_full = tauFlat(HM, seaLevel, L, muV);
+    vec3  transV    = exp(-bR * tauR_full - bMe * tauM_full);
+    vec3  col       = vec3(0.0) * transV;
+
+    vec3 rayleigh = I_R * bR * phaseR * 1.0;
+    vec3 mie      = I_M * bMs * phaseM * lightColor * 2.5;
+    col += SunI * (rayleigh + mie) + lightColor;
+
+    if (doGround) {
+        col *= pow2(pow2(1.0 + min(VdotU, 0.0)));
+    }
+
+    if (doGlare) {
+        float glare = pow(max(0.0, muS), 64.0);
+        col += lightColor * glare * 2.0;
+    }
+
+    // --- NIGHT / BELOW-HORIZON OVERRIDE ------------------------------
+    // Make the sky below the horizon equal to lightColor (smooth transition).
+    
+    const float HSOFT = 0.1;                // ~1.7° softness around horizon
+    float below = smoothstep(0.0, HSOFT, -muV); // 0 above, 1 deeper below
+    col = mix(col, ambientColor * 0.5 + lightColor * 5.0, below);       // ← added
+    
+    // ------------------------------------------------------------------
+
+    // remove the nightFactor hack divide
+     col /= (1.0 + nightFactor * 32.0);    // ← removed
+
+    col += (dither - 0.5) / 32.0;
+    col  = sqrt(max(col, 0.0));
+    return max(col, 0.0);
+}
 #endif //INCLUDE_SKY

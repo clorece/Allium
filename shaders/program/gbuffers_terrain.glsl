@@ -216,6 +216,7 @@ void main() {
     vec2 lmCoordM = lmCoord;
     vec3 normalM = normal, geoNormal = normal, shadowMult = vec3(1.0);
     vec3 worldGeoNormal = normalize(ViewToPlayer(geoNormal * 10000.0));
+    //vec3 worldGeoNormal = normalize((gbufferModelViewInverse * vec4(normal, 0.0)).xyz);
     float albedoS = 1.0;
     #ifdef IPBR
         vec3 maRecolor = vec3(0.0);

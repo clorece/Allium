@@ -105,7 +105,7 @@ uniform vec3 previousCameraPositionFract;
 
     uniform sampler2DShadow shadowtex1;
 
-    #ifdef COMPOSITE
+    #ifdef COMPOSITE || DEFERRED1
         uniform sampler2D shadowtex0;
     #else
         uniform sampler2DShadow shadowtex0;

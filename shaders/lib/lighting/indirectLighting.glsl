@@ -101,21 +101,22 @@ vec3 CalculateFlux(vec3 incidentLight, vec3 normal, vec3 lightDir, float visibil
     return incidentLight * NdotL * visibility * attenuation;
 }
 
+vec3 genUnitVector(vec2 p) {
+    float phi = p.x * 6.283185307179586;
+    float z = p.y * 2.0 - 1.0;
+    float r = sqrt(max(0.0, 1.0 - z * z));
+    return vec3(sin(phi) * r, cos(phi) * r, z);
+}
+
+vec3 GenerateCosineVectorSafe(vec3 vector, vec2 xy) {
+    vec3 cosineVector = vector + genUnitVector(xy);
+    float lenSq = dot(cosineVector, cosineVector);
+    return lenSq > 0.0 ? cosineVector * inversesqrt(lenSq) : vector;
+}
+
 vec3 RayDirection(vec3 normal, float dither, int i, float roughness) {
-    /*
-    vec3 up = abs(normal.y) < 0.999 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0);
-    vec3 tangent = normalize(cross(up, normal));
-    vec3 bitangent = cross(normal, tangent);
-    */
-
-    vec3 up = abs(normal.z) < 0.999 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
-    vec3 tangent = normalize(cross(up, normal));
-    vec3 bitangent = cross(normal, tangent);
-
-    vec2 Xi = vec2(rand(dither, i));
-    vec3 hemi = normalize(cosineHemisphereSampleRough(Xi, roughness));
-    //return tangent * hemi.x + bitangent * hemi.y + normal * hemi.z;
-    return ((tangent * hemi.x) + (bitangent * hemi.y) + (normal * hemi.z));
+    vec2 Xi = vec2(rand(dither, i), rand(dither, i + 1));
+    return GenerateCosineVectorSafe(normal, Xi);
 }
 
 
@@ -236,8 +237,10 @@ vec3 RayDirection(vec3 normal, float dither, int i, float roughness) {
             float depthScene = GetLinearDepth(depthSample);
 
             if (depthScene < depthCurrent && depthSample >= minZ && depthSample <= maxZ) {
+                vec3 albedo     = texture2D(colortex9, tracePos.xy).rgb;
+                vec3 color      = texture2D(colortex2, tracePos.xy).rgb;
 
-                hitColor = toLinear(texture2D(colortex2, tracePos.xy).rgb) * GI_INTENSITY;
+                hitColor = toLinear(albedo * color) * GI_INTENSITY;
 
                 // adjust intensity from bounce
                 #if GI_BOUNCE == 1
@@ -255,7 +258,7 @@ vec3 RayDirection(vec3 normal, float dither, int i, float roughness) {
             float bias = 0.0005;
             minZ = maxZ - bias / max(depthCurrent, 0.0005); 
             maxZ += stepVec.z;
-            tracePos += stepVec * 2.0 * dither;
+            tracePos += stepVec * dither;
         }
 
         return tracePos;
@@ -421,7 +424,7 @@ vec3 RayDirection(vec3 normal, float dither, int i, float roughness) {
             vec3 accumulatedLight = vec3(0.0);
 
             vec3 bounceNormal = normal;
-            vec3 rayDir = RayDirection(bounceNormal, dither, i, r);
+            vec3 rayDir = RayDirection(bounceNormal, dither, i, r );
 
             for (int j = 0; j < GI_BOUNCE; ++j) {
                 bool hitFound = false;
@@ -439,8 +442,6 @@ vec3 RayDirection(vec3 normal, float dither, int i, float roughness) {
                 float depthFade = GetLinearDepth(tracePos.z) - GetLinearDepth(texelFetch(depthtex1, ivec2(tracePos.xy / texelSize), 0).r);
                 float fade = exp(-clamp(depthFade / 4.0, 0.0, 1.0));
 
-                // Use the hitColor as linear space from bilateralBlur (already handled inside Raytrace)
-                vec3 flux = CalculateFlux(hitColor, bounceNormal, rayDir, r, length(rayDir), 0.1);
                 accumulatedLight += throughput * hitColor + lightColor * fade;
 
                 throughput *= clamp(hitColor, 0.0, 1.0);
@@ -465,7 +466,7 @@ vec3 RayDirection(vec3 normal, float dither, int i, float roughness) {
         float exposure = 0.5 - (rainFactor * 0.05);
         exposure -= nightFactor * 0.1;
 
-        float saturation = 1.4;
+        float saturation = 1.0;
         float gamma = 1.0;
         float contrast = 1.3;
 

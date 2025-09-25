@@ -126,18 +126,11 @@ float GetInverseLinearDepth(float linearDepth) {
     }
 
     vec3 GetEndBackgroundColor(vec3 viewDir, float VdotS) {
-        //float VdotS = dot(viewDir, sunDir);
-
-        // Base dark space color (very dark gray)
         vec3 baseColor = vec3(0.02);
+        float glow = smoothstep(0.9, 1.0, -VdotS);
 
-        // Glow intensity around sun direction
-        float glow = smoothstep(0.9, 1.0, -VdotS); // glow fades off before 25° from sun
-
-        // Neutral light tint
         vec3 glowColor = vec3(0.15, 0.15, 0.15);
 
-        // Final background color = base + glow * glowColor
         return baseColor + glow * glowColor;
     }
 #endif
@@ -187,40 +180,6 @@ vec3 fakeBounceLight(vec3 normal, vec3 worldPos, vec3 lightPos, vec3 lightColor)
 }
 
 #include "/lib/lighting/indirectLighting.glsl"
-
-vec3 GetShadowPosition(vec3 tracePos, vec3 cameraPos) {
-    vec3 wpos = PlayerToShadow(tracePos - cameraPos);
-    float distb = sqrt(wpos.x * wpos.x + wpos.y * wpos.y);
-    float distortFactor = 1.0 - shadowMapBias + distb * shadowMapBias;
-    vec3 shadowPosition = vec3(vec2(wpos.xy / distortFactor), wpos.z * 0.2);
-    return shadowPosition * 0.5 + 0.5;
-}
-
-bool GetShadow(vec3 tracePos, vec3 cameraPos, int cloudAltitude, float lowerPlaneAltitude, float higherPlaneAltitude) {
-    const float cloudShadowOffset = 0.5;
-
-    vec3 shadowPosition0 = GetShadowPosition(tracePos, cameraPos);
-    if (length(shadowPosition0.xy * 2.0 - 1.0) < 1.0) {
-        float shadowsample0 = shadow2D(shadowtex0, shadowPosition0).z;
-
-        if (shadowsample0 == 0.0) return true;
-    }
-
-    return false;
-}
-
-vec3 sampleSurfaceAlbedo(vec3 worldPos) {
-    // Scale factor: controls tiling density — adjust to fit your scene scale
-    float tileScale = 0.1;
-
-    // Map world XZ coordinates into [0,1] range via fract (repeat)
-    vec2 uv = fract(worldPos.xz * tileScale);
-
-    // Sample albedo color from colortex9
-    vec3 albedo = texture(colortex9, uv).rgb;
-
-    return albedo;
-}
 
 //Program//
 void main() {

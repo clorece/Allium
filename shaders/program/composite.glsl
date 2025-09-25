@@ -306,7 +306,7 @@ void main() {
     #endif
 
     #ifdef CREPUSCULAR_RAYS
-        color += GetCrepuscularRays(VdotU, VdotS, z0, z1, dither).rgb;
+        color += GetCrepuscularRays(VdotL, VdotU, VdotS, lViewPos1, z0, z1, dither).rgb;
     #endif
 
     #ifdef BLOOM_FOG_COMPOSITE

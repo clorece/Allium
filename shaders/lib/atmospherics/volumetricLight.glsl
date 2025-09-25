@@ -156,20 +156,18 @@ float CloudVLTransmittanceAt(vec3 worldPos, vec3 sunDir_ws, vec3 cameraPos, floa
 
     #ifdef CREPUSCULAR_RAYS
     float Rayleigh(float cosTheta) {
-        // 3 / (16π) * (1 + cos^2θ)
         return 0.0596831037 * (1.0 + cosTheta * cosTheta);
     }
 
     float PhaseHenyeyGreenstein(float cosTheta, float g) {
-        // (1 - g^2) / (4π (1 + g^2 - 2g cosθ)^(3/2))
         float gg = g * g;
         float denom = pow(max(1.0 + gg - 2.0 * g * cosTheta, 1e-4), 1.5);
-        return (1.0 - gg) * 0.0795774715 / denom; // 1/(4π)
+        return (1.0 - gg) * 0.0795774715 / denom;
     }
 
-    vec4 GetCrepuscularRays(float VdotU, float VdotS, float z0, float z1, float dither)
+    vec4 GetCrepuscularRays(float VdotL, float VdotU, float VdotS, float lViewPos1, float z0, float z1, float dither)
     {
-        int samples = 3;
+        int samples = 2;
 
         float depth0  = GetDepth(z0);
         float depth1  = GetDepth(z1);
@@ -206,8 +204,17 @@ float CloudVLTransmittanceAt(vec3 worldPos, vec3 sunDir_ws, vec3 cameraPos, floa
 
             float y = playerPos.y;
             float fadeIn  = smoothstep(LOWER_CLOUD_LAYER_ALT - 44.0, LOWER_CLOUD_LAYER_ALT - 24.0,  y);
-            float fadeOut = 1.0 - smoothstep(LOWER_CLOUD_LAYER_ALT - 24.0, LOWER_CLOUD_LAYER_ALT + 6.0, y);
+            float fadeOut = 1.0 - smoothstep(LOWER_CLOUD_LAYER_ALT - 24.0, LOWER_CLOUD_LAYER_ALT + 8.0, y);
             ray *= (fadeIn * fadeOut);
+
+            float rainyNight = (1.0 - sunVisibility) * rainFactor;
+            float VdotLM = max((VdotL + 1.0) / 2.0, 0.0);
+            float VdotUmax0 = max(VdotU, 0.0);
+            float VdotUM = mix(pow2(1.0 - VdotUmax0), 1.0, 0.5 * 1.0);
+              VdotUM = smoothstep1(VdotUM);
+              VdotUM = pow(VdotUM, min(lViewPos1 / far, 1.0) * (3.0 - 2.0 * 1.0));
+            ray *= mix(-VdotUM * -VdotLM, 1.0, 0.4 * rainyNight) * vlTime;
+            ray *= mix(invNoonFactor2 * 0.875 + 0.125, 1.0, max(1.0, rainFactor2));
 
             vec3 viewDir_ws = normalize(cameraPosition - (playerPos + cameraPosition));
             float cosTheta  = dot(sunDir_ws, -viewDir_ws);
@@ -223,11 +230,11 @@ float CloudVLTransmittanceAt(vec3 worldPos, vec3 sunDir_ws, vec3 cameraPos, floa
             vec3  rayleighCol = rayleighTint * PR * 1.0;
             vec3  mieCol      = mieTint      * PM * 1.3;
 
-            vec3  rayColor = mix(getSkyColor, lightColor, 0.70) + lightColor;
+            vec3  rayColor = lightColor;
             //rayColor = mix(rayColor, vec3(0.0), nightFactor);
             rayColor += rainFactor;
 
-            outRay *= 3.5 - invNoonFactor;
+            //outRay *= 3.5 - invNoonFactor;
             //outRay *= 1.0 - nightFactor;
 
             if (nightFactor > 0.0) break;
@@ -236,7 +243,7 @@ float CloudVLTransmittanceAt(vec3 worldPos, vec3 sunDir_ws, vec3 cameraPos, floa
             outRay.a   += ray * sampleMult;
         }
 
-        outRay *= 4.0; // for screenshot usage
+        outRay *= 10.0; // for screenshot usage
         return outRay;
     }
 #endif
@@ -286,8 +293,8 @@ vec4 GetVolumetricLight(inout vec3 color, inout float vlFactor, vec3 translucent
         float VdotUM = mix(pow2(1.0 - VdotUmax0), 1.0, 0.5 * vlSceneIntensity);
               VdotUM = smoothstep1(VdotUM);
               VdotUM = pow(VdotUM, min(lViewPos1 / far, 1.0) * (3.0 - 2.0 * vlSceneIntensity));
-        vlMult *= mix(VdotUM * VdotLM, 1.0, 0.4 * rainyNight) * vlTime;
-        vlMult *= mix(invNoonFactor2 * 2.875 + 0.125, 1.0, max(vlSceneIntensity, rainFactor2));
+        //vlMult *= mix(VdotUM * VdotLM, 1.0, 0.4 * rainyNight) * vlTime;
+        //vlMult *= mix(invNoonFactor2 * 2.875 + 0.125, 1.0, max(vlSceneIntensity, rainFactor2));
 
         #if LIGHTSHAFT_QUALI == 4
             int sampleCount = vlSceneIntensity < 0.5 ? 30 : 50;
@@ -319,13 +326,13 @@ vec4 GetVolumetricLight(inout vec3 color, inout float vlFactor, vec3 translucent
 
     float depth0 = GetDepth(z0);
     float depth1 = GetDepth(z1);
-    #ifndef CLOUD_SHADOWS
+    //#ifndef CLOUD_SHADOWS
         maxDist = mix(max(far, 96.0) * 0.55, 80.0, vlSceneIntensity);
-    #else
-        bool  isSky   = (z1 == 1.0);
-        maxDist = isSky ? min(far * 1.25, renderDistance * 0.15)
-                            : min(depth1, far * 0.95);
-    #endif
+    //#else
+    //    bool  isSky   = (z1 == 1.0);
+    //    maxDist = isSky ? min(far * 1.25, renderDistance * 0.15)
+    //                        : min(depth1, far * 0.95);
+    //#endif
 
     #if WATER_FOG_MULT != 100
         if (isEyeInWater == 1) {
@@ -337,6 +344,7 @@ vec4 GetVolumetricLight(inout vec3 color, inout float vlFactor, vec3 translucent
     float sampleMultIntense = isEyeInWater != 1 ? 1.0 : 0.85;
     float distMult = maxDist / (sampleCount + 1.0);
 
+    /*
     #ifndef CLOUD_SHADOWS
         float viewFactor = 1.0 - 0.7 * pow2(dot(nViewPos.xy, nViewPos.xy));
 
@@ -349,7 +357,7 @@ vec4 GetVolumetricLight(inout vec3 color, inout float vlFactor, vec3 translucent
         maxDist *= viewFactor;
         distMult *= viewFactor;
     #endif
-
+    */
     float horizonBoost = clamp(1.0 - abs(VdotU), 0.0, 1.0);
     maxDist += mix(0.0, 2.0, horizonBoost);
 
@@ -441,7 +449,7 @@ vec4 GetVolumetricLight(inout vec3 color, inout float vlFactor, vec3 translucent
 
         if (currentDist > depth0) vlSample *= translucentMult;
 
-
+        /*
         #ifdef CLOUD_SHADOWS
             if (isEyeInWater != 1) {
                 vec3 worldPos  = playerPos + cameraPosition;
@@ -455,6 +463,7 @@ vec4 GetVolumetricLight(inout vec3 color, inout float vlFactor, vec3 translucent
                 //vlSample = max(vlSample, vec3(0.0));
             }
         #endif
+        */
 
         #ifdef OVERWORLD
             #ifdef LIGHTSHAFT_SMOKE

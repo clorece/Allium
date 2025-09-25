@@ -224,6 +224,7 @@ void main() {
 
         gl_FragData[1] = color2; // Light Shaft Color
     #endif
+    gl_FragData[2] = vec4(worldGeoNormal.xyz * 0.5 + 0.5, 0.0);
 }
 
 #endif

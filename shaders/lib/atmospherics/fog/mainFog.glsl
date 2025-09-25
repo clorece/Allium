@@ -117,8 +117,8 @@
         return altitudeFactor;
     }
 
-    void DoAtmosphericFog(inout vec3 color, vec3 playerPos, float lViewPos, float VdotS) {
-        /*#ifndef DISTANT_HORIZONS
+    void DoAtmosphericFog(inout vec3 color, vec3 playerPos, float lViewPos, float VdotU, float VdotS, float dither) {
+        #ifndef DISTANT_HORIZONS
             float renDisFactor = min1(192.0 / renderDistance);
 
             #if ATM_FOG_DISTANCE != 100
@@ -127,9 +127,9 @@
             #endif
 
             float fog = 1.0 - exp(-pow(lViewPos * (0.001 - 0.0007 * rainFactor), 2.0 - rainFactor2) * lViewPos * renDisFactor);
-        #else*/
+        #else
             float fog = pow2(1.0 - exp(-max0(lViewPos - 40.0) * (0.7 + 0.7 * rainFactor) / ATM_FOG_DISTANCE));
-        //#endif
+        #endif
         
         fog *= ATM_FOG_MULT - 0.1 - 0.15 * invRainFactor;
 
@@ -177,7 +177,8 @@
             fog = clamp(fog, 0.0, 1.0);
 
             #ifdef OVERWORLD
-                vec3 fogColorM = GetAtmFogColor(altitudeFactorRaw, VdotS);
+                //vec3 fogColorM = GetAtmFogColor(altitudeFactorRaw, VdotS);
+                vec3 fogColorM = GetSky(VdotU, VdotS, dither, true, true);
             #else
                 vec3 fogColorM = endSkyColor * 1.5;
             #endif
@@ -252,7 +253,7 @@ void DoFog(inout vec3 color, inout float skyFade, float lViewPos, vec3 playerPos
         DoCaveFog(color, lViewPos);
     #endif
     #ifdef ATMOSPHERIC_FOG
-        DoAtmosphericFog(color, playerPos, lViewPos, VdotS);
+        DoAtmosphericFog(color, playerPos, lViewPos, VdotU, VdotS, dither);
     #endif
     #ifdef BORDER_FOG
         DoBorderFog(color, skyFade, max(length(playerPos.xz), abs(playerPos.y)), VdotU, VdotS, dither);
