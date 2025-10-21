@@ -20,10 +20,10 @@
 #define CUMULUS_CLOUD_COVERAGE 1.5
 
 #define ALTOCUMULUS_CLOUD_MULT 0.4
-#define ALTOCUMULUS_CLOUD_SIZE_MULT 54.0
+#define ALTOCUMULUS_CLOUD_SIZE_MULT 52.0
 #define ALTOCUMULUS_CLOUD_SIZE_MULT_M (200.0 * 0.01)
 #define ALTOCUMULUS_CLOUD_GRANULARITY 0.4
-#define ALTOCUMULUS_CLOUD_ALT 320
+#define ALTOCUMULUS_CLOUD_ALT 500
 #define ALTOCUMULUS_CLOUD_HEIGHT 92.0
 #define ALTOCUMULUS_CLOUD_COVERAGE 1.5
 
@@ -31,7 +31,7 @@
 
 #define CUMULONIMBUS_STEP_QUALITY 2.5
 #define CUMULUS_STEP_QUALITY 3.0
-#define ALTOCUMULUS_STEP_QUALITY 3.0
+#define ALTOCUMULUS_STEP_QUALITY 2.0
 #define CLOUD_SHADING_QUALITY 30
 #define CLOUD_SHADING_STRENGTH 9.0
 #define CLOUD_RENDER_DISTANCE 1024
@@ -300,7 +300,7 @@ vec4 GetVolumetricClouds(int cloudAltitude,
         } else if (layer == 2) {
             finalColor = mix(skyColor, cloudCol * skyMult1, cloudFogFactor * skyMult2 * 0.6);
         } else if (layer == 3) {
-            finalColor = mix(skyColor, cloudCol * skyMult1, cloudFogFactor * skyMult2 * 0.35);
+            finalColor = mix(skyColor, cloudCol * skyMult1, (cloudFogFactor * 1.5) * skyMult2 * 0.35);
         }
 
         finalColor *= pow2(1.0 - maxBlindnessDarkness);

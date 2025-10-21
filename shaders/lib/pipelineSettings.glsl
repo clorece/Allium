@@ -8,7 +8,7 @@ const int colortex5Format = RGBA8_SNORM;    //normalM & scene image for water re
 const int colortex6Format = RGBA8;          //smoothnessD & materialMask & skyLightFactor
 const int colortex7Format = RGBA16F;        //(cloud/water map on gbuffer) | temporal filter
 
-const int colortex9Format = RGBA16F; // low-res volumetric clouds buffer
+const int colortex9Format = R11F_G11F_B10F; // low-res volumetric clouds buffer
 */
 
 const bool colortex0Clear = true;
@@ -21,9 +21,6 @@ const bool colortex6Clear = true;
 const bool colortex7Clear = false;
 const bool colortex9Clear = true; // Clear cloud buffer
 //
-
-// Cloud render resolution (0.25 = quarter res, 0.5 = half res, 0.75 = 3/4 res, 1.0 = full res)
-const float colortex9ResolutionScale = 0.5;
 
 const int noiseTextureResolution = 128;
 

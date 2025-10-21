@@ -138,6 +138,6 @@ vec3 GetSky(float VdotU, float VdotS, float dither, bool doGlare, bool doGround)
 
     finalSky.r *= 0.80;
     finalSky += max((dither - 0.5), 0.0)/32.0;
-    return pow(finalSky * 1.75, vec3(1.0 / 1.5));
+    return pow(finalSky * 1.5, vec3(1.0 / 1.5));
 }
 #endif //INCLUDE_SKY
