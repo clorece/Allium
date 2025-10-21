@@ -97,7 +97,7 @@ void main() {
         color.rgb += GetStars(starCoord, VdotU, VdotS);
 
         //vec2 cloudCoord = GetCloudCoords(viewPos.xyz);
-        color.rgb += GetPlanarClouds(viewPos.xyz, VdotU, VdotS, dither);
+        //color.rgb += GetPlanarClouds(viewPos.xyz, VdotU, VdotS, dither);
 
         #if SUN_MOON_STYLE >= 2
             float absVdotS = abs(VdotS) * 0.9977;
@@ -132,7 +132,7 @@ void main() {
                         sunMoonMixer *= 1.0 - 0.65 * GetCaveFactor();
                     #endif
 
-                    color.rgb = mix(color.rgb, lightColor * 768.0, sunMoonMixer);
+                    color.rgb = mix(color.rgb, lightColor * 512.0, sunMoonMixer);
                     //color.rgb = pow(color.rgb, vec3(2.2)) * 0.3;
                 } else {
                     float horizonFactor = GetHorizonFactor(-SdotU);

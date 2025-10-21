@@ -359,7 +359,7 @@ void main() {
     #ifdef WHITE_WORLD
         gl_FragData[0] = vec4(1.0, 1.0, 1.0, 1.0);    // white world debug
     #endif 
-    gl_FragData[1] = vec4(smoothnessD, materialMask, skyLightFactor, albedoS);
+    gl_FragData[1] = vec4(smoothnessD, materialMask, skyLightFactor, subsurfaceMode);
     gl_FragData[2] = vec4(flux, 1.0);
 
     #if BLOCK_REFLECT_QUALITY >= 2 && RP_MODE != 0

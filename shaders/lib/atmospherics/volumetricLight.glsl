@@ -1,7 +1,5 @@
 // Volumetric tracing from Robobo1221, highly modified
 
-//#define CREPUSCULAR_RAYS // lightshafts under clouds clouds ty chatgpt again...
-
 #define LQ_CLOUD
 #define LQ_SKY
 
@@ -29,70 +27,76 @@ vec4 DistortShadow(vec4 shadowpos, float distortFactor) {
 
 // start of cloud shadow code, there should be more optimal/cheap ways to do this, if anyone wants to improve this, let me know.
 
+#ifndef PI
+#define PI 3.141592653589793
+#endif
+
+#ifndef sunAngularSize
+const float sunAngularSize = 0.533333;
+#endif
+
+const float SUN_ANGULAR_RADIUS_RAD = (sunAngularSize * 0.5) * (PI / 180.0);
+const float INV_SHADOW_DISTANCE = 1.0 / max(shadowDistance, 1.0);
+const float EPSILON = 1e-4;
+
+// ============================================================================
+// CORE FUNCTIONS - Used by both implementations
+// ============================================================================
+
+int CloudShadowStepsLOD(float camDist) {
+    // Branchless LOD: returns 3 for distant, 4 for close
+    float t = clamp(camDist * INV_SHADOW_DISTANCE, 0.0, 1.0);
+    return 3 + int(step(t, 0.66));
+}
+
 bool RaySlabIntersectY(float yCenter, float halfThickness,
-                    vec3 ro, vec3 rd, out float tEnter, out float tExit)
+                       vec3 ro, vec3 rd, out float tEnter, out float tExit)
 {
     float yMin = yCenter - halfThickness;
     float yMax = yCenter + halfThickness;
 
-    if (abs(rd.y) < 1e-4) {
+    if (abs(rd.y) < EPSILON) {
         tEnter = 0.0;
         tExit  = 0.0;
         return (ro.y >= yMin && ro.y <= yMax);
     }
 
-    float t0 = (yMin - ro.y) / rd.y;
-    float t1 = (yMax - ro.y) / rd.y;
+    float invRy = 1.0 / rd.y;
+    float t0 = (yMin - ro.y) * invRy;
+    float t1 = (yMax - ro.y) * invRy;
     tEnter = min(t0, t1);
     tExit  = max(t0, t1);
     return (tExit > 0.0 && tExit > max(tEnter, 0.0));
 }
 
-// i have no idea if this is right tbh
-int CloudShadowStepsLOD(float camDist)
-{
-    float denom = max(shadowDistance, 1.0);
-    float t = clamp(camDist / denom, 0.0, 1.0);
-    int hi  = 2;
-    int lo  = max(3, 2 - 3);
-    return int(mix(float(hi), float(lo), t) + 0.5);
-}
-
 float LowerLayerDensityFast(vec3 p, int steps, vec3 cameraPos)
 {
     float lTracePosXZ   = length((p - cameraPos).xz);
-    float cloudPlayerY  = p.y - float(lowerLayerAlt);
+    float cloudPlayerY  = p.y - float(cumulusLayerAlt);
 
-    float d = GetLowerLayerCloud(
+    float d = GetCumulusCloud(
         p,
         steps,
-        lowerLayerAlt,
+        cumulusLayerAlt,
         lTracePosXZ,
         cloudPlayerY,
-        LOWER_CLOUD_LAYER_GRANULARITY,
+        CUMULUS_CLOUD_GRANULARITY,
         1.0,
         (200.0 * 0.01)
     );
 
-    return (d > 0.00001) ? d : 0.0;
+    return max(d, 0.0); // Branchless replacement for (d > 0.00001) ? d : 0.0
 }
 
-float RayHeightBoost(vec3 wpos, vec3 camPos, float yCenter, float stretch)
-{
-    float top   = yCenter + stretch;
-    float hNorm = clamp((wpos.y - top) / max(stretch*3.0,1.0), 0.0, 1.0);
-    hNorm = hNorm*hNorm*(3.0 - 2.0*hNorm);
-
-    float upness = clamp(dot(normalize(wpos - camPos), vec3(0,1,0))*0.5+0.5, 0.0, 1.0);
-    upness = upness*upness*(3.0 - 2.0*upness);
-
-    return 1.0 + 0.8 * (hNorm * upness);
-}
+// ============================================================================
+// VOLUMETRIC LIGHT VERSION - For light shaft integration
+// ============================================================================
 
 float CloudVLTransmittanceAt(vec3 worldPos, vec3 sunDir_ws, vec3 cameraPos, float jitter)
 {
-    float yCenter = float(lowerLayerAlt);
-    float halfH   = lowerLayerStretch;
+    
+    float yCenter = float(cumulusLayerAlt);
+    float halfH   = cumulusLayerStretch * 0.15;
 
     float tEnter, tExit;
     if (!RaySlabIntersectY(yCenter, halfH, worldPos, sunDir_ws, tEnter, tExit))
@@ -100,155 +104,55 @@ float CloudVLTransmittanceAt(vec3 worldPos, vec3 sunDir_ws, vec3 cameraPos, floa
 
     float t0 = max(tEnter, 0.0);
     float t1 = max(tExit,  0.0);
-    float lenInside = max(t1 - t0, 0.0);
-    if (lenInside <= 1e-4) return 1.0;
+    float lenInside = t1 - t0;
+    if (lenInside <= EPSILON) return 1.0;
 
     float camDist = distance(cameraPos, worldPos);
-    int   maxS    = (camDist > float(CLOUD_RENDER_DISTANCE) * 0.6)
-                    ? 2 : min(2, 3);
+    
+    // Optimized step count: branchless selection
+    float distThreshold = float(CLOUD_RENDER_DISTANCE) * 0.6;
+    int maxS = 2 + int(step(camDist, distThreshold)); // Returns 2 if far, 3 if close
+    maxS = min(maxS, 3);
 
-    float baseStep = (lenInside / 5.0) * mix(0.9, 1.1, fract(jitter * 43758.5453));
+    // Optimized step calculation
+    float baseStep = (lenInside * 0.2) * mix(0.9, 1.1, fract(jitter * 43758.5453));
     float stepLen  = max(baseStep, lenInside / float(maxS));
 
-    float t   = t0 + stepLen * 0.5;
-    vec3  p   = worldPos + sunDir_ws * t;
+    // Initialize ray marching
+    vec3 stepVec = sunDir_ws * stepLen;
+    vec3 p = worldPos + sunDir_ws * (t0 + stepLen * 0.5);
     float tau = 0.0;
 
-    for (int i = 0; i < 2; ++i) {
-        if (i >= maxS) break;
-
+    // Manual unroll for max 3 iterations
+    // Iteration 0
+    {
         float dens = LowerLayerDensityFast(p, maxS, cameraPos);
-
-        if (dens <= 0.0) {
-            stepLen *= 1.0;
-            t       += stepLen;
-            if (t > t1) break;
-            p        = worldPos + sunDir_ws * t;
-            continue;
-        }
-
-        tau += dens * stepLen * (1.0 + 0.2 * float(i));
-        if (tau > 1.0) break;
-
-        stepLen *= 1.0;
-        t       += stepLen;
-        if (t > t1) break;
-        p        = worldPos + sunDir_ws * t;
+        tau += dens * stepLen;
+        p += stepVec;
+    }
+    
+    // Iteration 1
+    if (maxS > 1 && tau <= 1.0) {
+        float dens = LowerLayerDensityFast(p, maxS, cameraPos);
+        tau += dens * stepLen * 1.2; // (1.0 + 0.2 * 1)
+        p += stepVec;
+    }
+    
+    // Iteration 2
+    if (maxS > 2 && tau <= 1.0) {
+        float dens = LowerLayerDensityFast(p, maxS, cameraPos);
+        tau += dens * stepLen * 1.4; // (1.0 + 0.2 * 2)
     }
 
+    // Optimized transmittance calculation
     float T = exp(-1.6 * tau);
-    T = pow(T, 0.1 * 1.05);
-
+    T = pow(T, 0.105); // 0.1 * 1.05 = 0.105
+    
     return clamp(T, 0.0, 1.0);
 }
-/*#else
-    float Noise3D(vec3 p) {
-        p.z = fract(p.z) * 128.0;
-        float iz = floor(p.z);
-        float fz = fract(p.z);
-        vec2 a_off = vec2(23.0, 29.0) * (iz) / 128.0;
-        vec2 b_off = vec2(23.0, 29.0) * (iz + 1.0) / 128.0;
-        float a = texture2D(noisetex, p.xy + a_off).r;
-        float b = texture2D(noisetex, p.xy + b_off).r;
-        return mix(a, b, fz);
-    }
-#endif*/
 
-    #ifdef CREPUSCULAR_RAYS
-    float Rayleigh(float cosTheta) {
-        return 0.0596831037 * (1.0 + cosTheta * cosTheta);
-    }
 
-    float PhaseHenyeyGreenstein(float cosTheta, float g) {
-        float gg = g * g;
-        float denom = pow(max(1.0 + gg - 2.0 * g * cosTheta, 1e-4), 1.5);
-        return (1.0 - gg) * 0.0795774715 / denom;
-    }
-
-    vec4 GetCrepuscularRays(float VdotL, float VdotU, float VdotS, float lViewPos1, float z0, float z1, float dither)
-    {
-        int samples = 2;
-
-        float depth0  = GetDepth(z0);
-        float depth1  = GetDepth(z1);
-        bool  isSky   = (z1 == 1.0);
-
-        float maxDist = isSky ? min(far * 1.25, renderDistance * 2.0)
-                            : min(depth1,     far * 0.95);
-
-        float distMult   = maxDist / (float(samples) + 1.0);
-        float sampleMult = 1.0 / float(samples);
-
-        vec4 outRay = vec4(0.0);
-
-        vec3 sunDir_ws = normalize(mat3(gbufferModelViewInverse) * lightVec);
-
-        vec3 getSkyColor = GetSky(VdotU, VdotS, dither, false, true);
-
-        for (int i = 0; i < samples; ++i)
-        {
-            float currentDist = (float(i) + dither) * distMult + 1.0;
-            if (currentDist > maxDist) break;
-
-            vec4 viewPos = gbufferProjectionInverse * (vec4(texCoord, GetDistX(currentDist), 1.0) * 2.0 - 1.0);
-            viewPos /= viewPos.w;
-            vec4 wpos4 = gbufferModelViewInverse * viewPos;
-            vec3 worldPos  = wpos4.xyz / wpos4.w;
-            vec3 playerPos = worldPos + cameraPosition;
-
-            float T   = CloudVLTransmittanceAt(playerPos, sunDir_ws, cameraPosition, dither);
-            float ray = pow(T, 1.25);
-
-            float distFade = 1.0 - smoothstep(48.0, renderDistance * 2.0, currentDist);
-            //ray *= pow(distFade, 2.2);
-
-            float y = playerPos.y;
-            float fadeIn  = smoothstep(LOWER_CLOUD_LAYER_ALT - 44.0, LOWER_CLOUD_LAYER_ALT - 24.0,  y);
-            float fadeOut = 1.0 - smoothstep(LOWER_CLOUD_LAYER_ALT - 24.0, LOWER_CLOUD_LAYER_ALT + 8.0, y);
-            ray *= (fadeIn * fadeOut);
-
-            float rainyNight = (1.0 - sunVisibility) * rainFactor;
-            float VdotLM = max((VdotL + 1.0) / 2.0, 0.0);
-            float VdotUmax0 = max(VdotU, 0.0);
-            float VdotUM = mix(pow2(1.0 - VdotUmax0), 1.0, 0.5 * 1.0);
-              VdotUM = smoothstep1(VdotUM);
-              VdotUM = pow(VdotUM, min(lViewPos1 / far, 1.0) * (3.0 - 2.0 * 1.0));
-            ray *= mix(-VdotUM * -VdotLM, 1.0, 0.4 * rainyNight) * vlTime;
-            ray *= mix(invNoonFactor2 * 0.875 + 0.125, 1.0, max(1.0, rainFactor2));
-
-            vec3 viewDir_ws = normalize(cameraPosition - (playerPos + cameraPosition));
-            float cosTheta  = dot(sunDir_ws, -viewDir_ws);
-
-            float g   = 0.82;
-            float PR  = Rayleigh(cosTheta);
-            float PM  = PhaseHenyeyGreenstein(cosTheta, g);
-
-            vec3 rayleighTint = vec3(0.286, 0.485, 1.0);
-            vec3 mieTint      = lightColor; 
-
-            float mieShare    = 0.70;
-            vec3  rayleighCol = rayleighTint * PR * 1.0;
-            vec3  mieCol      = mieTint      * PM * 1.3;
-
-            vec3  rayColor = lightColor;
-            //rayColor = mix(rayColor, vec3(0.0), nightFactor);
-            rayColor += rainFactor;
-
-            //outRay *= 3.5 - invNoonFactor;
-            //outRay *= 1.0 - nightFactor;
-
-            if (nightFactor > 0.0) break;
-
-            outRay.rgb += ray * rayColor * sampleMult;
-            outRay.a   += ray * sampleMult;
-        }
-
-        outRay *= 10.0; // for screenshot usage
-        return outRay;
-    }
-#endif
-
-vec4 GetVolumetricLight(inout vec3 color, inout float vlFactor, vec3 translucentMult, float lViewPos0, float lViewPos1, vec3 nViewPos, float VdotL, float VdotU, vec2 texCoord, float z0, float z1, float dither) {
+vec4 GetVolumetricLight(inout vec3 color, inout float vlFactor, vec3 translucentMult, float lViewPos0, float lViewPos1, vec3 nViewPos, float VdotL, float VdotU, float VdotS, vec2 texCoord, float z0, float z1, float dither) {
     vec4 volumetricLight = vec4(0.0);
     float vlMult = 10.0 - maxBlindnessDarkness;
 
@@ -288,13 +192,13 @@ vec4 GetVolumetricLight(inout vec3 color, inout float vlFactor, vec3 translucent
         #endif
 
         float rainyNight = (1.0 - sunVisibility) * rainFactor;
-        float VdotLM = max((VdotL + 1.0) / 2.0, 0.0);
+        float VdotLM = max((VdotL + 1.0) / 3.0, 0.0);
         float VdotUmax0 = max(VdotU, 0.0);
         float VdotUM = mix(pow2(1.0 - VdotUmax0), 1.0, 0.5 * vlSceneIntensity);
               VdotUM = smoothstep1(VdotUM);
               VdotUM = pow(VdotUM, min(lViewPos1 / far, 1.0) * (3.0 - 2.0 * vlSceneIntensity));
-        //vlMult *= mix(VdotUM * VdotLM, 1.0, 0.4 * rainyNight) * vlTime;
-        //vlMult *= mix(invNoonFactor2 * 2.875 + 0.125, 1.0, max(vlSceneIntensity, rainFactor2));
+        vlMult *= mix(VdotUM * VdotLM * 3.0, 1.0, 0.4 * rainyNight) * vlTime;
+        vlMult *= mix(invNoonFactor2 * 3.875 + 2.525, 1.0, max(vlSceneIntensity, rainFactor2));
 
         #if LIGHTSHAFT_QUALI == 4
             int sampleCount = vlSceneIntensity < 0.5 ? 30 : 50;
@@ -327,7 +231,7 @@ vec4 GetVolumetricLight(inout vec3 color, inout float vlFactor, vec3 translucent
     float depth0 = GetDepth(z0);
     float depth1 = GetDepth(z1);
     //#ifndef CLOUD_SHADOWS
-        maxDist = mix(max(far, 96.0) * 0.55, 80.0, vlSceneIntensity);
+        maxDist = mix(max(far * 1.5, renderDistance * 0.15) * 0.55, 80.0, vlSceneIntensity);
     //#else
     //    bool  isSky   = (z1 == 1.0);
     //    maxDist = isSky ? min(far * 1.25, renderDistance * 0.15)
@@ -344,20 +248,18 @@ vec4 GetVolumetricLight(inout vec3 color, inout float vlFactor, vec3 translucent
     float sampleMultIntense = isEyeInWater != 1 ? 1.0 : 0.85;
     float distMult = maxDist / (sampleCount + 1.0);
 
-    /*
-    #ifndef CLOUD_SHADOWS
-        float viewFactor = 1.0 - 0.7 * pow2(dot(nViewPos.xy, nViewPos.xy));
 
-        #ifdef END
-            if (z0 == 1.0) depth0 = 1000.0;
-            if (z1 == 1.0) depth1 = 1000.0;
-        #endif
+    float viewFactor = 1.0 - 0.7 * pow2(dot(nViewPos.xy, nViewPos.xy));
 
-        //Fast but inaccurate perspective distortion approximation
-        maxDist *= viewFactor;
-        distMult *= viewFactor;
+    #ifdef END
+        if (z0 == 1.0) depth0 = 1000.0;
+        if (z1 == 1.0) depth1 = 1000.0;
     #endif
-    */
+
+    //Fast but inaccurate perspective distortion approximation
+    maxDist *= viewFactor;
+    distMult *= viewFactor;
+    
     float horizonBoost = clamp(1.0 - abs(VdotU), 0.0, 1.0);
     maxDist += mix(0.0, 2.0, horizonBoost);
 
@@ -449,7 +351,7 @@ vec4 GetVolumetricLight(inout vec3 color, inout float vlFactor, vec3 translucent
 
         if (currentDist > depth0) vlSample *= translucentMult;
 
-        /*
+        
         #ifdef CLOUD_SHADOWS
             if (isEyeInWater != 1) {
                 vec3 worldPos  = playerPos + cameraPosition;
@@ -463,7 +365,7 @@ vec4 GetVolumetricLight(inout vec3 color, inout float vlFactor, vec3 translucent
                 //vlSample = max(vlSample, vec3(0.0));
             }
         #endif
-        */
+        
 
         #ifdef OVERWORLD
             #ifdef LIGHTSHAFT_SMOKE

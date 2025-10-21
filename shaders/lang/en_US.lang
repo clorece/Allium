@@ -1109,8 +1109,8 @@ screen.INDIRECT_LIGHTING=Indirect Lighting
         option.GI_RADIUS.comment=This determines how far rays can reach in a scene. Larger radius = more distant lighting, but also risk of hitting irrelevant surfaces or sky.
     option.GI_INTENSITY=GI Intensity
     option.GI_INTENSITY.comment=Adjusts overall visibility of the Global Illumination contribution.
-    option.GI_BOUNCE=GI Bounces
-        option.GI_BOUNCE.comment=Adjust the amount of bounces GI will make. §cHuge Performance Impact
+    option.GI_STEPS=GI Steps
+        option.GI_STEPS.comment=§cHuge Performance Impact
     option.EXCLUDE_ENTITIES_IN_RT=Exclude Entities in RT
         option.EXCLUDE_ENTITIES_IN_RT.comment=Prevents entity (includes player and hand) raytracing contribution. Disabling will make entities very noisy at low SSRTAO / SSRGI Samples.
     option.PREVENT_ACCUMULATION_IN_FOLIAGE=Prevent Foliage in GI

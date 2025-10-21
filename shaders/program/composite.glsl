@@ -231,7 +231,7 @@ void main() {
     #ifdef LIGHTSHAFTS_ACTIVE
         float vlFactorM = vlFactor;
 
-        volumetricEffect = GetVolumetricLight(color, vlFactorM, translucentMult, lViewPos, lViewPos1, nViewPos, VdotL, VdotU, texCoord, z0, z1, dither);
+        volumetricEffect = GetVolumetricLight(color, vlFactorM, translucentMult, lViewPos, lViewPos1, nViewPos, VdotL, VdotU, VdotS, texCoord, z0, z1, dither);
     #endif
 
     #ifdef NETHER_STORM
@@ -303,10 +303,6 @@ void main() {
 
         
         color += volumetricEffect.rgb;
-    #endif
-
-    #ifdef CREPUSCULAR_RAYS
-        color += GetCrepuscularRays(VdotL, VdotU, VdotS, lViewPos1, z0, z1, dither).rgb;
     #endif
 
     #ifdef BLOOM_FOG_COMPOSITE

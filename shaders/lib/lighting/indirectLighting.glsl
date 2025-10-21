@@ -82,14 +82,15 @@ vec3 toLinear(vec3 color) {
 	return mix(color / 12.92, pow((color + 0.055) / 1.055, vec3(2.4)), vec3(greaterThan(color, vec3(0.04045))));
 }
 
-vec3 cosineHemisphereSampleRough(vec2 Xi, float roughness) {
-    float exponent = 1.0 / max(roughness * roughness, 0.001);
+vec3 cosineHemisphereSampleRough(vec2 Xi)
+{
+    float r = sqrt(Xi.x);
+    float theta = 2.0 * 3.14159265359 * Xi.y;
 
-    float phi = 2.0 * 3.14159265 * Xi.y;
-    float cosTheta = pow(1.0 - Xi.x, 1.0 / (exponent + 1.0));
-    float sinTheta = sqrt(1.0 - cosTheta * cosTheta);
+    float x = r * cos(theta);
+    float y = r * sin(theta);
 
-    return vec3(cos(phi) * sinTheta, sin(phi) * sinTheta, cosTheta);
+    return vec3(x, y, sqrt(clamp(1.0 - Xi.x,0.,1.)));
 }
 
 vec3 CalculateFlux(vec3 incidentLight, vec3 normal, vec3 lightDir, float visibility, float distance, float falloffStrength) {
@@ -101,22 +102,27 @@ vec3 CalculateFlux(vec3 incidentLight, vec3 normal, vec3 lightDir, float visibil
     return incidentLight * NdotL * visibility * attenuation;
 }
 
-vec3 genUnitVector(vec2 p) {
-    float phi = p.x * 6.283185307179586;
-    float z = p.y * 2.0 - 1.0;
-    float r = sqrt(max(0.0, 1.0 - z * z));
-    return vec3(sin(phi) * r, cos(phi) * r, z);
-}
-
-vec3 GenerateCosineVectorSafe(vec3 vector, vec2 xy) {
-    vec3 cosineVector = vector + genUnitVector(xy);
-    float lenSq = dot(cosineVector, cosineVector);
-    return lenSq > 0.0 ? cosineVector * inversesqrt(lenSq) : vector;
-}
-
 vec3 RayDirection(vec3 normal, float dither, int i, float roughness) {
-    vec2 Xi = vec2(rand(dither, i), rand(dither, i + 1));
-    return GenerateCosineVectorSafe(normal, Xi);
+    vec3 up = abs(normal.y) < 0.999 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0);
+    vec3 tangent = normalize(cross(up, normal));
+    vec3 bitangent = cross(normal, tangent);
+
+    vec2 Xi = vec2(rand(dither, i));
+    vec3 hemi = normalize(cosineHemisphereSampleRough(Xi));
+    return ((tangent * hemi.x) + (bitangent * hemi.y) + (normal * hemi.z));
+}
+
+vec3 RTReprojection(vec3 pos, vec3 cameraOffset) {
+    pos = pos * 2.0 - 1.0;
+
+    vec4 viewPosPrev = gbufferProjectionInverse * vec4(pos, 1.0);
+    viewPosPrev /= viewPosPrev.w;
+    viewPosPrev = gbufferModelViewInverse * viewPosPrev;
+
+    vec4 previousPosition = viewPosPrev + vec4(cameraOffset, 0.0);
+    previousPosition = gbufferPreviousModelView * previousPosition;
+    previousPosition = gbufferPreviousProjection * previousPosition;
+    return previousPosition.xyz / previousPosition.w * 0.5 + 0.5;
 }
 
 
@@ -185,6 +191,13 @@ vec3 RayDirection(vec3 normal, float dither, int i, float roughness) {
     }
 #endif
 
+vec3 toScreenSpace(vec3 p) {
+	vec4 iProjDiag = vec4(gbufferProjectionInverse[0].x, gbufferProjectionInverse[1].y, gbufferProjectionInverse[2].zw);
+    vec3 p3 = p * 2. - 1.;
+    vec4 fragposition = iProjDiag * p3.xyzz + gbufferProjectionInverse[3];
+    return fragposition.xyz / fragposition.w;
+}
+
 // ------------------------------- Raytracer ------------------------------- //
 #if GLOBAL_ILLUMINATION >= 2
     vec3 Raytrace(
@@ -197,23 +210,19 @@ vec3 RayDirection(vec3 normal, float dither, int i, float roughness) {
         float smoothnessD,
         float maxStepsMul
     ) {
-        vec3 worldPos = mat3(gbufferModelViewInverse) * origin;
-        float distFactor = 1.0 + length(worldPos) / far;
-        float stepSize = STEP_SCALE / distFactor;
+        float stepSize = STEP_SCALE;
 
-        float rayLength = ((origin.z + dir.z * sqrt(3.0) * far) > -sqrt(3.0) * near)
-                        ? (-sqrt(3.0) * near - origin.z) / dir.z
-                        : sqrt(3.0) * far;
+        float rayLength = ((origin.z + dir.z * sqrt(3.0)*far) > -sqrt(3.0)*near) ?
+	   								(-sqrt(3.0)*near -origin.z) / dir.z : sqrt(3.0)*far;
 
         vec3 clipStart = toClipSpace(origin);
         vec3 clipEnd = toClipSpace(origin + dir * rayLength);
         vec3 clipDir = clipEnd - clipStart;
 
         float steps = max(abs(clipDir.x) / texelSize.x, abs(clipDir.y) / texelSize.y) / stepSize;
-        float maxFactor = min(min(
-            (step(0.0, clipDir) - clipStart).x / clipDir.x,
-            (step(0.0, clipDir) - clipStart).y / clipDir.y
-        ), (step(0.0, clipDir) - clipStart).z / clipDir.z) * 2000.0;
+
+        vec3 maxLengths = (step(0.0 ,clipDir) - clipStart) / clipDir;
+	    float maxFactor = min(min(maxLengths.x,maxLengths.y),maxLengths.z);
 
         int maxSteps = min(int(min(steps, maxFactor * steps) - 2.0), int(maxStepsMul));
 
@@ -227,7 +236,6 @@ vec3 RayDirection(vec3 normal, float dither, int i, float roughness) {
         hitColor = vec3(0.0);
 
         for (int k = 0; k < maxSteps; ++k) {
-            //tracePos += 2.0;
             if (k >= maxSteps) break;
             if (any(lessThan(tracePos, vec3(0.0))) || any(greaterThan(tracePos, vec3(1.0)))) break;
 
@@ -236,20 +244,19 @@ vec3 RayDirection(vec3 normal, float dither, int i, float roughness) {
             float depthCurrent = GetLinearDepth(tracePos.z);
             float depthScene = GetLinearDepth(depthSample);
 
+            
+
             if (depthScene < depthCurrent && depthSample >= minZ && depthSample <= maxZ) {
-                vec3 albedo     = texture2D(colortex9, tracePos.xy).rgb;
-                vec3 color      = texture2D(colortex2, tracePos.xy).rgb;
 
-                hitColor = toLinear(albedo * color) * GI_INTENSITY;
+                vec3 previousPosition = mat3(gbufferModelViewInverse) * toScreenSpace(tracePos) + gbufferModelViewInverse[3].xyz + cameraPosition-previousCameraPosition;
+                previousPosition = mat3(gbufferPreviousModelView) * previousPosition + gbufferPreviousModelView[3].xyz;
+                previousPosition.xy = projMAD(gbufferPreviousProjection, previousPosition).xy / -previousPosition.z * 0.5 + 0.5;
 
-                // adjust intensity from bounce
-                #if GI_BOUNCE == 1
-                    hitColor *= 6.0 * GI_INTENSITY;
-                #elif GI_BOUNCE == 2 
-                    hitColor *= 3.0 * GI_INTENSITY;
-                #elif GI_BOUNCE == 3
-                    hitColor *= 2.5 * GI_INTENSITY;
-                #endif
+                vec3 albedo     = texture2D(colortex9, previousPosition.xy).rgb;
+                vec3 color      = texture2D(colortex2, previousPosition.xy).rgb;
+
+                hitColor = albedo * color * GI_INTENSITY;
+                    hitColor *= 4.5 * GI_INTENSITY;
 
                 hitFound = true;
                 break;
@@ -258,7 +265,7 @@ vec3 RayDirection(vec3 normal, float dither, int i, float roughness) {
             float bias = 0.0005;
             minZ = maxZ - bias / max(depthCurrent, 0.0005); 
             maxZ += stepVec.z;
-            tracePos += stepVec * dither;
+            tracePos += stepVec * 0.5 * dither;
         }
 
         return tracePos;
@@ -305,7 +312,7 @@ vec3 RayDirection(vec3 normal, float dither, int i, float roughness) {
 #endif
 
 #if GLOBAL_ILLUMINATION == 2 || GLOBAL_ILLUMINATION == 4
-
+    
     float RTAO(vec3 viewPos, vec3 normal, float skyLightFactor, float dither) {
         const float r = 1.0;
         float occlusion = 0.0;
@@ -415,7 +422,7 @@ vec3 RayDirection(vec3 normal, float dither, int i, float roughness) {
         float smoothnessD
     ) {
         vec3 totalGI = vec3(0.0);
-        float r = 0.7;
+        float r = 5.0;
 
         vec3 bounceOrigin = viewPos + normal * SURFACE_BIAS;
 
@@ -424,13 +431,13 @@ vec3 RayDirection(vec3 normal, float dither, int i, float roughness) {
             vec3 accumulatedLight = vec3(0.0);
 
             vec3 bounceNormal = normal;
-            vec3 rayDir = RayDirection(bounceNormal, dither, i, r );
+            vec3 rayDir = RayDirection(bounceNormal, dither * 2048, i, r );
 
             for (int j = 0; j < GI_BOUNCE; ++j) {
                 bool hitFound = false;
                 vec3 hitColor = vec3(0.0);
                 
-                vec3 tracePos = Raytrace(bounceOrigin, rayDir, dither, hitFound, hitColor, smoothnessD, 10.0);
+                vec3 tracePos = Raytrace(bounceOrigin, rayDir, dither, hitFound, hitColor, smoothnessD, GI_STEPS);
 
                 if (!hitFound) {
                     #ifdef OVERWORLD
@@ -468,7 +475,7 @@ vec3 RayDirection(vec3 normal, float dither, int i, float roughness) {
 
         float saturation = 1.0;
         float gamma = 1.0;
-        float contrast = 1.3;
+        float contrast = 1.4;
 
         color *= exposure;
 
@@ -540,9 +547,9 @@ bool GetShadow(vec3 tracePos, vec3 cameraPos) {
         #endif
 
             #if GLOBAL_ILLUMINATION == 3
-                color += GITonemap(GlobalIllumination(viewPos, playerPos, normal, VdotU, VdotS, skyLightFactor, linearZ0, dither, smoothnessD)) * 1.0;
+                color += pow(GlobalIllumination(viewPos, playerPos, normal, VdotU, VdotS, skyLightFactor, linearZ0, dither, smoothnessD), vec3(2.2)) * 1.0;
             #elif GLOBAL_ILLUMINATION == 4
-                color += GITonemap(GlobalIllumination(viewPos, playerPos, normal, VdotU, VdotS, skyLightFactor, linearZ0, dither, smoothnessD)) * 1.35;
+                color += pow(GlobalIllumination(viewPos, playerPos, normal, VdotU, VdotS, skyLightFactor, linearZ0, dither, smoothnessD), vec3(2.2)) * 1.0;
             #endif
 
             #if GLOBAL_ILLUMINATION == 2 || GLOBAL_ILLUMINATION == 4
@@ -552,6 +559,7 @@ bool GetShadow(vec3 tracePos, vec3 cameraPos) {
         #ifdef EXCLUDE_ENTITIES_IN_RT
         }
         #endif
+        color += (dither - 0.5) / 8.0;
         return color;
     }
 #endif

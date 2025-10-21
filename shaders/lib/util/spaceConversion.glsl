@@ -38,9 +38,23 @@ vec3 ShadowViewToPlayer(vec3 pos) {
     return mat3(shadowModelViewInverse) * pos;
 }
 
-vec3 TangentToWorld(vec3 N, vec3 H){
+vec3 TangentToWorld(vec3 N, vec3 H)
+{
     vec3 UpVector = abs(N.z) < 0.999 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0);
     vec3 T = normalize(cross(UpVector, N));
     vec3 B = cross(N, T);
-    return (T * H.x) + (B * H.y) + (N * H.z);
+
+    return vec3((T * H.x) + (B * H.y) + (N * H.z));
+}
+
+float 	GetDepth(in vec2 coord) {
+	return texture2D(depthtex1, coord.st).x;
+}
+
+vec4  	GetScreenSpacePosition(in vec2 coord) {	//Function that calculates the screen-space position of the objects in the scene using the depth texture and the texture coordinates of the full-screen quad
+	float depth = GetDepth(coord);
+	vec4 fragposition = gbufferProjectionInverse * vec4(coord.s * 2.0f - 1.0f, coord.t * 2.0f - 1.0f, 2.0f * depth - 1.0f, 1.0f);
+		 fragposition /= fragposition.w;
+	
+	return fragposition;
 }

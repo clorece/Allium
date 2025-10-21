@@ -99,9 +99,11 @@ uniform vec3 previousCameraPositionFract;
 #endif
 
 //#if SHADOW_QUALITY > -1 || defined LIGHTSHAFTS_ACTIVE || defined FF_BLOCKLIGHT
+    uniform sampler2D shadowcolor;
     uniform sampler2D shadowcolor0;
     uniform sampler2D shadowcolor1;
-    uniform sampler2D shadowcolor2; 
+    uniform sampler2D shadowcolor2; // vec4(vec3(shadow normals), float(shadow depth))
+    uniform sampler2D shadowcolor3; // vec4(rsm flux, 0.0)
 
     uniform sampler2DShadow shadowtex1;
 
@@ -110,6 +112,7 @@ uniform vec3 previousCameraPositionFract;
     #else
         uniform sampler2DShadow shadowtex0;
     #endif
+    uniform sampler2D shadowtex2;
 //#endif
 
 #if !defined DH_TERRAIN && !defined DH_WATER

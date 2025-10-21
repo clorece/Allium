@@ -2,7 +2,8 @@
     --------------------------------------------PLEASE READ--------------------------------------------
     This ray tracing code was originally developed by Chocapic13.
     The specific implementation used here is derived from the Bliss Shaders by Xonk,
-    and has been heavily modified from Bliss's version of Chocapic13’s original ray tracing code.
+    and has been heavily modified from Bliss's version of Chocapic13's original ray tracing code.
+    Modified to use world space coordinates for Global Illumination.
     --------------------------------------------PLEASE READ--------------------------------------------
     LICENSE, AS STATED BY Chocapic13: SHARING A MODIFIED VERSION OF MY SHADERS:
         You are not allowed to claim any of the code included in "Chocapic13' shaders" as your own
@@ -46,11 +47,6 @@
     CREDITS:
         Xonk
         Chocapic13
-*/
-
-/*
-    and ty chatgpt o7
-    lol
 */
 
 #define GI_DISTANCE_BOOST
@@ -112,6 +108,22 @@ vec3 RayDirection(vec3 normal, float dither, int i, float roughness) {
     return ((tangent * hemi.x) + (bitangent * hemi.y) + (normal * hemi.z));
 }
 
+// Convert world space position to screen space
+vec3 worldToScreen(vec3 worldPos) {
+    vec4 viewPos = gbufferModelView * vec4(worldPos, 1.0);
+    vec4 clipPos = gbufferProjection * viewPos;
+    vec3 ndcPos = clipPos.xyz / clipPos.w;
+    return ndcPos * 0.5 + 0.5;
+}
+
+// Convert screen space to world space position
+vec3 screenToWorld(vec3 screenPos) {
+    vec4 ndcPos = vec4(screenPos * 2.0 - 1.0, 1.0);
+    vec4 viewPos = gbufferProjectionInverse * ndcPos;
+    viewPos /= viewPos.w;
+    vec4 worldPos = gbufferModelViewInverse * viewPos;
+    return worldPos.xyz;
+}
 
 // ------------------------------- Filters ------------------------------- //
 #if GLOBAL_ILLUMINATION >= 2
@@ -178,71 +190,69 @@ vec3 RayDirection(vec3 normal, float dither, int i, float roughness) {
     }
 #endif
 
-// ------------------------------- Raytracer ------------------------------- //
+// ------------------------------- Raytracer (World Space) ------------------------------- //
 #if GLOBAL_ILLUMINATION >= 2
-    vec3 Raytrace(
-        vec3 origin,
-        vec3 dir,
+    vec3 RaytraceWorldSpace(
+        vec3 worldOrigin,
+        vec3 worldDir,
         float dither,
         out bool hitFound,
         out vec3 hitColor,
         out bool hitIsFoliage,
         float maxStepsMul
     ) {
-        float dist = 1.0 + clamp(dir.z*dir.z/50.0,0,2);
-        float stepSize = STEP_SCALE / dist;
+        // Transform to screen space for marching
+        vec3 screenStart = worldToScreen(worldOrigin);
+        vec3 screenEnd = worldToScreen(worldOrigin + worldDir * GI_RENDER_DISTANCE);
+        
+        vec3 screenDir = screenEnd - screenStart;
+        float rayLength = length(screenDir);
+        screenDir = normalize(screenDir);
 
-        float rayLength = ((origin.z + dir.z * sqrt(3.0) * far) > -sqrt(3.0) * near)
-                        ? (-sqrt(3.0) * near - origin.z) / dir.z
-                        : sqrt(3.0) * far;
-
-        vec3 clipStart = toClipSpace(origin);
-        vec3 clipEnd = toClipSpace(origin + dir * rayLength);
-        vec3 clipDir = clipEnd - clipStart;
-
-        float steps = max(abs(clipDir.x) / texelSize.x, abs(clipDir.y) / texelSize.y) / stepSize;
-        float maxFactor = min(min(
-            (step(0.0, clipDir) - clipStart).x / clipDir.x,
-            (step(0.0, clipDir) - clipStart).y / clipDir.y
-        ), (step(0.0, clipDir) - clipStart).z / clipDir.z) * 2000.0;
-
-        int maxSteps = min(int(min(steps, maxFactor * steps) - 2.0), int(maxStepsMul));
-
-        vec3 stepVec = clipDir / steps;
-        vec3 tracePos = clipStart + vec3(texelSize * 0.5, 0.0);
-
-        float minZ = tracePos.z;
-        float maxZ = tracePos.z;
+        // Calculate step size based on screen space distance
+        float stepSize = STEP_SCALE;
+        float steps = rayLength / (stepSize * max(texelSize.x, texelSize.y));
+        
+        int maxSteps = min(int(steps), int(maxStepsMul));
+        
+        vec3 stepVec = screenDir * stepSize * max(texelSize.x, texelSize.y);
+        vec3 tracePos = screenStart;
 
         hitFound = false;
         hitColor = vec3(0.0);
-
-        float foliageFlag = texelFetch(colortex6, texelCoord, 0).a;
-        hitIsFoliage = foliageFlag > 0.5;
+        hitIsFoliage = false;
 
         for (int k = 0; k < maxSteps; ++k) {
-            if (tracePos.x < 0.0 || tracePos.y < 0.0 || tracePos.z < 0.0 || tracePos.x > 1.0 || tracePos.y > 1.0 || tracePos.z > 1.0) return vec3(1.1);
+            // Check bounds
+            if (tracePos.x < 0.0 || tracePos.y < 0.0 || tracePos.z < 0.0 || 
+                tracePos.x > 1.0 || tracePos.y > 1.0 || tracePos.z > 1.0) {
+                return tracePos;
+            }
 
             ivec2 texelCoord = ivec2(tracePos.xy / texelSize);
             float depthSample = texelFetch(depthtex1, texelCoord, 0).r;
-            float depthCurrent = GetLinearDepth(tracePos.z);
-            float depthScene = GetLinearDepth(depthSample);
+            
+            // Convert both to world space for comparison
+            vec3 worldRayPos = screenToWorld(tracePos);
+            vec3 worldScenePos = screenToWorld(vec3(tracePos.xy, depthSample));
+            
+            float distToScene = length(worldScenePos - worldOrigin);
+            float distAlongRay = length(worldRayPos - worldOrigin);
 
-            if (depthScene < depthCurrent && depthSample >= minZ && depthSample <= maxZ) {
-                hitColor = toLinear(texture2D(colortex2, tracePos.xy).rgb) * 1.0 * GI_INTENSITY;
-
+            if (distAlongRay >= distToScene - 0.01) {
+                hitColor = toLinear(texture2D(colortex2, tracePos.xy).rgb) * GI_INTENSITY;
+                
+                float foliageFlag = texelFetch(colortex6, texelCoord, 0).a;
+                hitIsFoliage = foliageFlag > 0.5;
+                
                 if (hitIsFoliage) hitColor *= 0.75;
                 
                 hitFound = true;
                 break;
             }
 
-            float bias = 0.0005;
-            minZ = maxZ - bias / max(depthCurrent, 0.0005); 
-            maxZ += stepVec.z;
-
             #ifdef GI_DISTANCE_BOOST
-                tracePos += stepVec * 2.0 * dither;
+                tracePos += stepVec * mix(1.0, 2.0, dither);
             #else
                 tracePos += stepVec;
             #endif
@@ -292,108 +302,37 @@ vec3 RayDirection(vec3 normal, float dither, int i, float roughness) {
 #endif
 
 #if GLOBAL_ILLUMINATION == 2 || GLOBAL_ILLUMINATION == 4
-    float RTAO(vec3 viewPos, vec3 normal, float skyLightFactor, float dither) {
+    float RTAO(vec3 worldPos, vec3 worldNormal, float skyLightFactor, float dither) {
         const float r = 1.0;
         float occlusion = 0.0;
         float invSamples = 1.0 / float(RTAO_SAMPLES);
 
         for (int i = 0; i < RTAO_SAMPLES; ++i) {
-            vec3 rayDir = RayDirection(normal, dither, i, r);
-            vec3 rayOrigin = viewPos + normal * SURFACE_BIAS;
+            vec3 rayDir = RayDirection(worldNormal, dither, i, r);
+            vec3 rayOrigin = worldPos + worldNormal * SURFACE_BIAS;
 
             bool hitFound;
             bool hitIsFoliage;
             vec3 hitColor;
-            vec3 tracePos = Raytrace(rayOrigin, rayDir, dither, hitFound, hitColor, hitIsFoliage, float(RTAO_STEP));
+            vec3 tracePos = RaytraceWorldSpace(rayOrigin, rayDir, dither, hitFound, hitColor, hitIsFoliage, float(RTAO_STEP));
 
             if (hitFound) {
-                float dz = GetLinearDepth(tracePos.z) - GetLinearDepth(toClipSpace(viewPos).z);
-                float attenuate = 1.0 - smoothstep(0.0, AO_RADIUS, dz);
+                vec3 worldHitPos = screenToWorld(tracePos);
+                float hitDist = length(worldHitPos - worldPos);
+                float attenuate = 1.0 - smoothstep(0.0, AO_RADIUS, hitDist);
                 occlusion += attenuate * 0.5 * AO_I;
             }
         }
 
-        //occlusion = pow(occlusion, 2.2);
         return clamp(1.0 - occlusion * invSamples, 0.0, 1.0);
     }
-
-    /* OLD RTAO
-    float check(vec3 surfaceNormal, vec3 viewDir, vec3 hitPos, vec3 viewPos) {
-        vec3 hitNormal = normalize(cross(dFdx(hitPos), dFdy(hitPos)));
-        float facing = dot(hitNormal, surfaceNormal);
-        if (facing < 0.3) return 0.0;
-
-        return smoothstep(0.3, 1.0, facing);
-    }
-
-    float RTAO(vec3 viewPos, vec3 normal, float skyLightFactor, float dither) {
-
-        float occlusion = 0.0;
-
-        // Tangent space basis
-        vec3 up = abs(normal.y) < 0.999 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0);
-        vec3 tangent = normalize(cross(up, normal));
-        vec3 bitangent = cross(normal, tangent);
-
-        float invSamples = 1.0 / float(RTAO_SAMPLES);
-        float stepSize = AO_RADIUS / float(4);
-
-        for (int i = 0; i < RTAO_SAMPLES; ++i) {
-            
-            float fi = float(i);
-            float rand = fract(fi * 0.73 + dither * 4);
-            float phi = 6.2831 * (rand);
-            float cosTheta = sqrt(1.0 - fi * invSamples);
-            float sinTheta = sqrt(1.0 - cosTheta * cosTheta);
-
-            vec3 hemiDir = sinTheta * cos(phi) * tangent +
-                        sinTheta * sin(phi) * bitangent +
-                        cosTheta * normal;
-
-            vec3 rayDir = hemiDir * stepSize;
-            vec3 rayPos = viewPos + normal * 0.01 * texture2D(colortex2, texCoord).rgb;
-
-            for (int j = 0; j < 4; ++j) {
-                rayPos += rayDir;
-
-                vec4 projected = gbufferProjection * vec4(rayPos, 1.0);
-                if (projected.w <= 0.0) break;
-
-                vec2 screenUV = projected.xy / projected.w * 0.5 + 0.5;
-                if (abs(screenUV.x - 0.5) > view.x || abs(screenUV.y - 0.5) > view.y) break;
-
-                float sceneZ = texture2D(depthtex1, screenUV).r;
-                vec4 hitClip = vec4(screenUV * 2.0 - 1.0, sceneZ * 2.0 - 1.0, 1.0);
-                vec4 hitPos4 = gbufferProjectionInverse * hitClip;
-                vec3 hitPos = hitPos4.xyz / hitPos4.w;
-
-                float dz = hitPos.z - rayPos.z;
-                float depthDiff = abs(hitPos.z - viewPos.z);
-
-                if (dz > 0.001 && dz < stepSize * 12.0 && depthDiff < AO_RADIUS * 12.0) {
-                    float geomFactor = check(normal, rayDir, hitPos, viewPos);
-                    float weight = (1.0 - smoothstep(0.0, stepSize * 12.0, dz));
-                    //occlusion -= geomFactor;
-                    occlusion += weight * AO;
-                    break;
-                }
-            }
-        }
-        occlusion *= 0.5;
-
-        float ao = 1.0 - (occlusion * invSamples);
-        return clamp(ao, 0.0, 1.0);
-
-    }
-    */
 #endif
 
-// ------------------------------- Global Illumination ------------------------------- //
+// ------------------------------- Global Illumination (World Space) ------------------------------- //
 #if GLOBAL_ILLUMINATION == 3 || GLOBAL_ILLUMINATION == 4
     vec3 GlobalIllumination(
-        vec3 viewPos,
-        vec3 playerPos,
-        vec3 normal,
+        vec3 worldPos,
+        vec3 worldNormal,
         float VdotU,
         float VdotS,
         float skyLightFactor,
@@ -406,26 +345,25 @@ vec3 RayDirection(vec3 normal, float dither, int i, float roughness) {
         vec3 contribution = vec3(0.0);
 
         for (int i = 0; i < GI_SAMPLES; ++i) {
-            vec3 bounceOrigin = viewPos + normal * SURFACE_BIAS;
+            vec3 bounceOrigin = worldPos + worldNormal * SURFACE_BIAS;
 
-            vec3 rayDir = RayDirection(normal, dither + float(i), i, r);
+            vec3 rayDir = RayDirection(worldNormal, dither + float(i), i, r);
 
             bool hitFound = false;
             bool hitIsFoliage = false;
             vec3 hitColor = vec3(0.0);
-            vec3 tracePos = Raytrace(bounceOrigin, rayDir, dither, hitFound, hitColor, hitIsFoliage, 10.0);
+            vec3 tracePos = RaytraceWorldSpace(bounceOrigin, rayDir, dither, hitFound, hitColor, hitIsFoliage, 10.0);
 
             if (hitFound) {
-                float depthCurrent = GetLinearDepth(toClipSpace(bounceOrigin).z);
-                float depthHit = GetLinearDepth(tracePos.z);
-                float fade = exp(-clamp((depthCurrent - depthHit) / 4.0, 0.0, 1.0));
+                vec3 worldHitPos = screenToWorld(tracePos);
+                float hitDistance = length(worldHitPos - worldPos);
+                float fade = exp(-clamp(hitDistance / 4.0, 0.0, 1.0));
 
-                hitColor += CalculateFlux(hitColor, normal, rayDir, r, length(rayDir), 0.5);
+                hitColor += CalculateFlux(hitColor, worldNormal, rayDir, r, hitDistance, 0.5);
 
                 contribution = clamp(hitColor, 0.0, 1.0) * fade;
             }
             else {
-
                 #ifdef OVERWORLD
                     contribution = GetSky(VdotU, VdotS, dither, false, true) * 0.25 * skyLightFactor;
                 #endif
@@ -436,12 +374,10 @@ vec3 RayDirection(vec3 normal, float dither, int i, float roughness) {
         return totalGI;
     }
 
-
     vec3 GITonemap(vec3 color) {
         color = clamp(color, 0.0, 10.0);
 
         float exposure = 0.9 - (rainFactor * 0.05);
-        //exposure -= nightFactor * 0.1;
 
         float saturation = 1.1;
         float gamma = 1.0;
@@ -476,51 +412,32 @@ vec3 RayDirection(vec3 normal, float dither, int i, float roughness) {
 
 // ------------------------------- Apply ------------------------------- //
 #ifdef GLOBAL_ILLUMINATION > 1
-/*
     vec3 DoRT(
         vec3 color, 
-        vec3 viewPos, 
-        vec3 playerPos, 
-        vec3 normal, 
-        float skyLightFactor, 
-        float linearZ0, 
-        float dither, 
-        bool entityOrHand,
-        bool isFoliage
-    ) {
-    */
-    vec3 DoRT(
-        vec3 color, 
-        vec3 viewPos, 
-        vec3 playerPos, 
-        vec3 normal, 
+        vec3 worldPos,
+        vec3 worldNormal, 
         float skyLightFactor, 
         float linearZ0, 
         float dither, 
         bool entityOrHand,
         float smoothnessD
     ) {
-        float VdotU = dot(normal, upVec);
-        float VdotS = dot(normal, sunVec);
-        float VdotL = dot(normal, lightVec);
+        float VdotU = dot(worldNormal, upVec);
+        float VdotS = dot(worldNormal, sunVec);
+        float VdotL = dot(worldNormal, lightVec);
 
         #ifdef EXCLUDE_ENTITIES_IN_RT
         if (!entityOrHand) {
         #endif
 
-            //bool shadow = GetShadow(viewPos, cameraPosition);
-            //float rts = RaytraceShadow(lightVec, viewPos, dither, shadow);
-
             #if GLOBAL_ILLUMINATION == 3
-                color += GITonemap(GlobalIllumination(viewPos, playerPos, normal, VdotU, VdotS, skyLightFactor, linearZ0, dither)) * 1.0;
+                color += GITonemap(GlobalIllumination(worldPos, worldNormal, VdotU, VdotS, skyLightFactor, linearZ0, dither)) * 1.0;
             #elif GLOBAL_ILLUMINATION == 4
-                color += GITonemap(GlobalIllumination(viewPos, playerPos, normal, VdotU, VdotS, skyLightFactor, linearZ0, dither)) * 1.35;
+                color += GITonemap(GlobalIllumination(worldPos, worldNormal, VdotU, VdotS, skyLightFactor, linearZ0, dither)) * 1.35;
             #endif
 
-            //color += mix(color, vec3(rts), vec3(0.5)) * 0.1;
-
             #if GLOBAL_ILLUMINATION == 2 || GLOBAL_ILLUMINATION == 4
-                color *= RTAO(viewPos, normal, skyLightFactor, dither);
+                color *= RTAO(worldPos, worldNormal, skyLightFactor, dither);
             #endif
 
         #ifdef EXCLUDE_ENTITIES_IN_RT

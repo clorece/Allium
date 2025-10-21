@@ -59,12 +59,17 @@ vec2 GetCombinedWaves(vec2 uv, vec2 wind) {
             nSmall * WATER_BUMP_SMALL +
             nBig * WATER_BUMP_BIG;
 }
-
+vec3 GetWorldSunDir() { 
+    return normalize((gbufferModelViewInverse * vec4(sunVec, 0.0)).xyz); 
+}
 //Program//
 void main() {
     vec4 color1 = texture2DLod(tex, texCoord, 0); // Shadow Color
     vec3 normalM = normal, geoNormal = normal, shadowMult = vec3(1.0);
-    vec3 worldGeoNormal = normalize((gbufferModelViewInverse * vec4(normalM, 0.0)).xyz );
+    vec3 worldGeoNormal = normalize((gbufferModelViewInverse * vec4(normalM, 0.0)).xyz);
+
+    vec3 baseAlbedo = color1.rgb * glColor.rgb;
+    //vec3 baseAlbedo = texture2DLod(tex, texCoord, 0).rgb * glColor.rgb;
 
     #if SHADOW_QUALITY >= 1
         vec4 color2 = color1; // Light Shaft Color
@@ -212,8 +217,13 @@ void main() {
         }
     #endif
 
-    // New RT2 for RSM flux:
-    //color1.rgb *= NdotL;
+    vec3 Lw = GetWorldSunDir();
+    float NdotL = max(0.0, dot(worldGeoNormal, Lw));
+
+    float opaqueMask = 1.0;
+    if (mat >= 32008 && mat < 32020) opaqueMask = 0.0;
+
+    vec3 rsmFlux = baseAlbedo * NdotL * opaqueMask;
 
     gl_FragData[0] = color1; // Shadow Color
 
@@ -224,7 +234,8 @@ void main() {
 
         gl_FragData[1] = color2; // Light Shaft Color
     #endif
-    gl_FragData[2] = vec4(worldGeoNormal.xyz * 0.5 + 0.5, 0.0);
+    gl_FragData[2] = vec4(worldGeoNormal * 0.5 + 0.5, gl_FragCoord.z); // RSM Normal (0..1)
+    gl_FragData[3] = vec4(rsmFlux, 1.0);             // RSM Flux (linear)
 }
 
 #endif

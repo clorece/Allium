@@ -1,3 +1,5 @@
+
+
 #ifdef ATM_COLOR_MULTS
     #include "/lib/colors/colorMultipliers.glsl"
 #endif
@@ -45,7 +47,7 @@
             fog = clamp(fog, 0.0, 1.0);
 
             #ifdef OVERWORLD
-                vec3 fogColorM = GetSky(VdotU, VdotS, dither, true, false);
+                vec3 fogColorM = GetSky(VdotU, VdotS, dither, true, true);
             #elif defined NETHER
                 vec3 fogColorM = netherColor;
             #else
@@ -80,6 +82,8 @@
     }
 #endif
 
+#define ignoreMie
+
 #ifdef ATMOSPHERIC_FOG
     #include "/lib/colors/lightAndAmbientColors.glsl"
     #include "/lib/colors/skyColors.glsl"
@@ -100,7 +104,7 @@
             float dayNightFogBlend = pow(invNightFactor, 4.0 - VdotS - 2.5 * sunVisibility2);
             return mix(
                 ambientColor * 0.5 * (nightFogMult - dayNightFogBlend * nightFogMult),
-                mix((ambientColor * 0.5 + lightColor * 0.25) * 2.0 * (invNoonFactor2 * 1.575 + 0.825), (ambientColor * 0.5 + lightColor * 0.25) * 1.5 * (1.5 + 0.5 * noonFactor), vec3(0.5)),
+                mix((ambientColor * 0.5 + lightColor * 0.5) * 2.0 * (invNoonFactor2 * 1.575 + 0.825), (ambientColor * 0.5 + lightColor * 0.5) * 1.5 * (1.0 + 0.5 * noonFactor), vec3(0.5)),
                 dayNightFogBlend
             );
         }
@@ -118,6 +122,7 @@
     }
 
     void DoAtmosphericFog(inout vec3 color, vec3 playerPos, float lViewPos, float VdotU, float VdotS, float dither) {
+
         #ifndef DISTANT_HORIZONS
             float renDisFactor = min1(192.0 / renderDistance);
 
@@ -143,7 +148,7 @@
 
         #ifdef OVERWORLD
             altitudeFactor *= 1.0 - 0.1 * GetAtmFogAltitudeFactor(cameraPosition.y) * invRainFactor;
-            altitudeFactor += 0.5 * invNoonFactor2 * 1.0;
+            altitudeFactor += 1.0 * invNoonFactor2 * 1.0;
 
             #if defined SPECIAL_BIOME_WEATHER || RAIN_STYLE == 2
                 #if RAIN_STYLE == 2
@@ -178,7 +183,7 @@
 
             #ifdef OVERWORLD
                 //vec3 fogColorM = GetAtmFogColor(altitudeFactorRaw, VdotS);
-                vec3 fogColorM = GetSky(VdotU, VdotS, dither, true, true);
+                vec3 fogColorM = GetSky(VdotU, VdotS, dither, false, false) * 1.25;
             #else
                 vec3 fogColorM = endSkyColor * 1.5;
             #endif

@@ -7,41 +7,46 @@ float GetAltocumulusDetail(vec3 pos, vec3 offset, float persistence) {
     const int detailSamples = 3;
 
     for (int i = 0; i < detailSamples; ++i) {
-        float n = Noise3D(p * (2.0 ) + offset * 1.5);
+        vec3 windOffset = windDir * GetWind() * 0.1 * float(i);
+        float n = Noise3D(p * (4.5 + float(i) * 1.5) / 2.7 + offset * 1.5 + windOffset);
         detail += n * amplitude;
-        total += amplitude;
+        total  += amplitude;
         amplitude *= persistence;
-        p *= 6.0; // scale for next octave
+        p *= 3.0;
     }
 
     return detail / total;
 }
 
-float GetAltocumulusCloud(vec3 tracePos, int steps, int cloudAltitude, float lTracePosXZ, float cloudPlayerPosY, float noisePersistence, float mult, float size) {
-    vec3 tracePosM = tracePos * (0.00018 * size);
-    tracePosM.y *= 0.25;
-
+float GetAltocumulusCloud(vec3 tracePos, int steps, int cloudAltitude, float lTracePosXZ, float cloudPlayerPosY,
+                          float noisePersistence, float mult, float size)
+{
+    vec3 tracePosM = shearMatrix * tracePos * (0.00018 * size);
     vec3 offset = Offset(GetWind() * size);
-    //    offset *= 2.0;
+    offset *= 1.0;
 
-    tracePosM.x += sin(tracePosM.z * 1.2) * 0.35;
+    float shearAmount = 0.3;
+    tracePosM.x += tracePosM.y * windDir.x * shearAmount;
+    tracePosM.z += tracePosM.y * windDir.z * shearAmount;
 
-    float base = Noise3D(tracePosM * 0.15 + offset) * 12.0;
-    //    base += Noise3D(tracePosM * 2.0 + offset) * 6.0;
-        base /= 5.25 / ALTOCUMULUS_COVERAGE;
-        base -= nightFactor * 0.25;
-        //base += rainFactor * 1.75;
+    float base  = Noise3D(tracePosM * 0.75 / cumulusCloudSizeMult + offset + windDir * GetWind() * 0.05) * 12.0;
+    base       += Noise3D(tracePosM * 1.0  / cumulusCloudSizeMult + offset + windDir * GetWind() * 0.05) * 6.0;
+    base       /= 7.0 / ALTOCUMULUS_CLOUD_COVERAGE;
+    base       += rainFactor * 0.7;
 
     float detail = GetAltocumulusDetail(tracePosM, offset, noisePersistence);
 
-    float combined = mix(base, base * detail, 0.65) * 0.9;
+    float combined = mix(base, base * detail, 0.7);
     combined = max(combined - 0.2, 0.0);
-    combined = pow(combined, 2.2) * mult * 1.3;
-    //combined *= 2.0 * lTracePosXZ * 0.001;
+    combined = pow(combined, 1.35) * mult;
 
-    float fadeTop    = smoothstep(0.0, altocumulusCloudStretch, cloudAltitude + altocumulusCloudStretch - tracePos.y);
-    float fadeBottom = smoothstep(altocumulusCloudStretch * 0.1, altocumulusCloudStretch, tracePos.y - (cloudAltitude - altocumulusCloudStretch));
+    if (combined < 0.9) return 0.0;
+
+    float fadeTop    = smoothstep(0.0, altocumulusLayerStretch, cloudAltitude + altocumulusLayerStretch - tracePos.y);
+    float fadeBottom = smoothstep(altocumulusLayerStretch * 0.95, altocumulusLayerStretch, tracePos.y - (cloudAltitude - altocumulusLayerStretch));
     float verticalFade = fadeTop * fadeBottom;
-    
-    return combined * verticalFade;
+
+    float groupMask = getCloudMap(tracePos * 0.0058);
+
+    return combined * verticalFade * groupMask;
 }

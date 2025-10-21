@@ -97,7 +97,45 @@ float GetInverseLinearDepth(float linearDepth) {
 #endif
 
 #ifdef VL_CLOUDS_ACTIVE
-    #include "/lib/atmospherics/clouds/mainClouds.glsl"
+    //#include "/lib/atmospherics/clouds/mainClouds.glsl"
+    vec4 BilateralCloudUpscale(vec2 coord, float depth) {
+        vec4 cloudSample = texture2D(colortex9, coord);
+        
+        // Simple bilinear is fine for 0.5x, but for lower res you may want bilateral filtering
+        #if 0 // Set to 1 for higher quality upscaling
+            float linearDepth = GetLinearDepth(depth);
+            vec2 texelSize = 2.0 / vec2(viewWidth, viewHeight); // Adjust for 0.5x scale
+            
+            vec4 cloudColor = vec4(0.0);
+            float totalWeight = 0.0;
+            
+            // 3x3 bilateral filter
+            for (int x = -1; x <= 1; x++) {
+                for (int y = -1; y <= 1; y++) {
+                    vec2 offset = vec2(x, y) * texelSize;
+                    vec2 sampleCoord = coord + offset;
+                    
+                    vec4 sample = texture2D(colortex9, sampleCoord);
+                    float sampleDepth = sample.a; // Cloud depth stored in alpha
+                    
+                    // Spatial weight
+                    float spatialWeight = exp(-dot(offset, offset) * 2.0);
+                    
+                    // Depth weight to avoid bleeding across depth discontinuities
+                    float depthDiff = abs(linearDepth - sampleDepth);
+                    float depthWeight = exp(-depthDiff * 2.0);
+                    
+                    float weight = spatialWeight * depthWeight;
+                    cloudColor += sample * weight;
+                    totalWeight += weight;
+                }
+            }
+            
+            return cloudColor / max(totalWeight, 0.001);
+        #else
+            return cloudSample;
+        #endif
+    }
 #endif
 
 #ifdef PBR_REFLECTIONS
@@ -489,6 +527,8 @@ void main() {
     float cloudLinearDepth = 1.0;
     vec4 clouds = vec4(0.0);
 
+    /*
+
     #ifdef VL_CLOUDS_ACTIVE
         float cloudZCheck = 0.56;
 
@@ -496,6 +536,19 @@ void main() {
             clouds = GetClouds(cloudLinearDepth, skyFade, cameraPosition, playerPos,
                                lViewPos, VdotS, VdotU, dither, auroraBorealis, nightNebula);
 
+            color = mix(color, clouds.rgb, clouds.a);
+        }
+    #endif
+    */
+
+    #ifdef VL_CLOUDS_ACTIVE
+        float cloudZCheck = 0.56;
+
+        if (z0 > cloudZCheck) {
+            // Sample from low-res cloud buffer with upscaling
+            clouds = texture2D(colortex9, texCoord);
+            cloudLinearDepth = clouds.a; // Alpha stores cloud depth
+            
             color = mix(color, clouds.rgb, clouds.a);
         }
     #endif
@@ -567,7 +620,7 @@ void main() {
     normal = normalize(gl_NormalMatrix * gl_Normal);
 
     upVec = normalize(gbufferModelView[1].xyz);
-    sunVec = GetSunVector();
+    sunVec = normalize(sunPosition);
 
     #if defined LIGHTSHAFTS_ACTIVE && (LIGHTSHAFT_BEHAVIOUR == 1 && SHADOW_QUALITY >= 1 || defined END)
         vlFactor = texelFetch(colortex4, ivec2(viewWidth-1, viewHeight-1), 0).r;

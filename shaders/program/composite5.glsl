@@ -9,43 +9,15 @@
 // Query's AWESOME LUTs
 // LUT DEFAULT SHOULD BE 2
 #define Lut_Set                     1           //[1] // technically there should be a 2 for raspberry but ill keep it off for now :3
-    #define Overworld_Lut                5          //[0 1 2 3 4 5 6 7 8 9]
-    #define Nether_Lut                8          //[0 1 2 3 4 5 6 7 8 9]
-    #define End_Lut                 1          //[0 1 2 3 4 5 6 7 8 9]
-    #define GBPreset 18 // [1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32]
 
-#define VIBRANCE 0.65 
 
-// Per-hue saturation multipliers
-#define SAT_RED      0.985
-#define SAT_ORANGE   0.75
-#define SAT_YELLOW   1.00
-#define SAT_GREEN    1.2
-#define SAT_CYAN     1.15
-#define SAT_BLUE     1.1
-#define SAT_MAGENTA  1.00
+#define Overworld_Lut                5          //[0 1 2 3 4 5 6 7 8 9]
+#define Nether_Lut                8          //[0 1 2 3 4 5 6 7 8 9]
+#define End_Lut                 1          //[0 1 2 3 4 5 6 7 8 9]
 
-#define HUE_BAND_WIDTH   0.08
-#define HUE_BAND_SOFT    2.00
+#define GBPreset 18 // [1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32]
 
-#define TONEMAP
-#define EXPOSURE 0.5 //[0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0]
-#define SATURATION 0.8 //[0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0]
-#define CONTRAST 0.999 //[0.985 0.986 0.987 0.988 0.989 0.990 0.991 0.992 0.993 0.994 0.995 0.996 0.997 0.998 0.999]
-#define GAMMA 1.9 //[0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0]
-#define BLACK_DEPTH 0.00001
-#define WHITE_CLIP 1.0
-#define DESATURATION_AMOUNT 0.35
-
-#define RESATURATION_SATURATION 1.0
-#define RESATURATION_CONTRAST 1.0
-#define RESATURATION_DESATURATION_AMOUNT 0.35
-
-#define PURKINJE
-#define MIN_EXPOSURE     0.1    // darkest allowed exposure
-#define BASE_EXPOSURE    1.0    // base exposure multiplier (normal brightness)
-#define MAX_EXPOSURE     5.0    // brightest allowed exposure
-#define EXPOSURE_CURVE   0.8    // curve < 1.0 brightens dark scenes more
+const float eyeBrightnessHalflife = 1.0f;
 
 //////////Fragment Shader//////////Fragment Shader//////////Fragment Shader//////////
 #ifdef FRAGMENT_SHADER
@@ -70,31 +42,62 @@ vec2 view = vec2(viewWidth, viewHeight);
 #endif
 
 //Common Functions//
+void DoBSLTonemap(inout vec3 color) {
+    color = T_EXPOSURE * color;
+    color = color / pow(pow(color, vec3(TM_WHITE_CURVE)) + 1.0, vec3(1.0 / TM_WHITE_CURVE));
+    color = pow(color, mix(vec3(T_LOWER_CURVE), vec3(T_UPPER_CURVE), sqrt(color)));
 
-float getAverageSceneBrightness() {
-    vec3 color = textureLod(colortex0, vec2(0.5), 8).rgb;
-    float luminance = dot(color, vec3(0.2126, 0.7152, 0.0722));
-    luminance = max(luminance, 0.0001); // avoid log(0)
+    color = pow(color, vec3(1.0 / 2.2));
+}
 
-    float exposureMin = 0.0001;
-    float exposureMax = 0.1;
+void DoBSLColorSaturation(inout vec3 color) {
+    float grayVibrance = (color.r + color.g + color.b) / 3.0;
+    float graySaturation = grayVibrance;
+    if (T_SATURATION < 1.00) graySaturation = dot(color, vec3(0.299, 0.587, 0.114));
 
-    float normalizedLum = clamp((luminance - exposureMin) / (exposureMax - exposureMin), 0.0, 1.0);
+    float mn = min(color.r, min(color.g, color.b));
+    float mx = max(color.r, max(color.g, color.b));
+    float sat = (1.0 - (mx - mn)) * (1.0 - mx) * grayVibrance * 5.0;
+    vec3 lightness = vec3((mn + mx) * 0.5);
 
-    return exp(mix(log(exposureMin), log(exposureMax), normalizedLum));
+    color = mix(color, mix(color, lightness, 1.0 - T_VIBRANCE), sat);
+    color = mix(color, lightness, (1.0 - lightness) * (2.0 - T_VIBRANCE) / 2.0 * abs(T_VIBRANCE - 1.0));
+    color = color * T_SATURATION - graySaturation * (T_SATURATION - 1.0);
 }
 
 
-vec3 applyPurkinjeEffect(vec3 color, float sceneBrightness) {
-    float shift = smoothstep(0.0, 0.6, 0.5 - sceneBrightness) * 0.5;
+vec3 AcesTonemap(vec3 color) {
+    // === Adjustable parameters ===
 
-    vec3 purkinje = vec3(
-        mix(1.0, 0.6, shift),
-        mix(1.0, 0.8, shift),
-        mix(1.0, 1.2, shift) 
+    float exposure = 0.45;   // >1.0 = brighter, <1.0 = darker
+    float saturation = 1.05; // >1.0 = more vibrant, <1.0 = more gray
+    float gamma = 2.2;      // sRGB standard gamma
+    float contrast = 0.999;   // >1.0 = higher contrast, <1.0 = flatter
+
+    color *= exposure;
+
+    const mat3 m1 = mat3(
+        0.59719, 0.07600, 0.02840,
+        0.35458, 0.90834, 0.13383,
+        0.04823, 0.01566, 0.83777
+    );
+    const mat3 m2 = mat3(
+        1.60475, -0.10208, -0.00327,
+        -0.53108,  1.10813, -0.07276,
+        -0.07367, -0.00605,  1.07602
     );
 
-    return color * purkinje;
+    vec3 v = m1 * color;
+    vec3 a = v * (v + 0.0245786) - 0.000090537;
+    vec3 b = v * (0.983729 * v + 0.4329510) + 0.238081;
+    vec3 tonemapped = m2 * (a / b);
+
+    float luminance = dot(tonemapped, vec3(0.2126, 0.7152, 0.0722));
+    tonemapped = mix(vec3(luminance), tonemapped, saturation);
+
+    tonemapped = mix(vec3(0.5), tonemapped, contrast);
+
+    return pow(clamp(tonemapped, 0.0, 1.0), vec3(1.0 / gamma));
 }
 
 #define clamp01(x) clamp(x, 0.0, 1.0)
@@ -129,9 +132,6 @@ void OverworldLookup(inout vec3 color) {
     newColor1 = texture2D(colortex8, texPos.xy * correctGrid[0] + correctGrid[1]).rgb;
     newColor2 = texture2D(colortex8, texPos.zw * correctGrid[0] + correctGrid[1]).rgb;
     #endif
-
-    //#if Overworld_Lut == 2
-    
     
     color = mix(newColor1, newColor2, fract(blueColor));
 }
@@ -256,111 +256,6 @@ void EndLookup(inout vec3 color) {
     #include "/lib/misc/lensFlare.glsl"
 #endif
 
-vec3 ApplyVibrance(vec3 color, float vibranceAmount) {
-    float luma = dot(color, vec3(0.2126, 0.7152, 0.0722));
-
-    vec3 diff = color - vec3(luma);
-
-    return color + diff * vibranceAmount;
-}
-
-vec3 HableFilmic(vec3 x, float A, float B, float C, float D, float E, float F) {
-    // ((x*(A*x + C*B) + D*E) / (x*(A*x + B) + D*F)) - E/F
-    return ((x * (A * x + C * B) + D * E) / (x * (A * x + B) + D * F)) - E / F;
-}
-
-float HableWhiteScale(float W, float A, float B, float C, float D, float E, float F) {
-    float w = ((W * (A * W + C * B) + D * E) / (W * (A * W + B) + D * F)) - E / F;
-    return 1.0 / max(w, 1e-6);
-}
-
-vec3 UnchartedTonemap(vec3 color) {
-
-    #ifdef PURKINJE
-        float sceneBrightness = getAverageSceneBrightness();
-        vec3  purkinje       = applyPurkinjeEffect(color, sceneBrightness);
-        color = max(purkinje * EXPOSURE - BLACK_DEPTH, 0.0);
-    #else
-        color = max(color / getAverageSceneBrightness() * EXPOSURE - BLACK_DEPTH, 0.0);
-    #endif
-
-    const float A = 0.22;
-    const float B = 0.30;
-    const float C = 0.10;
-    const float D = 0.20;
-    const float E = 0.01;
-    const float F = 0.30;
-
-    const float W = 11.2;
-
-    vec3  c      = HableFilmic(color, A, B, C, D, E, F);
-    float whiteS = HableWhiteScale(W, A, B, C, D, E, F);
-    c *= whiteS;
-
-    if (WHITE_CLIP < 1.0) c = min(c, vec3(WHITE_CLIP));
-
-    c = mix(vec3(0.5), c, CONTRAST);
-
-    float luma = dot(c, vec3(0.2126, 0.7152, 0.0722));
-    c = mix(vec3(luma), c, SATURATION);
-
-    c = pow(clamp(c, 0.0, 1.0), vec3(1.0 / GAMMA));
-
-    return c;
-}
-
-float hueDist(float h, float center){
-    float d = abs(h - center);
-    return min(d, 1.0 - d);
-}
-
-float bandWeight(float h, float center, float width, float softness){
-    float x = clamp(1.0 - pow(hueDist(h, center) / max(width, 1e-6), softness), 0.0, 1.0);
-    return x * x * (3.0 - 2.0 * x);
-}
-
-const float H_RED     = 0.000;
-const float H_ORANGE  = 0.083; 
-const float H_YELLOW  = 0.167; 
-const float H_GREEN   = 0.333; 
-const float H_CYAN    = 0.500; 
-const float H_BLUE    = 0.667;
-const float H_MAGENTA = 0.833; 
-
-vec3 BoostHueSaturationBands(vec3 rgb){
-    vec3 hsv = rgb2hsv(rgb);
-    float h  = hsv.x;
-    float s  = hsv.y;
-
-    float wR = bandWeight(h, H_RED,     HUE_BAND_WIDTH, HUE_BAND_SOFT);
-    float wO = bandWeight(h, H_ORANGE,  HUE_BAND_WIDTH, HUE_BAND_SOFT);
-    float wY = bandWeight(h, H_YELLOW,  HUE_BAND_WIDTH, HUE_BAND_SOFT);
-    float wG = bandWeight(h, H_GREEN,   HUE_BAND_WIDTH, HUE_BAND_SOFT);
-    float wC = bandWeight(h, H_CYAN,    HUE_BAND_WIDTH, HUE_BAND_SOFT);
-    float wB = bandWeight(h, H_BLUE,    HUE_BAND_WIDTH, HUE_BAND_SOFT);
-    float wM = bandWeight(h, H_MAGENTA, HUE_BAND_WIDTH, HUE_BAND_SOFT);
-
-    float totalW = wR + wO + wY + wG + wC + wB + wM;
-    float blendedMul = 1.0;
-    if (totalW > 1e-3) {
-        blendedMul =
-            (wR * SAT_RED +
-             wO * SAT_ORANGE +
-             wY * SAT_YELLOW +
-             wG * SAT_GREEN +
-             wC * SAT_CYAN +
-             wB * SAT_BLUE +
-             wM * SAT_MAGENTA) / totalW;
-    }
-
-    if (s > 0.05) {
-        float boosted = clamp(s * blendedMul, 0.0, 1.0);
-        hsv.y = mix(s, boosted, s);
-    }
-
-    return hsv2rgb(hsv);
-}
-
 //Program//
 void main() {
     vec3 color = texture2D(colortex0, texCoord).rgb;
@@ -371,7 +266,7 @@ void main() {
     // Calculate noise and sample texture
     float noise = (fract(sin(dot(texCoord * sin(frameTimeCounter) + 1.0, vec2(12.9898,78.233) * 2.0)) * 43758.5453));
 
-    #define FILM_GRAIN_I 0  // [0 1 2 3 4 5 6 7 8 9 10]
+    #define FILM_GRAIN_I 2  // [0 1 2 3 4 5 6 7 8 9 10]
     
     color.rgb *= max(noise, 1.0 - (float(FILM_GRAIN_I) / 10));
     color *= 1.3;
@@ -416,17 +311,14 @@ void main() {
         color *= 0.01;
     #endif
 
+    //float filmGrain = dither;
+    //color += vec3((filmGrain - 0.25) / 128.0);
+
+    //DoBSLTonemap(color);
     float ignored = dot(color * vec3(0.15, 0.50, 0.35), vec3(0.1, 0.65, 0.6));
     float desaturated = dot(color, vec3(0.15, 0.50, 0.35));
-    color = mix(color, vec3(ignored), exp2((-32.0) * desaturated));
-
-    #ifdef TONEMAP
-        //vec3 tonemappedColor = ACESTonemap(color);
-        //color = ResaturatedTonemap(tonemappedColor);
-        color = UnchartedTonemap(color);
-        color = ApplyVibrance(color, VIBRANCE);
-        color = BoostHueSaturationBands(color);
-    #endif
+    color = mix(color, vec3(ignored), exp2((-24) * desaturated));
+    color = AcesTonemap(color);
 
     #if defined GREEN_SCREEN_LIME || SELECT_OUTLINE == 4
         int materialMaskInt = int(texelFetch(colortex6, texelCoord, 0).g * 255.1);
@@ -461,9 +353,6 @@ void main() {
     #ifdef END
         EndLookup(color);
     #endif
-
-    float filmGrain = dither;
-    //color += vec3((filmGrain - 0.25) / 128.0);
 
     /* DRAWBUFFERS:3 */
     gl_FragData[0] = vec4(color, 1.0);

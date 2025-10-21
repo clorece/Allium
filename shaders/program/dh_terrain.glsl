@@ -46,21 +46,6 @@ mat4 gbufferProjectionInverse = dhProjectionInverse;
 
 //Common Functions//
 
-/*
-#ifndef CREPUSCULAR_RAYS
-    float Noise3D(vec3 p) {
-        p.z = fract(p.z) * 128.0;
-        float iz = floor(p.z);
-        float fz = fract(p.z);
-        vec2 a_off = vec2(23.0, 29.0) * (iz) / 128.0;
-        vec2 b_off = vec2(23.0, 29.0) * (iz + 1.0) / 128.0;
-        float a = texture2D(noisetex, p.xy + a_off).r;
-        float b = texture2D(noisetex, p.xy + b_off).r;
-        return mix(a, b, fz);
-    }
-#endif
-*/
-
 //Includes//
 #include "/lib/util/spaceConversion.glsl"
 #include "/lib/util/dither.glsl"
@@ -141,6 +126,7 @@ void main() {
                worldGeoNormal, lmCoordM, noSmoothLighting, noDirectionalShading, noVanillaAO,
                centerShadowBias, subsurfaceMode, smoothnessG, highlightMult, emission);
 
+    color *= 0.85;
     /* DRAWBUFFERS:0 */
     gl_FragData[0] = color;
 }

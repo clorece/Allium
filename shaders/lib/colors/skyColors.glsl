@@ -2,7 +2,7 @@
     #define INCLUDE_SKY_COLORS
 
     #ifdef OVERWORLD
-        vec3 skyColorSqrt = sqrt(skyColor);
+        vec3 skyColorSqrt = sqrt(vec3(0.35, 0.55, 1.0));
 
         float invRainStrength2 = (1.0 - rainStrength) * (1.0 - rainStrength);
         vec3  skyColorM  = mix(max(skyColorSqrt, vec3(0.58, 0.68, 0.98)),
@@ -36,7 +36,7 @@
         vec3 nmscWeatherM = vec3(-0.10, -0.40, -0.60) + vec3(0.00, 0.07, 0.14) * noonFactor;
         vec3 ndscWeatherM = vec3(-0.15, -0.30, -0.42) + vec3(0.00, 0.03, 0.09) * noonFactor;
 
-        vec3 noonUpSkyColor     = pow(skyColorM, vec3(2.6));
+        vec3 noonUpSkyColor     = pow(skyColorM, vec3(2.2));
 
         vec3 noonMiddleSkyColor = skyColorM * (vec3(1.10, 1.18, 1.36)
                                    + rainFactor * (nmscWeatherM + nmscRainM + nmscSnowM + nmscDryM))
@@ -48,13 +48,13 @@
         vec3 sunsetUpSkyColor     = skyColorM2 * (vec3(0.95, 0.60, 0.40)
                                               + vec3(0.10, 0.20, 0.35) * rainFactor2);
 
-        vec3 sunsetMiddleSkyColor = skyColorM2 * (vec3(1.90, 1.12, 0.88) 
+        vec3 sunsetMiddleSkyColor = skyColorM2 * (vec3(1.66, 1.12, 0.88) 
                                               + vec3(0.12, 0.20, -0.05) * rainFactor2);
 
-        vec3 sunsetDownSkyColorP  = vec3(1.65, 0.78, 0.32) 
+        vec3 sunsetDownSkyColorP  = vec3(1.65, 0.58, 0.32) 
                                   - vec3(0.80, 0.30, 0.00) * rainFactor;
-        vec3 sunsetDownSkyColor   = sunsetDownSkyColorP * 0.50
-                                  + 0.24 * sunsetMiddleSkyColor;
+        vec3 sunsetDownSkyColor   = sunsetDownSkyColorP * 0.24
+                                  + 0.5 * sunsetMiddleSkyColor;
 
         vec3 dayUpSkyColor     = mix(noonUpSkyColor,    sunsetUpSkyColor,    invNoonFactor2);
         vec3 dayMiddleSkyColor = mix(noonMiddleSkyColor,sunsetMiddleSkyColor,invNoonFactor2);

@@ -8,6 +8,8 @@ float shadowTimeVar2 = shadowTimeVar1 * shadowTimeVar1;
 float shadowTime = shadowTimeVar2 * shadowTimeVar2;
 float farMinusNear = far - near;
 
+vec3 moonVec = normalize(-sunPosition);
+
 #ifdef LIGHTSHAFTS_ACTIVE
     float vlTime = min(abs(SdotU) - 0.05, 0.15) / 0.15;
 #endif

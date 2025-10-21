@@ -34,6 +34,7 @@ vec3 highlightColor = normalize(pow(lightColor, vec3(0.37))) * (0.3 + 1.5 * sunV
 
 // start of cloud shadow code, there should be more optimal/cheap ways to do this, if anyone wants to improve this, let me know.
 
+#ifdef CLOUD_SHADOWS
 #ifndef PI
 #define PI 3.141592653589793
 #endif
@@ -43,75 +44,118 @@ const float sunAngularSize = 0.533333;
 #endif
 const float SUN_ANGULAR_RADIUS_RAD = (sunAngularSize * 0.5) * (PI / 180.0);
 
+// Precompute reciprocal to avoid division
+const float INV_SHADOW_DISTANCE = 1.0 / max(shadowDistance, 1.0);
+const float EPSILON = 1e-4;
 
 int CloudShadowStepsLOD(float distCamToPoint) {
-    int base = min(2 + 2, 4);
-
-    float denom = max(shadowDistance, 1.0);
-    float t = clamp(distCamToPoint / denom, 0.0, 1.0);
-
-    int reduce = (t > 0.66) ? 1 : 0;
-    return max(2, base - reduce);
+    // Branchless LOD selection using step function
+    float t = clamp(distCamToPoint * INV_SHADOW_DISTANCE, 0.0, 1.0);
+    return 3 + int(step(t, 0.66));
 }
 
 float LightRayCloudShadow(vec3 worldPos, vec3 cameraPos, vec3 sunDir, float dither)
 {
-    float y0 = float(lowerLayerAlt);
-    float h  = lowerLayerStretch;
-
+    float y0 = float(cumulusLayerAlt);
+    float h  = cumulusLayerStretch;
     float ry = sunDir.y;
-    if (abs(ry) < 1e-4) return 0.0;
-
-    float tToTop    = ((y0 + h) - worldPos.y) / ry;
-    float tToBottom = ((y0 - h) - worldPos.y) / ry;
+    
+    // Early exit with single comparison
+    if (abs(ry) < EPSILON) return 0.0;
+    
+    float invRy = 1.0 / ry;
+    float yTop = y0 + h;
+    float yBot = y0 - h;
+    
+    // Optimized intersection calculation
+    float tToTop    = (yTop - worldPos.y) * invRy;
+    float tToBottom = (yBot - worldPos.y) * invRy;
     float tNear = min(tToTop, tToBottom);
     float tFar  = max(tToTop, tToBottom);
-    float tEnter = (tNear > 0.0) ? tNear : ((tFar > 0.0) ? 0.0 : -1.0);
-    if (tEnter < 0.0) return 0.0;
-
-    float thickness = max(tFar - max(tEnter, 0.0), 0.0);
-    if (thickness <= 1e-4) return 0.0;
+    
+    // Combined early exit
+    if (tFar <= 0.0) return 0.0;
+    
+    float tEnter = max(tNear, 0.0);
+    float thickness = tFar - tEnter;
+    if (thickness <= EPSILON) return 0.0;
 
     int steps = CloudShadowStepsLOD(distance(cameraPos, worldPos));
-    float stepLen = thickness / float(steps);
-    vec3  p = worldPos + sunDir * (tEnter + stepLen * (0.25 + 0.5 * dither));
+    float invSteps = 1.0 / float(steps);
+    float stepLen = thickness * invSteps;
+    
+    // Optimized starting position - fused multiply-add
+    vec3 stepVec = sunDir * stepLen;
+    vec3 p = worldPos + sunDir * tEnter + stepVec * (0.25 + 0.5 * dither);
 
     float sum = 0.0;
-
-    int sampleCount = 4;
-
-    for (int i=0; i < sampleCount; ++i) {
-        if (i >= steps) break;
-        float dens = GetLowerLayerCloud(p, steps, lowerLayerAlt, length(p.xz - cameraPos.xz), p.y - y0, 0.6, 1.0, LOWER_CLOUD_LAYER_SIZE_MULT_M);
-
-        if (dens < 0.05) { p += sunDir * stepLen; continue; }
-        sum += dens;
-        p   += sunDir * stepLen;
+    vec2 xzOffset = p.xz - cameraPos.xz;
+    
+    // Manual loop unrolling for 4 iterations (max case)
+    // Iteration 0
+    {
+        float dist2D = length(xzOffset);
+        float dens = GetCumulusCloud(p, steps, cumulusLayerAlt, dist2D, 
+                                       p.y - y0, 0.4, 1.0, 
+                                       CUMULUS_CLOUD_SIZE_MULT);
+        sum += dens * step(0.05, dens);
+        p += stepVec;
+        xzOffset += stepVec.xz;
+    }
+    
+    // Iteration 1
+    if (steps > 1) {
+        float dist2D = length(xzOffset);
+        float dens = GetCumulusCloud(p, steps, cumulusLayerAlt, dist2D, 
+                                       p.y - y0, 0.4, 1.0, 
+                                       CUMULUS_CLOUD_SIZE_MULT);
+        sum += dens * step(0.05, dens);
+        p += stepVec;
+        xzOffset += stepVec.xz;
+    }
+    
+    // Iteration 2
+    if (steps > 2) {
+        float dist2D = length(xzOffset);
+        float dens = GetCumulusCloud(p, steps, cumulusLayerAlt, dist2D, 
+                                       p.y - y0, 0.4, 1.0, 
+                                       CUMULUS_CLOUD_SIZE_MULT);
+        sum += dens * step(0.05, dens);
+        p += stepVec;
+        xzOffset += stepVec.xz;
+    }
+    
+    // Iteration 3
+    if (steps > 3) {
+        float dist2D = length(xzOffset);
+        float dens = GetCumulusCloud(p, steps, cumulusLayerAlt, dist2D, 
+                                       p.y - y0, 0.4, 1.0, 
+                                       CUMULUS_CLOUD_SIZE_MULT);
+        sum += dens * step(0.05, dens);
     }
 
-    float occ = clamp(sum / float(steps), 0.0, 1.0);
-    float sunUp = max(dot(sunDir, upVec), 0.0);
-    occ += invNoonFactor * 0.2;
-
-    return occ;
+    // Simplified occlusion calculation
+    return clamp(sum * invSteps + invNoonFactor * 0.2, 0.0, 1.0);
 }
 
-
-void ApplyCloudShadows(vec3 worldPos, vec3 cameraPos, float dither, int subsurfaceMode, inout vec3 shadowMult)
+void ApplyCloudShadows(vec3 worldPos, vec3 cameraPos, float dither, 
+                       int subsurfaceMode, inout vec3 shadowMult)
 {
-
     vec3 sunDir = normalize(mat3(gbufferModelViewInverse) * lightVec);
-    float occ = LightRayCloudShadow(worldPos, cameraPos, sunDir, dither) * 3.0;
-        //if(subsurfaceMode == 3) occ = LightRayCloudShadow(worldPos, cameraPos, sunDir, dither) * 6.0;
-
+    float occ = LightRayCloudShadow(worldPos, cameraPos, sunDir, dither) * 4.0;
+    
+    // Optimized shading calculation with branchless power
     float k = clamp(CLOUD_SHADING_STRENGTH, 0.0, 1.0);
-    float lightMul = mix(1.0, 1.0 - occ, 0.5);
-    if (k > 1.0) lightMul = pow(lightMul, 1.0 + min(k - 1.0, 3.0));
+    float lightMul = 1.0 - (occ * 0.5);
+    float powerFactor = 1.0 + min(max(k - 1.0, 0.0), 3.0);
+    
+    // Branchless: use mix to avoid branching on power computation
+    // When k <= 1.0, powerFactor = 1.0, so pow(x, 1.0) = x
+    lightMul = pow(lightMul, powerFactor);
 
-    shadowMult *= vec3(lightMul);
-    shadowMult = max(shadowMult, vec3(0.0));
+    shadowMult = max(shadowMult * lightMul, vec3(0.0));
 }
-
+#endif
 //Lighting//
 void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 viewPos, float lViewPos, vec3 geoNormal, vec3 normalM, float dither,
                 vec3 worldGeoNormal, vec2 lightmap, bool noSmoothLighting, bool noDirectionalShading, bool noVanillaAO,
@@ -324,7 +368,7 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
                                     #endif
                                 } else if (subsurfaceMode == 2) {
                                     leaves = true;
-                                    offset = 0.001235 * lightmapYM + 0.0009765;
+                                    offset = 0.005235 * lightmapYM + 0.0009765;
                                     shadowPos.z -= 0.000175 * lightmapYM;
                                     subsurfaceHighlight = lightFactor * 0.6;
                                     #ifndef SHADOW_FILTERING

@@ -48,135 +48,96 @@
     }
     
 
-    // I CANT DO THIS ANYMORE
-    // https://www.shadertoy.com/view/XsKfWz
-    const float R0   = 6360e3;
-    const float Ra   = 6380e3;
-    const float HR   = 8e3;
-    const float HM   = 1.2e3;
-    const float Ha   = Ra - R0;
-    const vec3  bR   = vec3(58e-7, 135e-7, 331e-7);
-    const vec3  bMs  = vec3(2e-5);
-    const vec3  bMe  = bMs * 1.0;
-    const float SunI = 200.0;
-    const float seaLevel = 70.0;
+    // helpers
+#define saturate(x) clamp((x), 0.0, 1.0)
+#define PI 3.14159265359
 
-    const float R_PHASE = 0.0597;
-    const float M_PHASE = 0.0196; 
-    float hgDen(float mu) { return pow(1.58 - 1.52 * mu, 1.5); }
+// Simple Rayleigh phase
+float rayleighPhase(float mu) { return 3.0/(16.0*PI) * (1.0 + mu*mu); }
+float hgPhase(float cosTheta, float g) {
+    float g2 = g * g;
+    return (1.0 - g2) / (4.0 * 3.14159265359 * pow(1.0 + g2 - 2.0 * g * cosTheta, 1.5));
+}
 
-    float safe_rcp(float x)  { return 1.0 / max(x, 1e-4); }
-    float saturate(float x)  { return clamp(x, 0.0, 1.0); }
-
-    // this pmo
-    float tauFlat(float H, float h, float L, float mu) {
-        float em = exp(-h / H);
-        float amu = abs(mu);
-        if (amu < 1e-4) {
-            return L * em;
-        }
-        float k = mu / H;
-        return (em / k) * (1.0 - exp(-k * L));
-    }
-
-    // please help
-    float tauToTOA(float H, float h, float muSunZ)
-    {
-        const float eps = 0.015;
-
-        float hh = clamp(h, 0.0, Ha - 1.0);
-        float mu = clamp(muSunZ, -1.0, 1.0);
-        float muEff = sqrt(mu*mu + eps*eps);
-        float Ls = (Ha - hh) / muEff;
-        float tau = tauFlat(H, hh, Ls, muEff);
-        float below = smoothstep(-0.20, 0.0, -mu);
-
-        tau += 80.0 * below;                    
-
-        return tau;
-    }
-
-    // im going insane
-    vec3 GetSky(float VdotU, float VdotS, float dither, bool doGlare, bool doGround)
+// Spectral coefficients (normalized 1/λ^4 for R,G,B)
+vec3 rayleighRGB()
 {
-    vec3 Up  = normalize(upVec);
-    vec3 Sun = normalize(sunVec);
+    // wavelengths (nm)
+    const vec3 nm = vec3(680.0, 550.0, 440.0);
+    vec3 inv = 1.0 / (nm*nm*nm*nm);
+    return inv / dot(inv, vec3(1.0)); // normalize
+}
 
-    float muV  = clamp(VdotU, -1.0, 1.0);
-    float muS  = clamp(VdotS, -1.0, 1.0);
-    float cameraHeight = cameraPosition.y;
+// Approx ozone cross-section (Chappuis band 450–800nm; strongest in G/Y)
+// Coeffs are relative; we just need the shape.
+vec3 ozoneXS()
+{
+    // more absorption in G, medium in R, low in B
+    return vec3(0.35, 1.0, 0.15);
+}
 
-    float muV_soft = max(0.05, muV + 0.15);
-    float L        = Ha * safe_rcp(muV_soft);
+vec3 GetSky(float VdotU, float VdotS, float dither, bool doGlare, bool doGround)
+{
+    float nightFactorSqrt2 = sqrt2(nightFactor);
+    float nightFactorM = sqrt2(nightFactorSqrt2) * 0.4;
+    float VdotSM1 = pow2(max(VdotS, 0.0));
+    float VdotSM2 = pow2(VdotSM1);
+    float VdotSM3 = pow2(pow2(max(-VdotS, 0.0)));
+    float VdotSML = sunVisibility > 0.5 ? VdotS : -VdotS;
 
-    const int STEPS = 2;
-    float horizonW = saturate(1.0 - muV);
-    float tExp = mix(1.0, 2.0, horizonW);
+    float VdotUmax0  = max(VdotU, 0.0);
+    float VdotUmax0M = 1.0 - VdotUmax0*VdotUmax0;
 
-    vec3 I_R = vec3(0.0);
-    vec3 I_M = vec3(0.0);
+    // base colors
+    vec3 upColor     = mix(nightUpSkyColor * (1.5 - 0.5*nightFactorSqrt2 + nightFactorM*VdotSM3*1.5),
+                           dayUpSkyColor, sunFactor);
+    vec3 middleColor = mix(nightMiddleSkyColor * (3.0 - 2.0*nightFactorSqrt2),
+                           dayMiddleSkyColor * 0.8 * (1.0 + VdotSM2*0.3), sunFactor);
+    vec3 downColor   = mix(nightDownSkyColor, dayDownSkyColor * 0.75, (sunFactor + sunVisibility)*0.5);
 
-    float muPhase = muS;
-    vec3 phaseR   = vec3(R_PHASE * (1.0 + muPhase * muPhase));
-    float mieDen  = hgDen(muPhase);
-    vec3 phaseM   = vec3(M_PHASE / mieDen);
+    float VdotUM1 = pow2(1.0 - VdotUmax0);
+          VdotUM1 = pow(VdotUM1, 1.0 - VdotSM2*0.4);
+          VdotUM1 = mix(VdotUM1, 1.0, rainFactor2*0.15);
+    vec3 finalSky = mix(upColor, middleColor, VdotUM1);
 
-    for (int i = 0; i < STEPS; ++i) {
-        float t0   = pow(float(i)   / float(STEPS), tExp);
-        float t1   = pow(float(i+1) / float(STEPS), tExp);
-        float sMid = L * 0.5 * (t0 + t1);
-        float ds   = L * (t1 - t0);
+    // sunset band
+    float VdotUM2 = pow2(1.0 - abs(VdotU + 0.08));
+          VdotUM2 = VdotUM2*VdotUM2*(3.0 - 2.0*VdotUM2);
+          VdotUM2 *= (0.7 - nightFactorM + VdotSM1*(0.3 + nightFactorM)) * invNoonFactor * sunFactor;
+    finalSky = mix(finalSky, lightColor*(1.0 + VdotSM1*0.3), VdotUM2*invRainFactor);
 
-        float h  = max(0.0, sMid * muV + cameraHeight - seaLevel);
+    // ground scatter blend
+    float VdotUM3 = min(max0(-VdotU + 0.125)/0.25, 1.0);
+          VdotUM3 = smoothstep1(VdotUM3);
+    vec3 scatteredGroundMixer = vec3(VdotUM3 * VdotUM3, sqrt1(VdotUM3), sqrt3(VdotUM3));
+         scatteredGroundMixer = mix(vec3(VdotUM3), scatteredGroundMixer, 0.75 - 0.5*rainFactor);
+    finalSky = mix(finalSky, pow(downColor, vec3(1.5)), scatteredGroundMixer) * 1.5;
+    //finalSky += invNoonFactor2 * 0.1;
 
-        float rhoR = exp(-h / HR);
-        float rhoM = exp(-h / HM);
+    if (doGround) finalSky *= smoothstep1(pow2(1.0 + min(VdotU, 0.0)));
 
-        float tauVR = tauFlat(HR, seaLevel, sMid, muV);
-        float tauVM = tauFlat(HM, seaLevel, sMid, muV);
-        vec3  Tview = exp(-bR * tauVR - bMe * tauVM);
+    if (isEyeInWater == 1) finalSky = mix(finalSky*3.0, waterFogColor, VdotUmax0M);
 
-        float tauSR = tauToTOA(HR, h, dot(Sun, Up));
-        float tauSM = tauToTOA(HM, h, dot(Sun, Up));
-        vec3  Tsun  = exp(-bR * tauSR - bMe * tauSM);
-
-        vec3 A = Tview * Tsun;
-        I_R += A * rhoR * ds;
-        I_M += A * rhoM * ds;
-    }
-
-    float tauR_full = tauFlat(HR, seaLevel, L, muV);
-    float tauM_full = tauFlat(HM, seaLevel, L, muV);
-    vec3  transV    = exp(-bR * tauR_full - bMe * tauM_full);
-    vec3  col       = vec3(0.0) * transV;
-
-    vec3 rayleigh = I_R * bR * phaseR * 1.0;
-    vec3 mie      = I_M * bMs * phaseM * lightColor * 2.5;
-    col += SunI * (rayleigh + mie) + lightColor;
-
-    if (doGround) {
-        col *= pow2(pow2(1.0 + min(VdotU, 0.0)));
-    }
-
+    
     if (doGlare) {
-        float glare = pow(max(0.0, muS), 64.0);
-        col += lightColor * glare * 2.0;
+        float glareScatter = 4.0*(2.0 - clamp01(VdotS*1000.0));
+        float VdotSM4 = pow(abs(VdotS), glareScatter);
+        float visfactor = 0.075;
+        float glare = visfactor/(1.0 - (1.0 - visfactor)*VdotSM4) - visfactor;
+        glare *= 0.5 + pow2(noonFactor)*1.2;
+        glare *= 1.0 - rainFactor*0.5;
+        float glareWaterFactor = isEyeInWater * sunVisibility;
+        vec3 glareColor = mix(vec3(0.38,0.4,0.5)*0.7, vec3(0.5), sunVisibility);
+             glareColor += glareWaterFactor*vec3(7.0);
+        finalSky += glare*shadowTime*lightColor;
     }
 
-    // --- NIGHT / BELOW-HORIZON OVERRIDE ------------------------------
-    // Make the sky below the horizon equal to lightColor (smooth transition).
-    
-    const float HSOFT = 0.1;                // ~1.7° softness around horizon
-    float below = smoothstep(0.0, HSOFT, -muV); // 0 above, 1 deeper below
-    col = mix(col, ambientColor * 0.5 + lightColor * 5.0, below);       // ← added
-    
-    // ------------------------------------------------------------------
+    #ifdef CAVE_FOG
+        finalSky = mix(finalSky, caveFogColor, GetCaveFactor()*VdotUmax0M);
+    #endif
 
-    // remove the nightFactor hack divide
-     col /= (1.0 + nightFactor * 32.0);    // ← removed
-
-    col += (dither - 0.5) / 32.0;
-    col  = sqrt(max(col, 0.0));
-    return max(col, 0.0);
+    finalSky.r *= 0.80;
+    finalSky += max((dither - 0.5), 0.0)/32.0;
+    return pow(finalSky * 1.75, vec3(1.0 / 1.5));
 }
 #endif //INCLUDE_SKY

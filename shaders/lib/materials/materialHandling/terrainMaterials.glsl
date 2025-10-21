@@ -1,3 +1,4 @@
+
 if (mat >= 10000) {
 if (mat < 11024) {
     if (mat < 10512) {
@@ -2473,6 +2474,7 @@ if (mat < 11024) {
                                 }
                             } else {
                                 if (mat < 10892) { // Hay Block
+                                    subsurfaceMode = 3;
                                     smoothnessG = pow2(color.r) * 0.5;
                                     highlightMult *= 1.5;
                                     smoothnessD = float(color.r > color.g * 2.0) * 0.3;
