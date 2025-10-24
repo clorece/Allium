@@ -12,10 +12,10 @@
 #define CUMULONIMBUS_CLOUD_COVERAGE 1.5
 
 #define CUMULUS_CLOUD_MULT 0.4
-#define CUMULUS_CLOUD_SIZE_MULT 2.25
+#define CUMULUS_CLOUD_SIZE_MULT 4.25
 #define CUMULUS_CLOUD_SIZE_MULT_M (200.0 * 0.01)
 #define CUMULUS_CLOUD_GRANULARITY 0.4
-#define CUMULUS_CLOUD_ALT 180
+#define CUMULUS_CLOUD_ALT 230
 #define CUMULUS_CLOUD_HEIGHT 128.0
 #define CUMULUS_CLOUD_COVERAGE 1.5
 
@@ -23,28 +23,29 @@
 #define ALTOCUMULUS_CLOUD_SIZE_MULT 52.0
 #define ALTOCUMULUS_CLOUD_SIZE_MULT_M (200.0 * 0.01)
 #define ALTOCUMULUS_CLOUD_GRANULARITY 0.4
-#define ALTOCUMULUS_CLOUD_ALT 500
+#define ALTOCUMULUS_CLOUD_ALT 340
 #define ALTOCUMULUS_CLOUD_HEIGHT 92.0
 #define ALTOCUMULUS_CLOUD_COVERAGE 1.5
 
 // ---------------------- LIGHTING & QUALITY ---------------------- //
 
 #define CUMULONIMBUS_STEP_QUALITY 2.5
-#define CUMULUS_STEP_QUALITY 3.0
+#define CUMULUS_QUALITY 0.5 // [0.1 0.25 0.5 0.75 1.0]
 #define ALTOCUMULUS_STEP_QUALITY 2.0
-#define CLOUD_SHADING_QUALITY 30
-#define CLOUD_SHADING_STRENGTH 9.0
+#define CLOUD_LIGHTING_QUALITY 7 // [7 14 30]
 #define CLOUD_RENDER_DISTANCE 1024
-#define CLOUD_AO_STRENGTH 0.6
-#define CLOUD_AO_SAMPLES 6
-#define CLOUD_MULTISCATTER 2.0
-#define CLOUD_MULTISCATTER_OCTAVES 3
+#define CLOUD_AO_STRENGTH 0.9
+#define CLOUD_AO_SAMPLES 3 // [3 6 9]
+#define CLOUD_MULTISCATTER 3.0
+#define CLOUD_MULTISCATTER_OCTAVES 3 // [1 2 3]
 
 // ---------------------- CURVATURE ---------------------- //
 
 #define CURVED_CLOUDS
 #define PLANET_RADIUS 100000
 #define CURVATURE_STRENGTH 2.0
+
+#define CUMULUS_STEP_QUALITY (CUMULUS_QUALITY * 4.0)
 
 const int cumulonimbusLayerAlt = int(CUMULONIMBUS_CLOUD_ALT);
 const int cumulusLayerAlt = int(CUMULUS_CLOUD_ALT);
@@ -95,6 +96,8 @@ float altocumulusLayerHeight = altocumulusLayerStretch * 2.0;
 #include "/lib/atmospherics/clouds/cloudHelpers.glsl"
 #include "/lib/atmospherics/clouds/cumulus.glsl"
 #include "/lib/atmospherics/clouds/altocumulus.glsl"
+
+#if defined DEFERRED1 || defined DH_WATER || defined GBUFFERS_WATER
 #include "/lib/atmospherics/clouds/cloudLighting.glsl"
 
 vec4 GetVolumetricClouds(int cloudAltitude, 
@@ -145,7 +148,7 @@ vec4 GetVolumetricClouds(int cloudAltitude,
         int sampleCount = int(planeDistanceDif / baseStep + dither + 1);
 
         #ifndef LQ_CLOUD
-            int cloudSteps = CLOUD_SHADING_QUALITY;
+            int cloudSteps = CLOUD_LIGHTING_QUALITY;
         #else
             int cloudSteps = 2;
         #endif
@@ -201,9 +204,6 @@ vec4 GetVolumetricClouds(int cloudAltitude,
             if (layer == 1 && abs(yCurved - float(cloudAltitude)) > cumulonimbusLayerStretch * 3.0) break;
             if (layer == 2 && abs(yCurved - float(cloudAltitude)) > cumulusLayerStretch * 3.0) break;
             if (layer == 3 && abs(yCurved - float(cloudAltitude)) > altocumulusLayerStretch * 3.0) break;
-            //if (layer == 1 && abs(tracePos.y - cloudAltitude) > cumulonimbusLayerStretch * 1.0) break;
-            //if (layer == 2 && abs(tracePos.y - cloudAltitude) > cumulusLayerStretch * 1.0) break;
-            //if (layer == 3 && abs(tracePos.y - cloudAltitude) > altocumulusLayerStretch * 1.0) break;
 
             vec3 toPos = tracePos - cameraPos;
             float lTracePos = length(toPos);
@@ -240,6 +240,7 @@ vec4 GetVolumetricClouds(int cloudAltitude,
                                             cloudAltitude, cumulusLayerStretch, size, 2);
                 
                 ao = SampleCloudAO(tracePos, cloudAltitude, cumulusLayerStretch, size, dither, 2);
+                //ao = 1.0;
             } else if (layer == 3) {
                 shadow = SampleCloudShadow(tracePos, sunDir, dither, cloudSteps,
                                             cloudAltitude, altocumulusLayerStretch, size, 3) * 0.65;
@@ -247,7 +248,22 @@ vec4 GetVolumetricClouds(int cloudAltitude,
                 ao = SampleCloudAO(tracePos, cloudAltitude, altocumulusLayerStretch, size, dither, 3);
             }
 
-            float lightTrans = 1.0 - clamp(shadow * CLOUD_SHADING_STRENGTH_MULT + noonFactor * 0.2, 0.0, 1.0);
+            shadow -= rainFactor * 0.05;
+
+            // [7 14 30]
+            //[2.85 5.5 12.0]
+
+            #if CLOUD_LIGHTING_QUALITY == 7
+                float shadowMult = 2.85;
+            #elif CLOUD_LIGHTING_QUALITY == 14
+                float shadowMult = 5.5;
+            #elif CLOUD_LIGHTING_QUALITY == 30
+                float shadowMult = 12.0;
+            #else
+                float shadowMult = 1.0;
+            #endif
+
+            float lightTrans = 1.0 - clamp(shadow * shadowMult + noonFactor * 0.2, 0.0, 1.0) - rainFactor * 0.1;
 
             float skylight = clamp((yCurved - lowerPlaneAltitude) /
                       max(higherPlaneAltitude - lowerPlaneAltitude, 1e-3), 0.0, 1.0);
@@ -285,7 +301,7 @@ vec4 GetVolumetricClouds(int cloudAltitude,
         float cloudFogFactor = 0.0;
         
         if (firstHitPos > 0.0) {
-            float fadeDistance = distanceThreshold * 0.9;
+            float fadeDistance = distanceThreshold * 1.0;
             float distF = clamp((fadeDistance - lastLxz) / fadeDistance, 0.0, 1.0);
             cloudFogFactor = pow(distF, 4.0) ;
         }
@@ -332,7 +348,7 @@ vec4 GetClouds(inout float cloudLinearDepth, float skyFade, vec3 cameraPos, vec3
     #if CLOUD_QUALITY == 3
         //cumulus
         #ifdef CUMULUS
-        clouds = GetVolumetricClouds(cumulusLayerAlt, thresholdF * 1.25, cloudLinearDepth, skyFade, skyMult0,
+        clouds = GetVolumetricClouds(cumulusLayerAlt, thresholdF, cloudLinearDepth, skyFade, skyMult0,
                                             cameraPos, nPlayerPos, lViewPosM, VdotS, VdotU, dither,
                                             CUMULUS_CLOUD_GRANULARITY, CUMULUS_CLOUD_MULT, CUMULUS_CLOUD_SIZE_MULT_M, 2);
         #endif
@@ -340,7 +356,7 @@ vec4 GetClouds(inout float cloudLinearDepth, float skyFade, vec3 cameraPos, vec3
         #ifdef CUMULONIMBUS
             if (clouds.a == 0.0) {
                 // cumulonimbus
-                clouds = GetVolumetricClouds(cumulusLayerAlt, thresholdF * 1.25, cloudLinearDepth, skyFade, skyMult0,
+                clouds = GetVolumetricClouds(cumulusLayerAlt, thresholdF, cloudLinearDepth, skyFade, skyMult0,
                                             cameraPos, nPlayerPos, lViewPosM, VdotS, VdotU, dither,
                                             CUMULUS_CLOUD_GRANULARITY, CUMULUS_CLOUD_MULT, CUMULUS_CLOUD_SIZE_MULT_M, 1);
             }
@@ -349,7 +365,7 @@ vec4 GetClouds(inout float cloudLinearDepth, float skyFade, vec3 cameraPos, vec3
         #ifdef ALTOCUMULUS
             if (clouds.a == 0.0) {
                 //altocumulus
-                clouds = GetVolumetricClouds(altocumulusLayerAlt, thresholdF * 1.25, cloudLinearDepth, skyFade, skyMult0,
+                clouds = GetVolumetricClouds(altocumulusLayerAlt, thresholdF, cloudLinearDepth, skyFade, skyMult0,
                                             cameraPos, nPlayerPos, lViewPosM, VdotS, VdotU, dither,
                                             ALTOCUMULUS_CLOUD_GRANULARITY, ALTOCUMULUS_CLOUD_MULT, ALTOCUMULUS_CLOUD_SIZE_MULT_M, 3);
             }
@@ -379,3 +395,4 @@ vec4 GetClouds(inout float cloudLinearDepth, float skyFade, vec3 cameraPos, vec3
     
     return clouds;
 }
+#endif

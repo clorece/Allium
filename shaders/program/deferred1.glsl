@@ -154,30 +154,11 @@ float GetInverseLinearDepth(float linearDepth) {
     #include "/lib/misc/distantLightBokeh.glsl"
 #endif
 
-//#include "/lib/lighting/AO.glsl"
-
 #ifdef NETHER
 vec3 ambientColor = vec3(0.5, 0.21, 0.01);
 #endif
 
 #define MIN_LIGHT_AMOUNT 1.0
-
-vec3 fakeBounceLight(vec3 normal, vec3 worldPos, vec3 lightPos, vec3 lightColor) {
-    // Direction from point to light
-    vec3 toLight = normalize(lightPos - worldPos);
-
-    // Simulate bounce intensity based on how much the normal faces the light
-    float bounceStrength = max(dot(normal, toLight), 0.0);
-
-    // Fake falloff (optional for distance attenuation)
-    float distance = length(lightPos - worldPos);
-    float attenuation = 1.0 / (distance * distance + 1.0);
-
-    // Final bounced light color
-    vec3 bouncedLight = lightColor * bounceStrength * attenuation * 0.5; // 0.5 is bounce scale
-
-    return bouncedLight;
-}
 
 #include "/lib/lighting/indirectLighting.glsl"
 
@@ -280,20 +261,14 @@ void main() {
         }
 
         
-        #if GLOBAL_ILLUMINATION == 0
+        #if SSAO_QUALI_DEFINE == 0
             ao = 1.0;
             if (!entityOrHand) color.rgb *= ao;
-        #elif GLOBAL_ILLUMINATION == 1
-            ao = SSAO(z0, linearZ0, dither);
-            ao = clamp( 1.0 - (1.0 - ao) * AO_I, 0.0, 1.0 );
+        #elif SSAO_QUALI_DEFINE > 0
+        //float DoAmbientOcclusion(float z0, float linearZ0, float dither, vec3 playerPos) {
+            ao = DoAmbientOcclusion(z0, linearZ0, dither, playerPos);
+            //ao = clamp( 1.0 - (1.0 - ao) * AO_I, 0.0, 1.0 );
             if (!entityOrHand) color.rgb *= ao;
-        #elif GLOBAL_ILLUMINATION > 1
-            color.rgb = DoRT(color.rgb, viewPos.xyz, playerPos, normalM, skyLightFactor, linearZ0, dither, entityOrHand, smoothnessD);
-            #if GLOBAL_ILLUMINATION == 3
-                ao = SSAO(z0, linearZ0, dither);
-                ao = clamp( 1.0 - (1.0 - ao) * AO_I, 0.0, 1.0 );
-                if (!entityOrHand) color.rgb *= ao;
-            #endif
         #endif
         // Add soft up-bounce light under the block based on skyLightFactor
 

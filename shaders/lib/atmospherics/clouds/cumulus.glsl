@@ -6,7 +6,13 @@ float GetCumulonimbusDetail(vec3 pos, vec3 offset, float persistence) {
     float detail = 0.0;
 
     vec3 p = pos;
+
+    #ifndef LQ_CLOUD
     const int detailSamples = 3;
+    #else
+    const int detailSamples = 1;
+    #endif
+
 
     for (int i = 0; i < detailSamples; ++i) {
         vec3 windOffset = windDir * GetWind() * 0.1 * float(i);
@@ -33,10 +39,18 @@ float GetCumulusCloud(vec3 tracePos, int steps, int cloudAltitude, float lTraceP
 
     float base = Noise3D(tracePosM * 0.75 / cumulusCloudSizeMult + offset + windDir * GetWind() * 0.05) * 12.0;
     base += Noise3D(tracePosM * 1.0 / cumulusCloudSizeMult + offset + windDir * GetWind() * 0.05) * 6.0;
-    base /= 11.0 / CUMULUS_CLOUD_COVERAGE;
+    base /= 12.0 / CUMULUS_CLOUD_COVERAGE;
     base += rainFactor * 0.7;
 
-    float detail = GetCumulonimbusDetail(tracePosM, offset, noisePersistence);
+    #ifndef LQ_CLOUD
+        //base *= 0.7;
+        //float detail = 1.0;
+
+        float detail = GetCumulonimbusDetail(tracePosM, offset, noisePersistence);
+    #else
+        base *= 0.8;
+        float detail = GetCumulonimbusDetail(tracePosM, offset, noisePersistence);
+    #endif
 
     float combined = mix(base, base * detail, 0.55);
     combined = max(combined - 0.2, 0.0);

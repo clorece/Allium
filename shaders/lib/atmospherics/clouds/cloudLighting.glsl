@@ -18,7 +18,7 @@ float SampleCloudAO(vec3 tracePos, int cloudAltitude, float stretch, float size,
         vec3(0.0, 0.0, -1.0)
     );
     
-    float aoRadius = stretch * 0.3;
+    float aoRadius = stretch;
     int samples = CLOUD_AO_SAMPLES;
     
     for (int i = 0; i < samples; ++i) {
@@ -80,7 +80,7 @@ float SampleCloudShadow(vec3 tracePos, vec3 lightDir, float dither, int steps, i
     const float shadowDensityScale = 1.0;
 
     for (int i = 0; i < steps; ++i) {
-        samplePos += lightDir * 12.0 + dither * i;
+        samplePos += lightDir * 24.0 + dither * i;
         
         float dxShadow = length((samplePos - cameraPosition).xz);
         float yCurvedS = samplePos.y + curvatureDrop(dxShadow);

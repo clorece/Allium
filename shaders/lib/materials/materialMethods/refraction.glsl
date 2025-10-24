@@ -12,9 +12,6 @@ void DoRefraction(inout vec3 color, inout float z0, inout float z1, vec3 viewPos
     vec3 worldPos = playerPos.xyz + cameraPosition.xyz;
     vec2 worldPosRM = worldPos.xz * 0.02 + worldPos.y * 0.01 + 0.01 * frameTimeCounter;
 
-    worldPosRM.x *= 2.0;
-    worldPosRM.y *= 0.5;
-
     vec2 refractNoise = texture2D(noisetex, worldPosRM * 1.0).rb - vec2(0.5);
          refractNoise *= WATER_REFRACTION_INTENSITY * fovScale / (3.0 + lViewPos);
 

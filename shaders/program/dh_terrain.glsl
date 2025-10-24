@@ -126,7 +126,7 @@ void main() {
                worldGeoNormal, lmCoordM, noSmoothLighting, noDirectionalShading, noVanillaAO,
                centerShadowBias, subsurfaceMode, smoothnessG, highlightMult, emission);
 
-    color *= 0.85;
+    color *= 1.0;
     /* DRAWBUFFERS:0 */
     gl_FragData[0] = color;
 }

@@ -72,7 +72,7 @@ vec3 AcesTonemap(vec3 color) {
     float exposure = 0.45;   // >1.0 = brighter, <1.0 = darker
     float saturation = 1.05; // >1.0 = more vibrant, <1.0 = more gray
     float gamma = 2.2;      // sRGB standard gamma
-    float contrast = 0.999;   // >1.0 = higher contrast, <1.0 = flatter
+    float contrast = 0.998;   // >1.0 = higher contrast, <1.0 = flatter
 
     color *= exposure;
 

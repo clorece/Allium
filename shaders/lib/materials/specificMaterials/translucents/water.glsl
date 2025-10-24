@@ -6,7 +6,7 @@
         vec3 glColorM = glColor.rgb;
 
         #if WATERCOLOR_MODE >= 3
-            glColorM.g = max(glColorM.g, 0.39);
+            glColorM.g = max(glColorM.g, 0.55);
         #endif
 
         #ifdef GBUFFERS_WATER
@@ -15,7 +15,7 @@
             translucentMult.g *= 1.0;
         #endif
 
-        glColorM = sqrt1(glColorM) * vec3(1.0, 0.85, 0.8);
+        glColorM = sqrt1(glColorM) * vec3(1.0, 0.85, 0.8) * 1.75;
     #else
         vec3 glColorM = vec3(0.43, 0.6, 0.8);
     #endif
@@ -89,13 +89,14 @@
             #ifdef WATER_PARALLAX
                 const int steps = 8;
                 const float stepSize = inversesqrt(float(steps));
-                const float maxHeight = 0.1;
+                const float maxHeight = 0.025;
 
                 vec3 rayStep = stepSize * vec3(viewVector.xy, viewVector.z) / viewVector.z;
 
                 vec3 offset = vec3(0.0);
                 float height = 0.0;
 
+                
                 for (int i = 0; i < steps; ++i) {
                     vec2 sampleUV = waterPosM + offset.xy;
                     height = dot(GetCombinedWaves(sampleUV, wind), vec2(0.5)) * maxHeight;
@@ -105,6 +106,7 @@
                     float dz = height - offset.z;
                     offset += rayStep * dz;
                 }
+                
 
                 height = dot(GetCombinedWaves(waterPosM + offset.xy, wind), vec2(0.5)) * maxHeight;
                 float dz = height - offset.z;
@@ -117,12 +119,12 @@
             normalMap.xy = finalNormal * 6.0 * (1.0 - 0.7 * fresnel) * WATER_BUMPINESS_M;
         #endif
 
-            normalMap.xy *= 0.03 * lmCoordM.y + 0.01;
+            normalMap.xy *= 0.05 * lmCoordM.y + 0.01;
             normalMap.z = sqrt(1.0 - (pow2(normalMap.x) + pow2(normalMap.y)));
             normalM = clamp(normalize(normalMap * tbnMatrix), vec3(-1.0), vec3(1.0));
 
             vec3 vector = reflect(nViewPos, normalize(normalM));
-            float norMix = pow2(pow2(pow2(1.0 - max0(dot(normal, vector))))) * 0.5;
+            float norMix = pow2(pow2(pow2(1.0 - max0(dot(normal, vector))))) * 1.0;
             normalM = mix(normalM, normal, norMix); // Fixes normals pointing inside water
 
             float fresnelP = fresnel;
@@ -169,8 +171,8 @@
                 lViewPosDifM *= WATER_FOG_MULT_M;
             #endif
 
-            float waterFog = max0(1.0 - exp(lViewPosDifM * 0.075));
-            color.a *= 0.25 + 0.75 * waterFog;
+            float waterFog = max0(1.0 - exp(lViewPosDifM * 0.125));
+            color.a *= 0.5 + 0.5 * waterFog;
 
             #if defined BRIGHT_CAVE_WATER && WATER_ALPHA_MULT < 200
                 // For better water visibility in caves and some extra color pop outdoors

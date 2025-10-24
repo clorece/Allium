@@ -82,8 +82,6 @@
     }
 #endif
 
-#define ignoreMie
-
 #ifdef ATMOSPHERIC_FOG
     #include "/lib/colors/lightAndAmbientColors.glsl"
     #include "/lib/colors/skyColors.glsl"
@@ -202,12 +200,11 @@
 
 #include "/lib/atmospherics/fog/waterFog.glsl"
 
-void DoWaterFog(inout vec3 color, float lViewPos, vec3 playerPos, vec3 worldPos) {
-    float fog = GetWaterFog(lViewPos, playerPos);
+void DoWaterFog(inout vec3 color, float lViewPos) {
+    float fog = GetWaterFog(lViewPos);
 
-    color = mix(color * 1.5, waterFogColor - nightFactor, fog);
+    color = mix(color * 2.0, waterFogColor * 2.0, fog);
 }
-
 void DoLavaFog(inout vec3 color, float lViewPos) {
     float fog = (lViewPos * 3.0 - gl_Fog.start) * gl_Fog.scale;
 
@@ -265,7 +262,7 @@ void DoFog(inout vec3 color, inout float skyFade, float lViewPos, vec3 playerPos
     #endif
 
     vec3 worldPos = playerPos + cameraPosition;
-    if (isEyeInWater == 1) DoWaterFog(color, lViewPos, playerPos, worldPos);
+    if (isEyeInWater == 1) DoWaterFog(color, lViewPos);
     else if (isEyeInWater == 2) DoLavaFog(color, lViewPos);
     else if (isEyeInWater == 3) DoPowderSnowFog(color, lViewPos);
 

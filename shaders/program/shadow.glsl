@@ -46,19 +46,8 @@ void DoNaturalShadowCalculation(inout vec4 color1, inout vec4 color2) {
     #include "/lib/materials/materialMethods/connectedGlass.glsl"
 #endif
 
-vec2 GetCombinedWaves(vec2 uv, vec2 wind) {
-    uv *= 1.0;
-    wind *= 1.5;
-    //uv *= 1.5;
-    vec2 nMed   = texture2D(gaux4, uv + 0.25 * wind).rg - 0.5;
-    vec2 nSmall = texture2D(gaux4, uv * 2.0 - 2.0 * wind).rg - 0.5;
-    vec2 nBig   = texture2D(gaux4, uv * 0.35 + 0.65 * wind).rg - 0.5;
-    //    nBig  += texture2D(gaux4, uv * 0.15 - 0.8 * wind).rg - 0.5;
+#include "/lib/materials/waterNormals.glsl"
 
-    return nMed * WATER_BUMP_MED +
-            nSmall * WATER_BUMP_SMALL +
-            nBig * WATER_BUMP_BIG;
-}
 vec3 GetWorldSunDir() { 
     return normalize((gbufferModelViewInverse * vec4(sunVec, 0.0)).xyz); 
 }
@@ -129,7 +118,7 @@ void main() {
                         float caustic = 0.0;
                         caustic += dot(texture2D(gaux4, cPos1 + vec2(offset, 0.0)).rg, vec2(cMult))
                                  - dot(texture2D(gaux4, cPos1 - vec2(offset, 0.0)).rg, vec2(cMult));
-                        caustic -= dot(texture2D(gaux4, cPos2 + vec2(0.0, offset)).rg, vec2(cMult))
+                        caustic += dot(texture2D(gaux4, cPos2 + vec2(0.0, offset)).rg, vec2(cMult))
                                  - dot(texture2D(gaux4, cPos2 - vec2(0.0, offset)).rg, vec2(cMult));
                         color1.rgb = vec3(max0(min1(caustic * 0.25 + 0.5)) * 0.5 + 0.01);
 
@@ -145,7 +134,7 @@ void main() {
                             color1.rgb *= vec3(0.3, 0.45, 0.9);
                         #endif
                     #endif
-                    color1.rgb *= vec3(0.7, 0.9, 0.9) * 0.75;
+                    color1.rgb *= vec3(0.9, 0.9, 0.9);
                     ////
 
                     // Underwater Light Shafts
@@ -164,7 +153,7 @@ void main() {
                     waterNoise = pow(waterNoise * 0.5, factor) * factor * 1.0;
 
                     #if MC_VERSION >= 11300 && WATERCOLOR_MODE >= 2
-                        color2.rgb = normalize(sqrt1(glColor.rgb)) * vec3(0.24, 0.29, 0.26);
+                        color2.rgb = normalize(sqrt1(glColor.rgb)) * vec3(0.24, 0.31, 0.26) * 0.15;
                     #else
                         color2.rgb = vec3(0.08, 0.12, 0.195);
                     #endif

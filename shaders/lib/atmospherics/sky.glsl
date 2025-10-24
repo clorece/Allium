@@ -111,7 +111,8 @@ vec3 GetSky(float VdotU, float VdotS, float dither, bool doGlare, bool doGround)
           VdotUM3 = smoothstep1(VdotUM3);
     vec3 scatteredGroundMixer = vec3(VdotUM3 * VdotUM3, sqrt1(VdotUM3), sqrt3(VdotUM3));
          scatteredGroundMixer = mix(vec3(VdotUM3), scatteredGroundMixer, 0.75 - 0.5*rainFactor);
-    finalSky = mix(finalSky, pow(downColor, vec3(1.5)), scatteredGroundMixer) * 1.5;
+    finalSky = mix(finalSky, pow(downColor, vec3(1.5)) + nightFactor * 0.1, scatteredGroundMixer) * 1.5;
+    finalSky = mix(finalSky, rainAmbientColor * 0.5 - nightFactor * 0.1, rainFactor);
     //finalSky += invNoonFactor2 * 0.1;
 
     if (doGround) finalSky *= smoothstep1(pow2(1.0 + min(VdotU, 0.0)));
@@ -136,7 +137,7 @@ vec3 GetSky(float VdotU, float VdotS, float dither, bool doGlare, bool doGround)
         finalSky = mix(finalSky, caveFogColor, GetCaveFactor()*VdotUmax0M);
     #endif
 
-    finalSky.r *= 0.80;
+    //finalSky.r *= 0.80;
     finalSky += max((dither - 0.5), 0.0)/32.0;
     return pow(finalSky * 1.5, vec3(1.0 / 1.5));
 }

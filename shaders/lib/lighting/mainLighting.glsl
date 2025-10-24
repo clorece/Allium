@@ -56,6 +56,8 @@ int CloudShadowStepsLOD(float distCamToPoint) {
 
 float LightRayCloudShadow(vec3 worldPos, vec3 cameraPos, vec3 sunDir, float dither)
 {
+    float distToCamera = distance(cameraPos, worldPos);
+    if (distToCamera > renderDistance * 0.5) return 0.0;
     float y0 = float(cumulusLayerAlt);
     float h  = cumulusLayerStretch;
     float ry = sunDir.y;
@@ -93,7 +95,7 @@ float LightRayCloudShadow(vec3 worldPos, vec3 cameraPos, vec3 sunDir, float dith
     
     // Manual loop unrolling for 4 iterations (max case)
     // Iteration 0
-    {
+    for (int i = 0; i < 4; i++) {
         float dist2D = length(xzOffset);
         float dens = GetCumulusCloud(p, steps, cumulusLayerAlt, dist2D, 
                                        p.y - y0, 0.4, 1.0, 
@@ -101,37 +103,6 @@ float LightRayCloudShadow(vec3 worldPos, vec3 cameraPos, vec3 sunDir, float dith
         sum += dens * step(0.05, dens);
         p += stepVec;
         xzOffset += stepVec.xz;
-    }
-    
-    // Iteration 1
-    if (steps > 1) {
-        float dist2D = length(xzOffset);
-        float dens = GetCumulusCloud(p, steps, cumulusLayerAlt, dist2D, 
-                                       p.y - y0, 0.4, 1.0, 
-                                       CUMULUS_CLOUD_SIZE_MULT);
-        sum += dens * step(0.05, dens);
-        p += stepVec;
-        xzOffset += stepVec.xz;
-    }
-    
-    // Iteration 2
-    if (steps > 2) {
-        float dist2D = length(xzOffset);
-        float dens = GetCumulusCloud(p, steps, cumulusLayerAlt, dist2D, 
-                                       p.y - y0, 0.4, 1.0, 
-                                       CUMULUS_CLOUD_SIZE_MULT);
-        sum += dens * step(0.05, dens);
-        p += stepVec;
-        xzOffset += stepVec.xz;
-    }
-    
-    // Iteration 3
-    if (steps > 3) {
-        float dist2D = length(xzOffset);
-        float dens = GetCumulusCloud(p, steps, cumulusLayerAlt, dist2D, 
-                                       p.y - y0, 0.4, 1.0, 
-                                       CUMULUS_CLOUD_SIZE_MULT);
-        sum += dens * step(0.05, dens);
     }
 
     // Simplified occlusion calculation
@@ -142,10 +113,10 @@ void ApplyCloudShadows(vec3 worldPos, vec3 cameraPos, float dither,
                        int subsurfaceMode, inout vec3 shadowMult)
 {
     vec3 sunDir = normalize(mat3(gbufferModelViewInverse) * lightVec);
-    float occ = LightRayCloudShadow(worldPos, cameraPos, sunDir, dither) * 4.0;
+    float occ = LightRayCloudShadow(worldPos, cameraPos, sunDir, dither) * 4.0 + noonFactor * 0.5;
     
     // Optimized shading calculation with branchless power
-    float k = clamp(CLOUD_SHADING_STRENGTH, 0.0, 1.0);
+    float k = clamp(100.0, 0.0, 1.0);
     float lightMul = 1.0 - (occ * 0.5);
     float powerFactor = 1.0 + min(max(k - 1.0, 0.0), 3.0);
     
@@ -189,7 +160,12 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
     float lightmapYM = smoothstep1(lightmap.y);
     float subsurfaceHighlight = 0.0;
     float ambientMult = 1.0;
+    #ifndef CLOUD_SHADOWS
+    vec3 lightColorM = lightColor * 2.5 * SUNLIGHT_AMOUNT;
+    #else
     vec3 lightColorM = lightColor * 4.0 * SUNLIGHT_AMOUNT;
+    #endif
+
     vec3 ambientColorM = ambientColor * 1.2 * AMBIENT_AMOUNT;
     vec3 nViewPos = normalize(viewPos);
 

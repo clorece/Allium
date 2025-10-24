@@ -34,7 +34,7 @@ float GetCumulonimbusCloud(vec3 tracePos, int steps, int cloudAltitude, float lT
 
     float base = Noise3D(tracePosM * 0.75 / lowerLayerCloudSizeMult + offset + windDir * GetWind() * 0.05) * 12.0;
     base += Noise3D(tracePosM * 1.0 / lowerLayerCloudSizeMult + offset + windDir * GetWind() * 0.05) * 6.0;
-    base /= 9.0 / CUMULONIMBUS_COVERAGE;
+    base /= 12.0 / CUMULONIMBUS_COVERAGE;
     base += rainFactor * 0.7;
 
     float detail = GetCumulonimbusDetail(tracePosM, offset, noisePersistence);

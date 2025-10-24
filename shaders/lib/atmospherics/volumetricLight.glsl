@@ -121,28 +121,12 @@ float CloudVLTransmittanceAt(vec3 worldPos, vec3 sunDir_ws, vec3 cameraPos, floa
     // Initialize ray marching
     vec3 stepVec = sunDir_ws * stepLen;
     vec3 p = worldPos + sunDir_ws * (t0 + stepLen * 0.5);
-    float tau = 0.0;
+    //float tau = 0.0;
 
-    // Manual unroll for max 3 iterations
-    // Iteration 0
-    {
-        float dens = LowerLayerDensityFast(p, maxS, cameraPos);
-        tau += dens * stepLen;
-        p += stepVec;
-    }
-    
-    // Iteration 1
-    if (maxS > 1 && tau <= 1.0) {
-        float dens = LowerLayerDensityFast(p, maxS, cameraPos);
-        tau += dens * stepLen * 1.2; // (1.0 + 0.2 * 1)
-        p += stepVec;
-    }
-    
-    // Iteration 2
-    if (maxS > 2 && tau <= 1.0) {
-        float dens = LowerLayerDensityFast(p, maxS, cameraPos);
-        tau += dens * stepLen * 1.4; // (1.0 + 0.2 * 2)
-    }
+    float dens = LowerLayerDensityFast(p, maxS, cameraPos);
+    float tau = dens * stepLen;
+    p += stepVec;
+
 
     // Optimized transmittance calculation
     float T = exp(-1.6 * tau);
@@ -162,7 +146,7 @@ vec4 GetVolumetricLight(inout vec3 color, inout float vlFactor, vec3 translucent
     #endif
 
     #ifdef OVERWORLD
-        vec3 vlColor = lightColor * 0.5;
+        vec3 vlColor = lightColor * 0.15;
         vec3 vlColorReducer = vec3(1.0);
         float vlSceneIntensity = isEyeInWater != 1 ? vlFactor : 1.0;
 
@@ -231,7 +215,8 @@ vec4 GetVolumetricLight(inout vec3 color, inout float vlFactor, vec3 translucent
     float depth0 = GetDepth(z0);
     float depth1 = GetDepth(z1);
     //#ifndef CLOUD_SHADOWS
-        maxDist = mix(max(far * 1.5, renderDistance * 0.15) * 0.55, 80.0, vlSceneIntensity);
+        //maxDist = mix(max(far * 1.5, renderDistance * 0.15) * 0.55, 80.0, vlSceneIntensity);
+        maxDist = mix(max(far, 96.0) * 0.55, 80.0, vlSceneIntensity);
     //#else
     //    bool  isSky   = (z1 == 1.0);
     //    maxDist = isSky ? min(far * 1.25, renderDistance * 0.15)
@@ -369,7 +354,7 @@ vec4 GetVolumetricLight(inout vec3 color, inout float vlFactor, vec3 translucent
 
         #ifdef OVERWORLD
             #ifdef LIGHTSHAFT_SMOKE
-                vec3 smokePos  = 0.0015 * (playerPos + cameraPosition);
+                vec3 smokePos  = 0.00055 * (playerPos + cameraPosition);
                 vec3 smokeWind = frameTimeCounter * vec3(0.002, 0.001, 0.0) * 0.1;
 
                 float smoke = 0.65 * Noise3D(smokePos + smokeWind)

@@ -1,20 +1,14 @@
 //#define TAA_TWEAKS
 
-// Anti-ghosting and anti-flicker controls
-#define TAA_ANTI_GHOST_STRENGTH 30.0    //[5.0 10.0 15.0 20.0 25.0 30.0] Higher = less ghosting but may reduce stability
-#define TAA_ANTI_FLICKER_STRENGTH 0.6   //[0.0 0.2 0.4 0.6 0.8 1.0] Higher = less flickering
-#define TAA_MOTION_REJECT 1.5           //[0.5 1.0 1.5 2.0 2.5 3.0] Higher = more rejection on subpixel motion
-#define TAA_STABILITY_WEIGHT 0.982      //[0.90 0.95 0.97 0.982 0.99 0.995] Base temporal stability weight
-
 #if TAA_MODE == 1
-    float blendMinimum = 0.3;
+    float blendMinimum = 0.8;
     float blendVariable = 0.2;
     float blendConstant = 0.7;
 
     float regularEdge = 20.0;
     float extraEdgeMult = 3.0;
 #elif TAA_MODE == 2
-    float blendMinimum = 1.0;
+    float blendMinimum = 0.85;
     float blendVariable = 0.2;
     float blendConstant = 0.7;
 
@@ -23,44 +17,31 @@
 #endif
 
 #ifdef TAA_MOVEMENT_IMPROVEMENT_FILTER
-    // Improved Catmull-Rom sampling from taa2
+    //Catmull-Rom sampling from Filmic SMAA presentation
     vec3 textureCatmullRom(sampler2D colortex, vec2 texcoord, vec2 view) {
         vec2 position = texcoord * view;
         vec2 centerPosition = floor(position - 0.5) + 0.5;
         vec2 f = position - centerPosition;
         vec2 f2 = f * f;
+        vec2 f3 = f * f2;
 
-        vec2 w0 = f * (-0.5 + f * (1.0 - 0.5 * f));
-        vec2 w1 = 1.0 + f2 * (-2.5 + 1.5 * f);
-        vec2 w2 = f * (0.5 + f * (2.0 - 1.5 * f));
-        vec2 w3 = f2 * (-0.5 + 0.5 * f);
+        float c = 0.7;
+        vec2 w0 =        -c  * f3 +  2.0 * c         * f2 - c * f;
+        vec2 w1 =  (2.0 - c) * f3 - (3.0 - c)        * f2         + 1.0;
+        vec2 w2 = -(2.0 - c) * f3 + (3.0 -  2.0 * c) * f2 + c * f;
+        vec2 w3 =         c  * f3 -                c * f2;
 
         vec2 w12 = w1 + w2;
-        vec2 delta12 = w2 / w12;
+        vec2 tc12 = (centerPosition + w2 / w12) / view;
 
-        vec2 uv0 = centerPosition - 1.0;
-        vec2 uv3 = centerPosition + 1.0;
-        vec2 uv12 = centerPosition + delta12;
-
-        vec2 viewPixelSize = 1.0 / view;
-        uv0 *= viewPixelSize;
-        uv3 *= viewPixelSize;
-        uv12 *= viewPixelSize;
-
-        vec3 col = vec3(0.0);
-        col += texture2DLod(colortex, vec2(uv0.x, uv0.y), 0).rgb * w0.x * w0.y;
-        col += texture2DLod(colortex, vec2(uv12.x, uv0.y), 0).rgb * w12.x * w0.y;
-        col += texture2DLod(colortex, vec2(uv3.x, uv0.y), 0).rgb * w3.x * w0.y;
-
-        col += texture2DLod(colortex, vec2(uv0.x, uv12.y), 0).rgb * w0.x * w12.y;
-        col += texture2DLod(colortex, vec2(uv12.x, uv12.y), 0).rgb * w12.x * w12.y;
-        col += texture2DLod(colortex, vec2(uv3.x, uv12.y), 0).rgb * w3.x * w12.y;
-
-        col += texture2DLod(colortex, vec2(uv0.x, uv3.y), 0).rgb * w0.x * w3.y;
-        col += texture2DLod(colortex, vec2(uv12.x, uv3.y), 0).rgb * w12.x * w3.y;
-        col += texture2DLod(colortex, vec2(uv3.x, uv3.y), 0).rgb * w3.x * w3.y;
-
-        return clamp(col, 0.0, 65535.0);
+        vec2 tc0 = (centerPosition - 1.0) / view;
+        vec2 tc3 = (centerPosition + 2.0) / view;
+        vec4 color = vec4(texture2DLod(colortex, vec2(tc12.x, tc0.y ), 0).rgb, 1.0) * (w12.x * w0.y ) +
+                    vec4(texture2DLod(colortex, vec2(tc0.x,  tc12.y), 0).rgb, 1.0) * (w0.x  * w12.y) +
+                    vec4(texture2DLod(colortex, vec2(tc12.x, tc12.y), 0).rgb, 1.0) * (w12.x * w12.y) +
+                    vec4(texture2DLod(colortex, vec2(tc3.x,  tc12.y), 0).rgb, 1.0) * (w3.x  * w12.y) +
+                    vec4(texture2DLod(colortex, vec2(tc12.x, tc3.y ), 0).rgb, 1.0) * (w12.x * w3.y );
+        return color.rgb / color.a;
     }
 #endif
 
@@ -88,11 +69,6 @@ vec3 ClipAABB(vec3 q, vec3 aabb_min, vec3 aabb_max){
         return q;
 }
 
-// Luminance function from taa2
-float getLuma(vec3 color) {
-    return dot(color, vec3(0.2125, 0.7154, 0.0721));
-}
-
 ivec2 neighbourhoodOffsets[8] = ivec2[8](
     ivec2( 1, 1),
     ivec2( 1,-1),
@@ -104,14 +80,12 @@ ivec2 neighbourhoodOffsets[8] = ivec2[8](
     ivec2( 0,-1)
 );
 
-// Improved neighborhood clamping using min/max from taa2
 void NeighbourhoodClamping(vec3 color, inout vec3 tempColor, float z0, float z1, inout float edge) {
     vec3 minclr = color;
-    vec3 maxclr = color;
+    vec3 maxclr = minclr;
 
     int cc = 2;
-    ivec2 texelCoordM1 = clamp(texelCoord, ivec2(cc), ivec2(view) - cc);
-    
+    ivec2 texelCoordM1 = clamp(texelCoord, ivec2(cc), ivec2(view) - cc); // Fixes screen edges
     for (int i = 0; i < 8; i++) {
         ivec2 texelCoordM2 = texelCoordM1 + neighbourhoodOffsets[i];
 
@@ -120,17 +94,15 @@ void NeighbourhoodClamping(vec3 color, inout vec3 tempColor, float z0, float z1,
         if (max(abs(GetLinearDepth(z0Check) - GetLinearDepth(z0)), abs(GetLinearDepth(z1Check) - GetLinearDepth(z1))) > 0.09) {
             edge = regularEdge;
 
-            if (int(texelFetch(colortex6, texelCoordM2, 0).g * 255.1) == 253)
+            if (int(texelFetch(colortex6, texelCoordM2, 0).g * 255.1) == 253) // Reduced Edge TAA
                 edge *= extraEdgeMult;
         }
 
         vec3 clr = texelFetch(colortex3, texelCoordM2, 0).rgb;
-        minclr = min(minclr, clr);
-        maxclr = max(maxclr, clr);
+        minclr = min(minclr, clr); maxclr = max(maxclr, clr);
     }
 
-    // Use direct clamping like taa2 instead of ClipAABB
-    tempColor = clamp(tempColor, minclr, maxclr);
+    tempColor = ClipAABB(tempColor, minclr, maxclr);
 }
 
 void DoTAA(inout vec3 color, inout vec3 temp, float z1) {
@@ -141,30 +113,34 @@ void DoTAA(inout vec3 color, inout vec3 temp, float z1) {
     viewPos1 /= viewPos1.w;
 
     #ifdef ENTITY_TAA_NOISY_CLOUD_FIX
-        float cloudLinearDepth = texture2D(colortex4, texCoord).r;
+        float cloudLinearDepth =  texture2D(colortex5, texCoord).a;
         float lViewPos1 = length(viewPos1);
 
         if (pow2(cloudLinearDepth) * renderDistance < min(lViewPos1, renderDistance)) {
+            // Material in question is obstructed by the cloud volume
             materialMask = 0;
         }
     #endif
 
-    /*
-    #ifdef TAA_TWEAKS
-        if (materialMask == 254) {
-            #ifndef CUSTOM_PBR
-                if (z1 <= 0.56) return;
-            #endif
-            int i = 0;
-            while (i < 4) {
-                int mms = int(texelFetch(colortex6, texelCoord + neighbourhoodOffsets[i], 0).g * 255.1);
-                if (mms != materialMask) break;
-                i++;
-            }
-            if (i == 4) return;
-        }
-    #endif
-    */
+    /*if (
+        abs(materialMask - 149.5) < 50.0 // Entity Reflection Handling (see common.glsl for details)
+        || materialMask == 254 // No SSAO, No TAA
+    ) { 
+        return;
+    }*/
+
+    /*if (materialMask == 254) { // No SSAO, No TAA
+        #ifndef CUSTOM_PBR
+            if (z1 <= 0.56) return; // The edge pixel trick doesn't look nice on hand
+        #endif
+        int i = 0;
+        while (i < 4) {
+            int mms = int(texelFetch(colortex6, texelCoord + neighbourhoodOffsets[i], 0).g * 255.1);
+            if (mms != materialMask) break;
+            i++;
+        } // Checking edge-pixels prevents flickering
+        if (i == 4) return;
+    }*/
 
     float z0 = texelFetch(depthtex0, texelCoord, 0).r;
 
@@ -177,18 +153,15 @@ void DoTAA(inout vec3 color, inout vec3 temp, float z1) {
         vec3 tempColor = textureCatmullRom(colortex2, prvCoord, view);
     #endif
 
-    if (tempColor == vec3(0.0) || any(isnan(tempColor))) {
+    if (tempColor == vec3(0.0) || any(isnan(tempColor))) { // Fixes the first frame and nans
         temp = color;
         return;
     }
 
-    // Store unclamped for comparison (taa2 technique)
-    vec3 unclampedColor = tempColor;
-
     float edge = 0.0;
     NeighbourhoodClamping(color, tempColor, z0, z1, edge);
 
-    if (materialMask == 253)
+    if (materialMask == 253) // Reduced Edge TAA
         edge *= extraEdgeMult;
 
     #ifdef DISTANT_HORIZONS
@@ -200,30 +173,22 @@ void DoTAA(inout vec3 color, inout vec3 temp, float z1) {
         }
     #endif
 
-    vec2 velocity = (texCoord - prvCoord) * view;
-
-    vec2 px_dist = 0.5 - abs(fract((prvCoord - texCoord) * view) - 0.5);
-    float blend_weight = dot(px_dist, px_dist);
-    blend_weight = pow(blend_weight, 1.5) * TAA_MOTION_REJECT;
-
-    float clamped = distance(unclampedColor, tempColor) / max(getLuma(unclampedColor), 0.001);
-
-    float lum_diff = distance(unclampedColor, color) / max(getLuma(unclampedColor), 0.001);
-    lum_diff = 1.0 - clamp(lum_diff * lum_diff, 0.0, 1.0) * TAA_ANTI_FLICKER_STRENGTH;
-
+    vec2 velocity = (texCoord - prvCoord.xy) * view;
     float blendFactor = float(prvCoord.x > 0.0 && prvCoord.x < 1.0 &&
                               prvCoord.y > 0.0 && prvCoord.y < 1.0);
-    float velocityFactor = dot(velocity, velocity) * 100.0;
+    float velocityFactor = dot(velocity, velocity) * 10.0;
     blendFactor *= max(exp(-velocityFactor) * blendVariable + blendConstant - length(cameraPosition - previousCameraPosition) * edge, blendMinimum);
 
-    float taa_weight = clamp(1.0 - sqrt(length(velocity)) / 2.0, 0.0, 1.0) * 0.9;
-    taa_weight = max(taa_weight, 0.35); // Minimum weight from taa2
+    #ifdef EPIC_THUNDERSTORM
+        blendFactor *= 1.0 - isLightningActive();
+    #endif
 
-    float stability = 1.0 - clamp(lum_diff * 0.5 + blend_weight + clamped * TAA_ANTI_GHOST_STRENGTH, 0.0, 1.0);
-    taa_weight = mix(taa_weight, TAA_STABILITY_WEIGHT, stability);
-
-    blendFactor = mix(blendFactor, taa_weight, 0.5);
+    #ifdef MIRROR_DIMENSION
+        blendFactor = 0.0;
+    #endif
 
     color = mix(color, tempColor, blendFactor);
     temp = color;
+
+    //if (edge > 0.05) color.rgb = vec3(1.0, 0.0, 1.0);
 }
