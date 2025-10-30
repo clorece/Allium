@@ -22,18 +22,17 @@ vec4 DistortShadow(vec4 shadowpos, float distortFactor) {
 }
 
 //#ifdef VL_CLOUD_SHADOW 
+
+#ifndef END
+#ifdef CLOUD_SHADOWS
 #include "/lib/colors/skyColors.glsl"
 #include "/lib/atmospherics/clouds/mainClouds.glsl"
 
 // start of cloud shadow code, there should be more optimal/cheap ways to do this, if anyone wants to improve this, let me know.
 
-#ifndef PI
 #define PI 3.141592653589793
-#endif
 
-#ifndef sunAngularSize
 const float sunAngularSize = 0.533333;
-#endif
 
 const float SUN_ANGULAR_RADIUS_RAD = (sunAngularSize * 0.5) * (PI / 180.0);
 const float INV_SHADOW_DISTANCE = 1.0 / max(shadowDistance, 1.0);
@@ -134,6 +133,8 @@ float CloudVLTransmittanceAt(vec3 worldPos, vec3 sunDir_ws, vec3 cameraPos, floa
     
     return clamp(T, 0.0, 1.0);
 }
+#endif
+#endif
 
 
 vec4 GetVolumetricLight(inout vec3 color, inout float vlFactor, vec3 translucentMult, float lViewPos0, float lViewPos1, vec3 nViewPos, float VdotL, float VdotU, float VdotS, vec2 texCoord, float z0, float z1, float dither) {

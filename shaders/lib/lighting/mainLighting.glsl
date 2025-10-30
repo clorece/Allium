@@ -7,8 +7,10 @@
 #include "/lib/colors/skyColors.glsl"
 #include "/lib/lighting/ggx.glsl"
 
+#ifndef NETHER
 #include "/lib/atmospherics/clouds/cloudCoord.glsl"
 #include "/lib/atmospherics/clouds/mainClouds.glsl"
+#endif
 
 #if SHADOW_QUALITY > -1 && (defined OVERWORLD || defined END)
     #include "/lib/lighting/shadowSampling.glsl"
@@ -34,14 +36,11 @@ vec3 highlightColor = normalize(pow(lightColor, vec3(0.37))) * (0.3 + 1.5 * sunV
 
 // start of cloud shadow code, there should be more optimal/cheap ways to do this, if anyone wants to improve this, let me know.
 
+#ifndef NETHER
 #ifdef CLOUD_SHADOWS
-#ifndef PI
 #define PI 3.141592653589793
-#endif
 
-#ifndef sunAngularSize
 const float sunAngularSize = 0.533333;
-#endif
 const float SUN_ANGULAR_RADIUS_RAD = (sunAngularSize * 0.5) * (PI / 180.0);
 
 // Precompute reciprocal to avoid division
@@ -127,6 +126,7 @@ void ApplyCloudShadows(vec3 worldPos, vec3 cameraPos, float dither,
     shadowMult = max(shadowMult * lightMul, vec3(0.0));
 }
 #endif
+#endif
 //Lighting//
 void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 viewPos, float lViewPos, vec3 geoNormal, vec3 normalM, float dither,
                 vec3 worldGeoNormal, vec2 lightmap, bool noSmoothLighting, bool noDirectionalShading, bool noVanillaAO,
@@ -161,9 +161,9 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
     float subsurfaceHighlight = 0.0;
     float ambientMult = 1.0;
     #ifndef CLOUD_SHADOWS
-    vec3 lightColorM = lightColor * 2.5 * SUNLIGHT_AMOUNT;
+    vec3 lightColorM = lightColor * 3.0 * SUNLIGHT_AMOUNT;
     #else
-    vec3 lightColorM = lightColor * 4.0 * SUNLIGHT_AMOUNT;
+    vec3 lightColorM = lightColor * 4.5 * SUNLIGHT_AMOUNT;
     #endif
 
     vec3 ambientColorM = ambientColor * 1.2 * AMBIENT_AMOUNT;
@@ -390,7 +390,8 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
             #else
                 shadowMult *= skyLightShadowMult;
             #endif
-
+            
+            #ifndef NETHER
             #ifdef CLOUD_SHADOWS
                 // world position of shaded point (you already compute this in your old block)
                 vec3 worldPos = playerPos + cameraPosition;
@@ -400,6 +401,7 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
 
                 // Apply brand-new cloud shadows
                 ApplyCloudShadows(worldPos, cameraPosition, dither, subsurfaceMode, shadowMult);
+            #endif
             #endif
 
             shadowMult *= max(NdotLM * shadowTime, 0.0);
@@ -685,7 +687,7 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
         specularHighlight *= highlightMult;
 
         lightHighlight = isEyeInWater != 1 ? shadowMult : pow(shadowMult, vec3(0.25)) * 0.35;
-        lightHighlight *= (subsurfaceHighlight + specularHighlight) * highlightColor * 1.5;
+        lightHighlight *= (subsurfaceHighlight + specularHighlight) * highlightColor * 1.0;
 
         #ifdef LIGHT_COLOR_MULTS
             lightHighlight *= lightColorMult;
@@ -698,19 +700,6 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
     // Mix Colors
     vec3 finalDiffuse = pow2(directionShade * vanillaAO) * (blockLighting + pow2(sceneLighting) + minLighting) + pow2(emission * 3.0);
 
-    
-    #ifdef FAKE_SUNLIGHT_BOUNCE
-        float bounceIntensity = 0.5 - nightFactor;
-        vec3 bounceColor = ambientColorM * 2.0;
-
-        float downFacingFactor = max(dot(normalM, vec3(0.0, -1.0, 0.0)), 0.0);
-        float lightAwayFactor = max(dot(normalM, -lightVec), 0.0);
-        float bounceVisibility = vanillaAO * (1.0 - max(shadowMult.r, 0.5));
-        float bounceStrength = bounceIntensity * (0.25 + 0.5 * downFacingFactor) * lightAwayFactor * bounceVisibility;
-
-        vec3 fakeBounceLight = bounceColor * bounceStrength;
-        finalDiffuse += fakeBounceLight * lightmapYM;
-    #endif
 
     finalDiffuse = sqrt(max(finalDiffuse, vec3(0.0))); // sqrt() for a bit more realistic light mix, max() to prevent NaNs
 

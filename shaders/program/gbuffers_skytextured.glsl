@@ -12,18 +12,14 @@ in vec2 texCoord;
 
 flat in vec4 glColor;
 
-#ifdef OVERWORLD || END
     flat in vec3 upVec, sunVec;
-#endif
 
 //Pipeline Constants//
 
 //Common Variables//
-#ifdef OVERWORLD || END
     float SdotU = dot(sunVec, upVec);
     float sunVisibility = clamp(SdotU + 0.0625, 0.0, 0.125) / 0.125;
     float sunVisibility2 = sunVisibility * sunVisibility;
-#endif
 
 //Common Functions//
 

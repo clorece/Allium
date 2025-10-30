@@ -107,6 +107,8 @@ void main() {
     vec4 colorP = vec4(vec3(0.85), glColor.a);
     vec4 color = glColor;
 
+    //if (texture(depthtex0, (gl_FragCoord.xy) / vec2(viewSize)).x < 1.0 || length(worldPos) < far / 3) discard;
+
     vec3 screenPos = vec3(gl_FragCoord.xy / vec2(viewWidth, viewHeight), gl_FragCoord.z);
     if (texture2D(depthtex1, screenPos.xy).r < 1.0) discard;
     float lViewPos = length(playerPos);

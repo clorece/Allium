@@ -4,7 +4,7 @@
 */
 
 #define JUPITER
-#define JUPITER_SCALE 40.0 
+#define JUPITER_SCALE 50.0 
 
 float GetEnderStarNoise(vec2 pos) {
     return fract(sin(dot(pos, vec2(12.9898, 4.1414))) * 43758.54953);
@@ -19,7 +19,7 @@ mat2 Rot2D(float angle) {
 
 vec3 JupiterSwirl(vec2 uv, float time) {
     float timeScale = 0.0001;
-    vec2 zoom = vec2(30.0, 4.5);
+    vec2 zoom = vec2(30.0, 3.5);
     vec2 offset = vec2(2.0, 1.0);
 
     vec2 point = uv * zoom + offset;
@@ -90,37 +90,46 @@ vec3 GetEndSky(vec3 viewPos, float VdotU) {
 
             vec2 uv = vec2(dot(jupiterToView_world, jupiterRight_world), dot(jupiterToView_world, jupiterUp_world));
                 uv = uv / sin(jupiterAngularRadius) * 0.5 + 0.5;
-                uv *= 0.5;
+
+            // Store original UV for distance calculations BEFORE distortion
+            vec2 originalUV = uv;
+
+            // Apply spherical distortion
+            vec2 centered = uv * 2.0 - 1.0;
+            float r = length(centered);
+            if (r < 1.0 && r > 0.0) {
+                float z = sqrt(1.0 - r * r);
+                float distortFactor = mix(1.0, 1.0 / z, 0.1);
+                centered = centered * distortFactor;
+            }
+            uv = centered * 0.5 + 0.5;
+            uv *= 0.25;
 
             float swirlAngle = radians(270.0);
             vec2 rotatedUV = Rot2D(swirlAngle) * uv;
 
             vec3 swirlCol = JupiterSwirl(rotatedUV, frameTimeCounter);
 
-            float dist = distance(uv, vec2(0.4));
-            float ambient = pow(smoothstep(0.5, 0.0, dist), 1.5);
+            // Use ORIGINAL UV for distance calculations to match planet edge
+            float dist = distance(originalUV, vec2(0.85)); // Center at 0.5 for original UV
+            float ambient = pow(smoothstep(1.2, 0.0, dist), 1.5); // Radius of 0.5 matches the circle
 
             jupiterColor = vec3(1.0, 0.85, 0.6) * swirlCol * 8.0;
-            jupiterColor *= ambient;
+            jupiterColor *= mix(jupiterColor, vec3(ambient), vec3(0.985));
 
-            float highlight = smoothstep(1.0, 0.0, dist) * 1.0;
-            highlight = pow(highlight, 2.0);
-
-            vec3 highlightColor = jupiterColor * 2.0;
-
-            enderStars = (jupiterColor * circle + highlightColor * highlight * (1.0 - circle)) * 0.175;
+            enderStars = jupiterColor * 0.075;
             enderStars *= (1.0 - circle); // prevent stars from rendering in the circle
         }
 
         float angleFromCenter = acos(clamp(cosAngle, -1.0, 1.0));
 
         float glowStart = jupiterAngularRadius;
-        float glowEnd   = jupiterAngularRadius * 3.0;
+        float glowEnd   = jupiterAngularRadius * 2.5;
 
         float glow = smoothstep(glowEnd, glowStart, angleFromCenter);
         glow = pow(glow, 2.0); 
 
-        vec3 glowColor = vec3(1.0, 0.74, 0.55) * 1.0;
+        vec3 glowColor = vec3(1.0, 0.74, 0.55) * 2.5;
 
         enderStars += (jupiterColor * circle + glowColor * glow * (1.0 - circle)) * 0.175;
         #endif

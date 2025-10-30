@@ -335,7 +335,21 @@ value.CLOUD_STYLE_DEFINE.3=Unbound
 value.CLOUD_STYLE_DEFINE.50=Vanilla §e[*]
 
 option.CLOUD_SHADOWS=Cloud Shadows
-option.CLOUD_SHADOWS.comment=Enables shadows that are cast from the clouds. §e[*]§r This setting will change the lighting system drastically, as the amount of light that will light the world will be dependent on cloud shadows, especially for rainy weather and light shafts.
+option.CLOUD_SHADOWS.comment=Enables shadows that are cast from the clouds. This option will also allow for lightshafts to cast rays from the clouds in the atmosphere. Extremely performance intensive!
+option.CUMULUS=Cumulus Clouds
+option.CUMULUS.comment=Toggles Volumetric Clouds
+option.CUMULUS_QUALITY=Cloud Quality
+option.CUMULUS_QUALITY.comment=Adjusts cloud step quality, lower for more performance but lower quality clouds, will cause a layer artifact on the noise!
+option.CLOUD_LIGHTING_QUALITY=Cloud Lighting Quality
+value.CLOUD_LIGHTING_QUALITY.7=§eMedium
+value.CLOUD_LIGHTING_QUALITY.14=§cHigh
+value.CLOUD_LIGHTING_QUALITY.30=§4§Ultra
+option.CLOUD_LIGHTING_QUALITY.commen=Adjusts shading and overall lighting quality for clouds, lower for more performance.
+option.CUMULUS_CLOUD_SIZE_MULT=Cloud Noise Size
+option.CUMULUS_CLOUD_COVERAGE=Cloud Coverage
+option.CUMULUS_CLOUD_ALT=Cloud Altitude
+option.CUMULUS_CLOUD_HEIGHT=Cloud Height
+option.PLANAR_CLOUDS=Cirrus Clouds
 
 option.CLOUD_CLOSED_AREA_CHECK=Prevent Clouds in Interiors
 option.CLOUD_CLOSED_AREA_CHECK.comment=Does additional checks to remove clouds in closed areas. §e[*]§r This setting only works with the "Reimagined" or "Unbound" Cloud Styles. §e[*]§r This setting will be disabled if "Real-Time Shadows" is OFF.
@@ -1086,62 +1100,7 @@ screen.LUT.comment=Lookup tables (LUTs) are used to change the colors of an imag
 screen.DIRECT_LIGHTING=Direct Lighting
 screen.INDIRECT_LIGHTING=Indirect Lighting
     option.SSAO_QUALI_DEFINE=Ambient Occlusion Method
-        option.SSAO_QUALI_DEFINE.comment=Changes the method of ambient occlusion between off, SSAO, and RTAO. §e[*]§r RTAO recommended for screenshots, not really for gameplay.
-    option.RTAO_SAMPLES=SSRTAO Samples
-        value.RTAO_SAMPLES.32=§4§lOVERDRIVE
-    option.AO_I=Ambient Occlusion Intensity
-    option.AO_RADIUS=Ambient Occlusion Radius
-    option.DEPTH_TOLERANCE=RTAO Gap Threshold
-        option.DEPTH_TOLERANCE.comment=Determines how wide much occlusioning needs to be done depending on the gap. Lower values will make smaller gaps (e.g. gaps in fences) less occluded, higher values will make them more occluded in the gaps.
-    option.GLOBAL_ILLUMINATION=Indirect Lighting Method
-        option.GLOBAL_ILLUMINATION.comment=Changes the method of indirect lighting. §eSSRT§r - SSRTAO and SSRTGI are combined for SSRTAO to fill in spots and finer details that SSRTGI cannot. §lSetting temporal filter to intense is recommended!§r
-            value.GLOBAL_ILLUMINATION.0=§aOFF
-            value.GLOBAL_ILLUMINATION.1=§eSSAO
-            value.GLOBAL_ILLUMINATION.2=§cSSRTAO
-            value.GLOBAL_ILLUMINATION.3=§cSSRTGI
-            value.GLOBAL_ILLUMINATION.4=§4§lSSRT
-    option.GI_SAMPLES=SSRTGI Samples
-        option.GI_SAMPLES.comment=Controls how many rays are cast per pixel for global illumination. Higher = smoother, better GI, but more expensive.
-        value.GI_SAMPLES.32=§4§lOVERDRIVE
-    option.GI_STEPS=Ray Distance
-        option.GI_STEPS.comment=Scales the total ray length for each ray. Affects performance and range; more steps = longer, denser rays, but more costly.
-    option.GI_RADIUS=Illumination Radius 
-        option.GI_RADIUS.comment=This determines how far rays can reach in a scene. Larger radius = more distant lighting, but also risk of hitting irrelevant surfaces or sky.
-    option.GI_INTENSITY=GI Intensity
-    option.GI_INTENSITY.comment=Adjusts overall visibility of the Global Illumination contribution.
-    option.GI_STEPS=GI Steps
-        option.GI_STEPS.comment=§cHuge Performance Impact
-    option.EXCLUDE_ENTITIES_IN_RT=Exclude Entities in RT
-        option.EXCLUDE_ENTITIES_IN_RT.comment=Prevents entity (includes player and hand) raytracing contribution. Disabling will make entities very noisy at low SSRTAO / SSRGI Samples.
-    option.PREVENT_ACCUMULATION_IN_FOLIAGE=Prevent Foliage in GI
-    option.PREVENT_ACCUMULATION_IN_FOLIAGE.comment=Prevents GI contribution when it comes to foliage blocks. Disabling may make GI look wrong on foliage in many cases but not all.
-    option.GLOBAL_ILLUMINATION_VIEW=GI View
-        option.GLOBAL_ILLUMINATION_VIEW.comment=Debug View for Global Illumination
-
-    option.LOWER_CLOUD_LAYER=Cloud Toggle
-    option.CLOUD_STEP_QUALITY=Cloud Quality
-    option.CLOUD_SHADING_QUALITY=Cloud Shading Quality
-    option.CLOUD_SHADING_STRENGTH=Cloud Shading Strength
-    option.CURVED_CLOUDS=Cloud Curvature
-    option.PLANET_RADIUS=Planet Radius
-    option.CURVATURE_STRENGTH=Curvature Strength
-    option.LOWER_CLOUD_LAYER_MULT=Noise Amount
-    option.LOWER_CLOUD_LAYER_SIZE_MULT=Size Amount
-    option.LOWER_CLOUD_LAYER_COVERAGE=Coverage
-    option.CUMULONIMBUS_GRANULARITY=Granularity
-        option.CUMULONIMBUS_GRANULARITY.comment=Adjusts how granular clouds can be.
-    option.LOWER_CLOUD_LAYER_ALT=Cloud Altitude
-        option.LOWER_CLOUD_LAYER_ALT.comment=Determines the world height which the clouds will appear at.
-    option.LOWER_CLOUD_LAYER_HEIGHT=Height
-        option.LOWER_CLOUD_LAYER_HEIGHT.comment=Determines how high clouds can reach. 
-
-LOWER_CLOUD_LAYER_MULT LOWER_CLOUD_LAYER_HEIGHT LOWER_CLOUD_LAYER_COVERAGE LOWER_CLOUD_LAYER_ALT
-
-option.CLOUD_RENDER_DISTANCE=Cloud Render Distance
-    option.CLOUD_RENDER_DISTANCE.comment=Render distance for both cloud layers. Dependent on your Minecraft's render distance. If there are any performance issues with distant horizons, try lowering it to near since clouds will still render really far away.
-        value.CLOUD_RENDER_DISTANCE.1024=§aNear
-        value.CLOUD_RENDER_DISTANCE.2048=§eNormal
-        value.CLOUD_RENDER_DISTANCE.4096=§cFar
+        option.SSAO_QUALI_DEFINE.comment=Changes the SSAO Quality.
 
 option.WHITE_WORLD=White World
     option.WHITE_WORLD.comment=Ambient Occlusion Debug View.

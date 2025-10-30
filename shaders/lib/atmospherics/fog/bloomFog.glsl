@@ -10,7 +10,7 @@ const float waterBloomAdd  = 14.0;
 #ifdef BORDER_FOG
     const float netherBloomAdd = 14.0;
 #else
-    const float netherBloomAdd = 3.0;
+    const float netherBloomAdd = 0.1;
 #endif
 
 float GetBloomFog(float lViewPos) {

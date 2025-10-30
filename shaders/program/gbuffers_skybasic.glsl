@@ -97,13 +97,15 @@ void main() {
         color.rgb += GetStars(starCoord, VdotU, VdotS);
 
         //vec2 cloudCoord = GetCloudCoords(viewPos.xyz);
-        //color.rgb += GetPlanarClouds(viewPos.xyz, VdotU, VdotS, dither);
+        #ifdef PLANAR_CLOUDS
+            color.rgb += GetPlanarClouds(viewPos.xyz, VdotU, VdotS, dither);
+        #endif 
 
         #if SUN_MOON_STYLE >= 2
             float absVdotS = abs(VdotS) * 0.9977;
             float absVdotS2 = abs(VdotS) * 0.9977;
             #if SUN_MOON_STYLE == 2
-                float sunSizeFactor1 = 0.9975;
+                float sunSizeFactor1 = 0.9976;
                 float sunSizeFactor2 = 1000.0;
                 float moonCrescentOffset = 0.0055;
                 float moonPhaseFactor1 = 2.45;
@@ -132,7 +134,7 @@ void main() {
                         sunMoonMixer *= 1.0 - 0.65 * GetCaveFactor();
                     #endif
 
-                    color.rgb = mix(color.rgb, lightColor * 512.0, sunMoonMixer);
+                    color.rgb = mix(color.rgb, lightColor * 1024.0, sunMoonMixer);
                     //color.rgb = pow(color.rgb, vec3(2.2)) * 0.3;
                 } else {
                     float horizonFactor = GetHorizonFactor(-SdotU);

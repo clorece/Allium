@@ -107,11 +107,11 @@ vec3 GetSky(float VdotU, float VdotS, float dither, bool doGlare, bool doGround)
     finalSky = mix(finalSky, lightColor*(1.0 + VdotSM1*0.3), VdotUM2*invRainFactor);
 
     // ground scatter blend
-    float VdotUM3 = min(max0(-VdotU + 0.125)/0.25, 1.0);
+    float VdotUM3 = min(max0(-VdotU + 0.125)/0.35, 1.0);
           VdotUM3 = smoothstep1(VdotUM3);
     vec3 scatteredGroundMixer = vec3(VdotUM3 * VdotUM3, sqrt1(VdotUM3), sqrt3(VdotUM3));
          scatteredGroundMixer = mix(vec3(VdotUM3), scatteredGroundMixer, 0.75 - 0.5*rainFactor);
-    finalSky = mix(finalSky, pow(downColor, vec3(1.5)) + nightFactor * 0.1, scatteredGroundMixer) * 1.5;
+    finalSky = mix(finalSky, pow(downColor * 1.5, vec3(1.5)) + nightFactor * 0.1, scatteredGroundMixer) * 1.5;
     finalSky = mix(finalSky, rainAmbientColor * 0.5 - nightFactor * 0.1, rainFactor);
     //finalSky += invNoonFactor2 * 0.1;
 
@@ -136,8 +136,6 @@ vec3 GetSky(float VdotU, float VdotS, float dither, bool doGlare, bool doGround)
     #ifdef CAVE_FOG
         finalSky = mix(finalSky, caveFogColor, GetCaveFactor()*VdotUmax0M);
     #endif
-
-    //finalSky.r *= 0.80;
     finalSky += max((dither - 0.5), 0.0)/32.0;
     return pow(finalSky * 1.5, vec3(1.0 / 1.5));
 }

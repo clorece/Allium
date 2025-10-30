@@ -28,7 +28,7 @@ float polygonMask(vec2 p, int sides) {
 }
 
 vec3 circlePulseLens(vec2 uvOffset, float pulseSize, vec3 baseColor, vec3 highlightColor, float pulseDist, vec2 sunDirection) {
-    vec2 shiftedUV = uvOffset + sunDirection * 1.5 * pulseDist;
+    vec2 shiftedUV = (uvOffset + sunDirection * 1.5 * pulseDist) * 2.0;
     float ringCoord = length(shiftedUV * (pulseDist * 4.0)) + pulseSize / 2.0;
     float core      = max(0.01 - pow(length(shiftedUV * pulseDist), pulseSize * 1.4), 0.0) * 50.0;
     float ring      = max(0.001 - pow(ringCoord - 0.3, 1.0/40.0) + sin(ringCoord * 30.0), 0.0) * 3.0;
@@ -85,5 +85,23 @@ void DoLensFlare(inout vec3 color, vec3 viewPos, float dither) {
     circleAccum *= LENSFLARE_I * 0.25;
     circleAccum *= clamp01((SdotU + 0.1) * 5.0);
 
-    color += circleAccum * occlusionFactor;
+    float flareFactor = 1.0;
+    vec3 flare = circleAccum * occlusionFactor;
+
+    #if LENSFLARE_MODE == 2
+        if (sunVec.z > 0.0) {
+            flare = flare * 0.2 + GetLuminance(flare) * vec3(0.3, 0.4, 0.6);
+            flare *= clamp01(1.0 - (SdotU + 0.1) * 5.0);
+            flareFactor *= LENSFLARE_I > 1.001 ? sqrt(LENSFLARE_I) : LENSFLARE_I;
+        } else
+    #endif
+    {
+        flareFactor *= LENSFLARE_I;
+        flare *= clamp01((SdotU + 0.1) * 5.0);
+    }
+
+    //color += flareFactor;
+    flare *= flareFactor;
+
+    color += flare;
 }

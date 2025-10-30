@@ -1,7 +1,5 @@
 #ifndef INCLUDE_SKY_COLORS
     #define INCLUDE_SKY_COLORS
-
-    #ifdef OVERWORLD
         vec3 skyColorSqrt = sqrt(vec3(0.35, 0.55, 1.0));
 
         float invRainStrength2 = (1.0 - rainStrength) * (1.0 - rainStrength);
@@ -64,6 +62,5 @@
         vec3 nightUpSkyColor     = pow(nightColFactor, vec3(0.90)) * 0.40;
         vec3 nightMiddleSkyColor = sqrt(nightUpSkyColor) * 0.68;
         vec3 nightDownSkyColor   = nightMiddleSkyColor * vec3(0.82, 0.82, 0.88);
-    #endif
 
 #endif //INCLUDE_SKY_COLORS

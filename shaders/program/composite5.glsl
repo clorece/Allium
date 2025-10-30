@@ -12,7 +12,7 @@
 
 
 #define Overworld_Lut                5          //[0 1 2 3 4 5 6 7 8 9]
-#define Nether_Lut                8          //[0 1 2 3 4 5 6 7 8 9]
+#define Nether_Lut                2          //[0 1 2 3 4 5 6 7 8 9]
 #define End_Lut                 1          //[0 1 2 3 4 5 6 7 8 9]
 
 #define GBPreset 18 // [1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32]
@@ -69,7 +69,7 @@ void DoBSLColorSaturation(inout vec3 color) {
 vec3 AcesTonemap(vec3 color) {
     // === Adjustable parameters ===
 
-    float exposure = 0.45;   // >1.0 = brighter, <1.0 = darker
+    float exposure = 0.35;   // >1.0 = brighter, <1.0 = darker
     float saturation = 1.05; // >1.0 = more vibrant, <1.0 = more gray
     float gamma = 2.2;      // sRGB standard gamma
     float contrast = 0.998;   // >1.0 = higher contrast, <1.0 = flatter
@@ -98,6 +98,63 @@ vec3 AcesTonemap(vec3 color) {
     tonemapped = mix(vec3(0.5), tonemapped, contrast);
 
     return pow(clamp(tonemapped, 0.0, 1.0), vec3(1.0 / gamma));
+}
+
+vec3 Uchimura(vec3 x, float P, float a, float m, float l, float c, float b) {
+    // Uchimura 2017, "HDR theory and practice"
+    // Math: https://www.desmos.com/calculator/gslcdxvipg
+    // Source: https://www.slideshare.net/nikuque/hdr-theory-and-practicce-jp
+    float l0 = ((P - m) * l) / a;
+    float L0 = m - m / a;
+    float L1 = m + (1.0 - m) / a;
+    float S0 = m + l0;
+    float S1 = m + a * l0;
+    float C2 = (a * P) / (P - S1);
+    float CP = -C2 / P;
+
+    vec3 w0 = vec3(1.0) - smoothstep(vec3(0.0), vec3(m), x);
+    vec3 w2 = step(vec3(m + l0), x);
+    vec3 w1 = vec3(1.0) - w0 - w2;
+
+    vec3 T = m * pow(x / m, vec3(c)) + b;
+    vec3 S = P - (P - S1) * exp(CP * (x - S0));
+    vec3 L = m + a * (x - m);
+
+    return T * w0 + L * w1 + S * w2;
+}
+
+vec3 Tonemap_Uchimura(vec3 color) {
+    const float P = 1.0;  // max display brightness
+    const float a = 0.5;  // contrast
+    const float m = 0.22; // linear section start
+    const float l = 0.4;  // linear section length
+    const float c = 1.22; // black
+    const float b = 0.0;  // pedestal
+    return Uchimura(color, P, a, m, l, c, b);
+}
+
+vec3 Tonemap_Lottes(vec3 x) {
+    // Lottes 2016, "Advanced Techniques and Optimization of HDR Color Pipelines"
+    const float exposure = 0.7; // Exposure multiplier - Higher values brighten the image, lower values darken it
+    const float a = 1.0;        // Contrast - Higher values increase contrast in highlights
+    const float d = 0.977;      // Toe adjustment - Controls the curve in dark regions (closer to 1.0 = harder toe)
+    const float hdrMax = 8.0;   // Maximum HDR input value - Defines the upper limit of the HDR range
+    const float midIn = 0.18;   // Input middle grey - The HDR value that represents middle grey (18% grey)
+    const float midOut = 0.267; // Output middle grey - Where middle grey maps to in the output (controls overall brightness)
+    
+
+    // Apply exposure
+    x *= exposure;
+
+    // Can be precomputed
+    const float b =
+        (-pow(midIn, a) + pow(hdrMax, a) * midOut) /
+        ((pow(hdrMax, a * d) - pow(midIn, a * d)) * midOut);
+    const float c =
+        (pow(hdrMax, a * d) * pow(midIn, a) - pow(hdrMax, a) * pow(midIn, a * d) * midOut) /
+        ((pow(hdrMax, a * d) - pow(midIn, a * d)) * midOut);
+
+    return pow(x, vec3(a)) / (pow(x, vec3(a * d)) * b + c);
 }
 
 #define clamp01(x) clamp(x, 0.0, 1.0)
@@ -237,6 +294,14 @@ void EndLookup(inout vec3 color) {
             bloomStrength = mix(bloomStrength * 0.7, bloomStrength * 1.8, netherBloom);
         #endif
 
+        #ifdef NETHER
+        bloomStrength *= 0.1;
+        #endif
+
+        #ifdef END
+        bloomStrength *= 0.5;
+        #endif
+
         color = mix(color, blur, bloomStrength);
         //color = pow(color, vec3(2.2));
         //color += blur * bloomStrength * (ditherFactor.x + ditherFactor.y);
@@ -318,7 +383,7 @@ void main() {
     float ignored = dot(color * vec3(0.15, 0.50, 0.35), vec3(0.1, 0.65, 0.6));
     float desaturated = dot(color, vec3(0.15, 0.50, 0.35));
     color = mix(color, vec3(ignored), exp2((-24) * desaturated));
-    color = AcesTonemap(color);
+    color = Tonemap_Lottes(color);
 
     #if defined GREEN_SCREEN_LIME || SELECT_OUTLINE == 4
         int materialMaskInt = int(texelFetch(colortex6, texelCoord, 0).g * 255.1);
