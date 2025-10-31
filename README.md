@@ -1,15 +1,14 @@
 # Allium Shaders
 
-<img width="2560" height="1440" alt="2025-09-23_05 18 53" src="https://github.com/user-attachments/assets/0264e1bb-abfb-4b85-9fd1-cd1d97cd4306" />
-
-Shader development has always been a huge interest of mine ever since I first laid eyes on Chocapic13's Shaders. I decided to drop that passion for a while since I wasn't really learning anything. After experiencing the wonderful work of art, Complementary, I wanted to try and challenge myself and create something I truly love while persevering through college.
+<img width="2560" height="1080" alt="Allium Banner" src="https://github.com/user-attachments/assets/235d23be-84dd-4d7e-bd91-f3ce3a29d87e" />
 
 Allium is an edit of Complementary Unbound focused on bringing my creative vision to life. Emphasizing the beauty in colors and effects, all while staying as performant as it can be. With Allium, I hope to deliver a unique style and aesthetic that pushes my creativity to it's limits.
+
+v2.0 has received a massive overhaul on it's overall look, feel and atmospherics. Even though this shader is fairly young and hasn't received much updates, I began to feel as if the appearance was not going in a direction that I had originally intended. So I've spent the past couple of months revisioning what Allium should be, and what should have been. Although it's not perfect, I have been fairly happy with how it has turned out and wanted to share it with you all. Cheers! :)
 
 ### Huge Thanks
 - Emin for using Complementary as the base shader
 - Query for their wonderful LUT code
-- Xonk & Chocapic13 for SSRTGI code from Bliss Shaders
 
 ## Beta & Release Versions
 ### Beta
@@ -43,13 +42,8 @@ If you happen to find any bugs, please report them on the [Github Page](https://
 - Upload log files if applicable.
 
 ## Screenshots
+<img width="2560" height="1440" alt="2025-10-31_00 43 13" src="https://github.com/user-attachments/assets/2322d64d-1a7d-4fd5-9b20-b01fd248ba07" />
 
-<img width="2560" height="1440" alt="2025-09-23_05 22 18" src="https://github.com/user-attachments/assets/79636a00-5d1d-46a3-b5c1-2484c84dbf9a" />
+<img width="2560" height="1440" alt="2025-10-31_00 58 49" src="https://github.com/user-attachments/assets/8e308574-e454-4882-8a26-9258b3b09262" />
 
-<img width="2560" height="1440" alt="2025-09-23_05 18 53" src="https://github.com/user-attachments/assets/43fa23a3-743a-4541-a528-f777ff472e83" />
-
-<img width="2560" height="1440" alt="2025-09-23_04 41 58" src="https://github.com/user-attachments/assets/995b0112-8bde-45c9-80ef-d437bf89a91b" />
-
-<img width="2560" height="1440" alt="2025-09-23_04 42 08" src="https://github.com/user-attachments/assets/bc7279b2-205d-439d-b9ec-38acde13df37" />
-
-<img width="2560" height="1440" alt="2025-09-23_05 26 44" src="https://github.com/user-attachments/assets/fe2e9077-9588-4086-a818-397c6a8f88b6" />
+<img width="2560" height="1440" alt="2025-10-31_00 39 05" src="https://github.com/user-attachments/assets/b50618fc-a69c-4bb4-88bb-5dc855def1be" />
