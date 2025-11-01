@@ -30,12 +30,12 @@
 // ---------------------- LIGHTING & QUALITY ---------------------- //
 
 #define CUMULONIMBUS_STEP_QUALITY 4.0
-#define CUMULUS_QUALITY 0.6 // [0.1 0.15 0.2 0.25 0.3 0.35 0.4 0.45 0.5 0.55 0.65 0.7 0.75 0.8 0.85 0.9 0.95 1.0]
+#define CUMULUS_QUALITY 0.6 // [0.1 0.15 0.2 0.25 0.3 0.35 0.4 0.45 0.5 0.55 0.6 0.65 0.7 0.75 0.8 0.85 0.9 0.95 1.0]
 #define ALTOCUMULUS_STEP_QUALITY 2.0
 #define CLOUD_LIGHTING_QUALITY 7 // [7 14 30]
 #define CLOUD_AO_STRENGTH 0.9
 #define CLOUD_AO_SAMPLES 3 // [3 6 9]
-#define CLOUD_MULTISCATTER 5.0
+#define CLOUD_MULTISCATTER 6.0
 #define CLOUD_MULTISCATTER_OCTAVES 3 // [1 2 3]
 
 // ---------------------- CURVATURE ---------------------- //
@@ -64,7 +64,7 @@ float altocumulusLayerStretch = ALTOCUMULUS_CLOUD_HEIGHT;
 float altocumulusLayerHeight = altocumulusLayerStretch * 2.0;
 
 #ifdef LQ_CLOUD
-    #define CLOUD_SHADING_STRENGTH_MULT ((CLOUD_SHADING_STRENGTH * 0.85) / CLOUD_SHADING_STRENGTH)
+    #define CLOUD_SHADING_STRENGTH_MULT (CLOUD_SHADING_STRENGTH * 0.001)
 #else
     #define CLOUD_SHADING_STRENGTH_MULT CLOUD_SHADING_STRENGTH
 #endif
@@ -241,9 +241,13 @@ vec4 GetVolumetricClouds(int cloudAltitude,
             if (layer == 1) {
                 // nothing yet...
             } else if (layer == 2) {
+                #ifdef LQ_CLOUD
                 shadow = SampleCloudShadow(tracePos, sunDir, dither, cloudSteps,
-                                            cloudAltitude, cumulusLayerStretch, size, 2);
-                
+                                            cloudAltitude, cumulusLayerStretch, size, 2) * 0.5;
+                #else
+                    shadow = SampleCloudShadow(tracePos, sunDir, dither, cloudSteps,
+                                                cloudAltitude, cumulusLayerStretch, size, 2);
+                #endif
                 ao = SampleCloudAO(tracePos, cloudAltitude, cumulusLayerStretch, size, dither, 2);
                 //ao = 1.0;
             } else if (layer == 3) {
@@ -259,11 +263,11 @@ vec4 GetVolumetricClouds(int cloudAltitude,
             //[2.85 5.5 12.0]
 
             #if CLOUD_LIGHTING_QUALITY == 7
-                float shadowMult = 2.85;
+                float shadowMult = 2.6;
             #elif CLOUD_LIGHTING_QUALITY == 14
-                float shadowMult = 5.5;
+                float shadowMult = 5.25;
             #elif CLOUD_LIGHTING_QUALITY == 30
-                float shadowMult = 12.0;
+                float shadowMult = 11.75;
             #else
                 float shadowMult = 1.0;
             #endif
@@ -302,6 +306,10 @@ vec4 GetVolumetricClouds(int cloudAltitude,
         vec3 directSun = (lightColor * 128.4) * (scatter.x);
         vec3 ambSky = (skyColor * 2.0) * scatter.y;
         vec3 cloudCol = directSun + ambSky + multiScatter;
+
+        #ifdef LQ_CLOUD
+            cloudCol *= 4.0;
+        #endif
 
         float cloudFogFactor = 0.0;
         
@@ -396,7 +404,7 @@ vec4 GetClouds(inout float cloudLinearDepth, float skyFade, vec3 cameraPos, vec3
         clouds.rgb += nightNebula * 0.2;
     #endif
 
-    clouds += (dither - 0.5) / 64;
+    //clouds += (dither - 0.5) / 64;
     
     return clouds;
 }

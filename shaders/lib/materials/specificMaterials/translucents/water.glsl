@@ -25,14 +25,14 @@
         color.rgb = colorPM * glColorM;
     #else
         vec3 colorPM = vec3(0.25);
-        color.rgb = 0.375 * glColorM;
+        color.rgb = 0.175 * glColorM;
     #endif
 #else
     #if WATER_STYLE < 3
         color.rgb = mix(color.rgb, vec3(GetLuminance(color.rgb)), 0.88);
         color.rgb = pow2(color.rgb) * vec3(2.3, 3.5, 3.1) * 0.9;
     #else
-        color.rgb = vec3(0.13, 0.2, 0.27);
+        color.rgb = vec3(0.13, 0.2, 0.7);
     #endif
 #endif
 
@@ -260,7 +260,7 @@
             vec3 lightNormal = normalize(vec3(lightNormalP, 1.0) * tbnMatrix);
             highlightMult = dot(lightNormal, lightVec);
             highlightMult = max0(highlightMult) / max(dot(normal, lightVec), 0.17);
-            highlightMult = mix(pow2(pow2(highlightMult * 1.1)), 1.0, min1(sqrt(miplevel) * 0.45)) * 0.24;
+            highlightMult = mix(pow2(pow2(highlightMult * 1.1)), 1.0, min1(sqrt(miplevel) * 0.45));
         #else
             smoothnessG = 0.5;
 

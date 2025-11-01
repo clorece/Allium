@@ -42,15 +42,7 @@ float GetCumulusCloud(vec3 tracePos, int steps, int cloudAltitude, float lTraceP
     base /= 12.0 / CUMULUS_CLOUD_COVERAGE;
     base += rainFactor * 0.7;
 
-    #ifndef LQ_CLOUD
-        //base *= 0.7;
-        //float detail = 1.0;
-
-        float detail = GetCumulonimbusDetail(tracePosM, offset, noisePersistence);
-    #else
-        base *= 0.8;
-        float detail = GetCumulonimbusDetail(tracePosM, offset, noisePersistence);
-    #endif
+    float detail = GetCumulonimbusDetail(tracePosM, offset, noisePersistence);
 
     float combined = mix(base, base * detail, 0.55);
     combined = max(combined - 0.2, 0.0);

@@ -104,14 +104,14 @@ void main() {
                             color1.rgb = color1.rgb * pow2(wcl) * 1.2;
                         #else
                             color1.rgb = mix(color1.rgb, vec3(GetLuminance(color1.rgb)), 0.88);
-                            color1.rgb = pow2(color1.rgb) * vec3(2.5, 3.0, 3.0) * 0.96;
+                            color1.rgb = pow2(color1.rgb) * vec3(1.0, 1.0, 1.0) * 0.96;
                         #endif
                     #else
                         #define WATER_SPEED_MULT_M WATER_SPEED_MULT * 0.035
                         vec2 causticWind = vec2(frameTimeCounter * WATER_SPEED_MULT_M, 0.0);
                         causticWind *= 0.25;
-                        vec2 cPos1 = -worldPos.xz * 0.010 - causticWind;
-                        vec2 cPos2 = worldPos.xz * 0.05 + causticWind;
+                        vec2 cPos1 = -worldPos.xz * 0.05 - causticWind;
+                        vec2 cPos2 = worldPos.xz * 0.1 + causticWind;
 
                         float cMult = 17.0;
                         float offset = 0.001;
@@ -123,7 +123,7 @@ void main() {
                         color1.rgb = vec3(max0(min1(caustic * 0.25 + 0.5)) * 0.5 + 0.01);
 
                         #if MC_VERSION < 11300
-                            color1.rgb *= vec3(0.3, 0.45, 0.9);
+                            color1.rgb *= vec3(1.0, 1.0, 1.0);
                         #endif
                     #endif
 
@@ -131,7 +131,7 @@ void main() {
                         #if WATERCOLOR_MODE >= 2
                             color1.rgb *= glColor.rgb;
                         #else
-                            color1.rgb *= vec3(0.3, 0.45, 0.9);
+                            color1.rgb *= vec3(1.0, 1.0, 1.0);
                         #endif
                     #endif
                     color1.rgb *= vec3(0.9, 0.9, 0.9);
@@ -153,7 +153,7 @@ void main() {
                     waterNoise = pow(waterNoise * 0.5, factor) * factor * 1.0;
 
                     #if MC_VERSION >= 11300 && WATERCOLOR_MODE >= 2
-                        color2.rgb = normalize(sqrt1(glColor.rgb)) * vec3(0.24, 0.31, 0.26) * 0.15;
+                        color2.rgb = normalize(sqrt1(glColor.rgb)) * vec3(0.55, 0.89, 1.0) * 0.075;
                     #else
                         color2.rgb = vec3(0.08, 0.12, 0.195);
                     #endif
