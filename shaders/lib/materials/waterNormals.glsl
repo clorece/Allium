@@ -4,8 +4,6 @@
 
 // Gerstner wave utilities
 
-// Gerstner wave utilities
-
 uint hash(uint s) {
     s ^= 2747636419u;
     s *= 2654435769u;
@@ -21,7 +19,6 @@ float randf(uint seed) {
     return float(h % 1000000u) / 1000000.0;
 }
 
-// Standard Gerstner wave - more stable
 vec2 GerstnerWave(vec2 uv, float amplitude, float wavelength, float speed, float direction, float time) {
     vec2 d = vec2(cos(direction), sin(direction));
     float k = 2.0 * 3.14159 / wavelength;
@@ -78,7 +75,7 @@ vec2 GetCombinedWaves(vec2 uv, vec2 wind) {
     //vec2 n = (nSmall * WATER_BUMP_SMALL) * 0.65;
     vec2 n = (nMed * WATER_BUMP_MED +
             nSmall * WATER_BUMP_SMALL * 0.75 +
-            nBig * WATER_BUMP_BIG) * 0.65;
+            nBig * WATER_BUMP_BIG) * 0.7;
     vec2 g = (gMed * WATER_BUMP_MED +
             gSmall * WATER_BUMP_SMALL +
             gBig * WATER_BUMP_BIG) * 5.0;
