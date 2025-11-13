@@ -31,8 +31,16 @@
     #define BLOCK_REFLECT_QUALITY 2 //[0 1 2 3]
     #define ANISOTROPIC_FILTER 4 //[0 4 8 16]
 
-    const float STEP_SCALE = 32.0;
-    const float SURFACE_BIAS = 0.0005;
+    #define GLOBAL_ILLUMINATION 4 //[0 1 2 3 4]
+        #define RTAO_SAMPLES 4 //[2 3 4 5 6 7 8 9 10 12 14 16 18 20 22 24 32]
+        #define AO_I 1.0 //[0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0]
+        #define RTAO_STEP 6 //[2 3 4 5 6 7 8 9 10 12 14 16 18 20 22 24 32]
+        #define DEPTH_TOLERANCE 12.0 //[1.0 2.0 8.0 12.0 16.0 24.0 32.0]
+        #define AO_RADIUS 1.0 //[0.5 0.6 0.7 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0]
+        #define GI_SAMPLES      4 //[2 3 4 5 6 7 8 9 10 12 14 16 18 20 22 24 32]
+        #define GI_INTENSITY    1.0 //[0.5 0.6 0.7 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0 3.0 4.0 5.0 6.0 7.0 8.0 9.0 10.0]
+        const float STEP_SCALE = 32.0;
+        const float SURFACE_BIAS = 0.0005;
 
     #define COLORED_LIGHTING 0 //[0 128 256 512 768 1024]
     #if defined IRIS_FEATURE_CUSTOM_IMAGES && SHADOW_QUALITY > -1 && !defined MC_OS_MAC && !(defined DH_TERRAIN || defined DH_WATER)

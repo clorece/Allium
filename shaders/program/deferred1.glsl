@@ -232,6 +232,9 @@ void main() {
         vec3 normalM = mat3(gbufferModelView) * texture5;
 
         float albedoS = texelFetch(colortex6, texelCoord, 0).a;
+
+        float foliage = texelFetch(colortex6, texelCoord, 0).a;
+        bool isFoliage = foliage > 0.5;
         
         //color.rgb = foliage > 1.0 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0);
         //if (isFoliage) color.rgb = vec3(0.0, 1.0, 0.0);
@@ -260,7 +263,7 @@ void main() {
             }
         }
 
-        
+        /*
         #if SSAO_QUALI_DEFINE == 0
             ao = 1.0;
             if (!entityOrHand) color.rgb *= ao;
@@ -269,6 +272,23 @@ void main() {
             ao = DoAmbientOcclusion(z0, linearZ0, dither, playerPos);
             //ao = clamp( 1.0 - (1.0 - ao) * AO_I, 0.0, 1.0 );
             if (!entityOrHand) color.rgb *= ao;
+        #endif*/
+
+
+        #if GLOBAL_ILLUMINATION == 0
+            ao = 1.0;
+            if (!entityOrHand) color.rgb *= ao;
+        #elif GLOBAL_ILLUMINATION == 1
+            ao = SSAO(z0, linearZ0, dither);
+            ao = clamp( 1.0 - (1.0 - ao) * AO_I, 0.0, 1.0 );
+            if (!entityOrHand) color.rgb *= ao;
+        #elif GLOBAL_ILLUMINATION > 1
+            color.rgb = DoRT(color.rgb, viewPos.xyz, playerPos, normalM, skyLightFactor, linearZ0, dither, entityOrHand, isFoliage);
+            #if GLOBAL_ILLUMINATION == 3
+                ao = SSAO(z0, linearZ0, dither);
+                ao = clamp( 1.0 - (1.0 - ao) * AO_I, 0.0, 1.0 );
+                if (!entityOrHand) color.rgb *= ao;
+            #endif
         #endif
         // Add soft up-bounce light under the block based on skyLightFactor
 
