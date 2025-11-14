@@ -58,6 +58,9 @@
 #define PREVENT_ACCUMULATION_IN_FOLIAGE
 #define EXCLUDE_ENTITIES_IN_RT
 
+#define SSRT_SHADOWS
+#define SSRT_SHADOW_SAMPLES 4 //[1 2 4 8]
+
 vec2 texelSize = vec2(1.0 / viewWidth, 1.0 / viewHeight);
 
 float rand(float dither, int i) {
@@ -92,15 +95,6 @@ vec3 cosineHemisphereSampleRough(vec2 Xi, float roughness) {
     return vec3(cos(phi) * sinTheta, sin(phi) * sinTheta, cosTheta);
 }
 
-vec3 CalculateFlux(vec3 incidentLight, vec3 normal, vec3 lightDir, float visibility, float distance, float falloffStrength) {
-    float NdotL = 0.5 + 0.5 * dot(normal, lightDir);
-
-    // Optional distance-based attenuation
-    float attenuation = 1.0 / (1.0 + falloffStrength * distance * distance);
-
-    return incidentLight * NdotL * visibility * attenuation;
-}
-
 vec3 RayDirection(vec3 normal, float dither, int i, float roughness) {
     vec3 up = abs(normal.y) < 0.999 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0);
     vec3 tangent = normalize(cross(up, normal));
@@ -110,72 +104,6 @@ vec3 RayDirection(vec3 normal, float dither, int i, float roughness) {
     vec3 hemi = normalize(cosineHemisphereSampleRough(Xi, roughness));
     return ((tangent * hemi.x) + (bitangent * hemi.y) + (normal * hemi.z));
 }
-
-
-// ------------------------------- Filters ------------------------------- //
-#if GLOBAL_ILLUMINATION >= 2
-    vec4 bilateralBlur(sampler2D tex, sampler2D depthTex, vec2 uv, float radius)
-    {
-        vec2 texSize = vec2(viewWidth, viewHeight);
-        vec2 texelSize = 1.0 / texSize;
-
-        float centerDepth = texture(depthTex, uv).r;
-
-        float totalWeight = 0.0;
-        vec4 result = vec4(0.0);
-
-        for (int y = -1; y <= 1; ++y) {
-            for (int x = -1; x <= 1; ++x) {
-                vec2 offset = vec2(x, y) * texelSize * radius;
-                vec2 sampleUV = uv + offset;
-
-                float sampleDepth = texture(depthTex, sampleUV).r;
-                float spatialWeight = exp(-dot(offset, offset) * 10.0); // Gaussian spatial
-                float depthWeight = exp(-abs(sampleDepth - centerDepth) * 50.0); // Depth weight
-
-                float weight = spatialWeight * depthWeight;
-                result += texture(tex, sampleUV) * weight;
-                totalWeight += weight;
-            }
-        }
-
-        return result / totalWeight;
-    }
-
-    vec4 atrousFilter(
-        sampler2D tex,
-        sampler2D depthTex,
-        vec2 uv,
-        int stepWidth
-    ) {
-        vec2 kernel[5] = vec2[](
-            vec2( 0.0,  0.0), // center
-            vec2(-1.0,  0.0),
-            vec2( 1.0,  0.0),
-            vec2( 0.0, -1.0),
-            vec2( 0.0,  1.0)
-        );
-
-        float centerDepth = texture(depthTex, uv).r;
-        vec4 result = vec4(0.0);
-        float totalWeight = 0.0;
-
-        for (int i = 0; i < 5; i++) {
-            vec2 offset = kernel[i] * float(stepWidth) * texelSize;
-            vec2 sampleUV = uv + offset;
-
-            float sampleDepth = texture(depthTex, sampleUV).r;
-            float depthWeight = exp(-abs(sampleDepth - centerDepth) * 50.0);
-            float spatialWeight = (i == 0) ? 1.0 : 0.25;
-
-            float weight = spatialWeight * depthWeight;
-            result += texture(tex, sampleUV) * weight;
-            totalWeight += weight;
-        }
-
-        return result / totalWeight;
-    }
-#endif
 
 // ------------------------------- Raytracer ------------------------------- //
 #if GLOBAL_ILLUMINATION >= 2
@@ -219,6 +147,11 @@ vec3 RayDirection(vec3 normal, float dither, int i, float roughness) {
         float foliageFlag = texelFetch(colortex6, texelCoord, 0).a; // or any channel you use
         hitIsFoliage = foliageFlag > 0.5;
 
+        // Visibility bitmask for tracking ray intersections
+        const int VISIBILITY_BITS = 32;
+        int visibilityMask = 0;
+        int validHits = 0;
+
         for (int k = 0; k < maxSteps; ++k) {
             if (tracePos.x < 0.0 || tracePos.y < 0.0 || tracePos.z < 0.0 || tracePos.x > 1.0 || tracePos.y > 1.0 || tracePos.z > 1.0) return vec3(1.1);
 
@@ -227,10 +160,26 @@ vec3 RayDirection(vec3 normal, float dither, int i, float roughness) {
             float depthCurrent = GetLinearDepth(tracePos.z);
             float depthScene = GetLinearDepth(depthSample);
 
-            if (depthScene < depthCurrent && depthSample >= minZ && depthSample <= maxZ) {
-                hitColor = toLinear(texture2D(colortex2, tracePos.xy).rgb) * 2.5 * GI_INTENSITY;
+            // Track visibility in bitmask for first N steps
+            if (k < VISIBILITY_BITS) {
+                bool isHit = (depthScene < depthCurrent && depthSample >= minZ && depthSample <= maxZ);
+                if (isHit) {
+                    visibilityMask |= (1 << k);
+                    validHits++;
+                }
+            }
 
-                if (hitIsFoliage) hitColor *= 0.75;
+            if (depthScene < depthCurrent && depthSample >= minZ && depthSample <= maxZ) {
+                // Check visibility mask confidence
+                // More valid hits = more confident intersection
+                float confidence = float(validHits) / float(min(k + 1, VISIBILITY_BITS));
+                
+                hitColor = toLinear(texture2D(colortex2, tracePos.xy).rgb) * GI_INTENSITY;
+                
+                // Optionally weight by confidence
+                 hitColor *= mix(0.5, 1.0, confidence);
+
+                //if (hitIsFoliage) hitColor *= 1.0;
                 
                 hitFound = true;
                 break;
@@ -239,7 +188,7 @@ vec3 RayDirection(vec3 normal, float dither, int i, float roughness) {
             float bias = 0.0005;
             minZ = maxZ - bias / max(depthCurrent, 0.0005); 
             maxZ += stepVec.z;
-            tracePos += stepVec * 6.0 * dither;
+            tracePos += stepVec * dither;
         }
 
         return tracePos;
@@ -324,39 +273,30 @@ vec3 RayDirection(vec3 normal, float dither, int i, float roughness) {
         float dither,
         bool isFoliage
     ) {
-        const float r = 1.0;        // Hemisphere spread
+        const float r = 1.0;
 
         vec3 totalGI = vec3(0.0);
         vec3 contribution = vec3(0.0);
 
         for (int i = 0; i < GI_SAMPLES; ++i) {
             vec3 bounceOrigin = viewPos + normal * SURFACE_BIAS;
-
-            // R2-style random hemisphere direction
             vec3 rayDir = RayDirection(normal, dither + float(i), i, r);
 
             bool hitFound = false;
             bool hitIsFoliage = false;
             vec3 hitColor = vec3(0.0);
-
-            // R1's Raytrace (shared with RTAO)
             vec3 tracePos = Raytrace(bounceOrigin, rayDir, dither, hitFound, hitColor, hitIsFoliage, 10.0);
 
             if (hitFound) {
-                // R2’s fade for soft falloff
                 float depthCurrent = GetLinearDepth(toClipSpace(bounceOrigin).z);
                 float depthHit = GetLinearDepth(tracePos.z);
                 float fade = exp(-clamp((depthCurrent - depthHit) / 4.0, 0.0, 1.0));
 
-                hitColor += CalculateFlux(hitColor, normal, rayDir, r, length(rayDir), 0.5);
-
-                // Simple energy transfer
                 contribution = clamp(hitColor, 0.0, 1.0) * fade;
             }
             else {
-                // R2’s soft sky fallback
                 #ifdef OVERWORLD
-                    contribution = GetSky(VdotU, VdotS, dither, false, true) * 0.15 * skyLightFactor;
+                    contribution = GetSky(VdotU, VdotS, dither, false, true) * 0.05 * skyLightFactor;
                 #endif
             }
             totalGI += contribution / float(GI_SAMPLES);
@@ -364,42 +304,61 @@ vec3 RayDirection(vec3 normal, float dither, int i, float roughness) {
 
         return totalGI;
     }
+#endif
 
+// ------------------------------- SSRT Shadows ------------------------------- //
+#ifdef SSRT_SHADOWS
+    vec3 GetShadowPosition(vec3 tracePos, vec3 cameraPos) {
+        vec3 wpos = PlayerToShadow(tracePos - cameraPos);
+        float distb = sqrt(wpos.x * wpos.x + wpos.y * wpos.y);
+        float distortFactor = 1.0 - shadowMapBias + distb * shadowMapBias;
+        vec3 shadowPosition = vec3(vec2(wpos.xy / distortFactor), wpos.z * 0.2);
+        return shadowPosition * 0.5 + 0.5;
+    }
 
-    vec3 GITonemap(vec3 color) {
-        color = clamp(color, 0.0, 10.0);
+    bool GetShadow(vec3 tracePos, vec3 cameraPos) {
 
-        float exposure = 0.6 - (rainFactor * 0.05);
-        exposure -= nightFactor * 0.1;
+        vec3 shadowPosition0 = GetShadowPosition(tracePos, cameraPos);
+        if (length(shadowPosition0.xy * 2.0 - 1.0) < 1.0) {
+            float shadowsample0 = shadow2D(shadowtex0, shadowPosition0).z;
+            if (shadowsample0 == 0.0) return true;
+        }
+        return false;
+    }
 
-        float saturation = 1.0;
-        float gamma = 1.0;
-        float contrast = 1.4;
-
-        color *= exposure;
-
-        const mat3 m1 = mat3(
-            0.59719, 0.07600, 0.02840,
-            0.35458, 0.90834, 0.13383,
-            0.04823, 0.01566, 0.83777
-        );
-
-        const mat3 m2 = mat3(
-            1.60475, -0.10208, -0.00327,
-            -0.53108,  1.10813, -0.07276,
-            -0.07367, -0.00605,  1.07602
-        );
-
-        vec3 v = m1 * color;
-        vec3 a = v * (v + 0.0245786) - 0.000090537;
-        vec3 b = v * (0.983729 * v + 0.4329510) + 0.238081;
-        vec3 tonemapped = m2 * (a / b);
-
-        float luminance = dot(tonemapped, vec3(0.2126, 0.7152, 0.0722));
-        tonemapped = mix(vec3(luminance), tonemapped, saturation);
-        tonemapped = mix(vec3(0.5), tonemapped, contrast);
-
-        return pow(clamp(tonemapped, 0.0, 1.0), vec3(1.0 / gamma));
+    float RaytraceShadow(vec3 lightDir, vec3 origin, vec3 normal, float dither) {
+        vec3 rayOrigin = origin + normal * SURFACE_BIAS;
+        vec3 rayDir = normalize(lightDir);
+        
+        bool hitFound;
+        bool hitIsFoliage;
+        vec3 hitColor;
+        
+        vec3 tracePos = Raytrace(rayOrigin, rayDir, dither, hitFound, hitColor, hitIsFoliage, float(32));
+        
+        
+        if (hitFound) {
+            // Convert to view space to check actual distance
+            vec3 hitViewPos = ScreenToView(tracePos);
+            vec3 originViewPos = origin;
+            
+            // Calculate actual distance to hit
+            float hitDistance = length(hitViewPos - originViewPos);
+            
+            // Only shadow if hit is within contact shadow range (2-3 blocks)
+            float maxContactDistance = 8.0;
+            
+            if (hitDistance < maxContactDistance) {
+                // Verify hit is actually between us and light (positive distance along light direction)
+                float distAlongLight = dot(hitViewPos - originViewPos, rayDir);
+                
+                if (distAlongLight > 0.01) { // Hit is in front, blocking light
+                    return 0.5;
+                }
+            }
+        }
+        
+        return 1.0;
     }
 #endif
 
@@ -424,16 +383,18 @@ vec3 RayDirection(vec3 normal, float dither, int i, float roughness) {
         if (!entityOrHand) {
         #endif
 
-            //bool shadow = GetShadow(viewPos, cameraPosition);
+            bool isInShadow = GetShadow(viewPos, cameraPosition);
             //float rts = RaytraceShadow(lightVec, viewPos, dither, shadow);
 
             #if GLOBAL_ILLUMINATION == 3
-                color += GITonemap(GlobalIllumination(viewPos, playerPos, normal, VdotU, VdotS, skyLightFactor, linearZ0, dither, isFoliage)) * 1.0;
+                color += GlobalIllumination(viewPos, playerPos, normal, VdotU, VdotS, skyLightFactor, linearZ0, dither, isFoliage) * 1.0;
             #elif GLOBAL_ILLUMINATION == 4
-                color += GITonemap(GlobalIllumination(viewPos, playerPos, normal, VdotU, VdotS, skyLightFactor, linearZ0, dither, isFoliage)) * 1.35;
+                color += GlobalIllumination(viewPos, playerPos, normal, VdotU, VdotS, skyLightFactor, linearZ0, dither, isFoliage) * 1.0;
             #endif
 
             //color += mix(color, vec3(rts), vec3(0.5)) * 0.1;
+            //float rtShadow = RaytraceShadow(lightVec, viewPos, normal, dither);
+            //color *= rtShadow;
 
             #if GLOBAL_ILLUMINATION == 2 || GLOBAL_ILLUMINATION == 4
                 color *= RTAO(viewPos, normal, skyLightFactor, dither);
