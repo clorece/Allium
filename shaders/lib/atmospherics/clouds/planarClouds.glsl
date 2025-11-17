@@ -1,6 +1,6 @@
 #include "/lib/colors/cloudColors.glsl"
 
-#define PLANAR_CLOUDS
+//#define PLANAR_CLOUDS
 
 // Map view position to planar cloud coordinates
 #ifdef PLANAR_CLOUDS

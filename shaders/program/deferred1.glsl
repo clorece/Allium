@@ -162,6 +162,7 @@ vec3 ambientColor = vec3(0.5, 0.21, 0.01);
 
 #include "/lib/lighting/indirectLighting.glsl"
 
+
 //Program//
 void main() {
     vec3 color = texelFetch(colortex0, texelCoord, 0).rgb;
@@ -240,6 +241,7 @@ void main() {
         //if (isFoliage) color.rgb = vec3(0.0, 1.0, 0.0);
 
         float ao = 1.0;
+        float colorMultInv = 1.0;
 
         if (materialMaskInt <= 240) {
             #ifdef IPBR
@@ -263,34 +265,94 @@ void main() {
             }
         }
 
-        /*
-        #if SSAO_QUALI_DEFINE == 0
-            ao = 1.0;
-            if (!entityOrHand) color.rgb *= ao;
-        #elif SSAO_QUALI_DEFINE > 0
-        //float DoAmbientOcclusion(float z0, float linearZ0, float dither, vec3 playerPos) {
-            ao = DoAmbientOcclusion(z0, linearZ0, dither, playerPos);
-            //ao = clamp( 1.0 - (1.0 - ao) * AO_I, 0.0, 1.0 );
-            if (!entityOrHand) color.rgb *= ao;
-        #endif*/
-
-
+        
         #if GLOBAL_ILLUMINATION == 0
             ao = 1.0;
             if (!entityOrHand) color.rgb *= ao;
         #elif GLOBAL_ILLUMINATION == 1
-            ao = SSAO(z0, linearZ0, dither);
-            ao = clamp( 1.0 - (1.0 - ao) * AO_I, 0.0, 1.0 );
+            ao = DoAmbientOcclusion(z0, linearZ0, dither, playerPos);
+            //ao = clamp( 1.0 - (1.0 - ao) * AO_I, 0.0, 1.0 );
             if (!entityOrHand) color.rgb *= ao;
-        #elif GLOBAL_ILLUMINATION > 1
-            color.rgb = DoRT(color.rgb, viewPos.xyz, playerPos, normalM, skyLightFactor, linearZ0, dither, entityOrHand, isFoliage);
-            #if GLOBAL_ILLUMINATION == 3
-                ao = SSAO(z0, linearZ0, dither);
-                ao = clamp( 1.0 - (1.0 - ao) * AO_I, 0.0, 1.0 );
-                if (!entityOrHand) color.rgb *= ao;
+        #else
+            vec3 normalG = normalM;
+            #ifdef TAA
+                float noiseMult = 1.0;
+            #else
+                float noiseMult = 0.1;
+            #endif
+            #ifdef TEMPORAL_FILTER
+                float blendFactor = 1.0;
+                float writeFactor = 1.0;
+            #endif
+
+            vec2 roughCoord = gl_FragCoord.xy / 128.0;
+            vec3 roughNoise = vec3(
+                texture2D(noisetex, roughCoord).r,
+                texture2D(noisetex, roughCoord + 0.09375).r,
+                texture2D(noisetex, roughCoord + 0.1875).r
+            );
+            roughNoise = fract(roughNoise + vec3(dither, dither * goldenRatio, dither * pow2(goldenRatio)));
+            roughNoise = noiseMult * (roughNoise - vec3(0.5));
+
+            normalG += roughNoise;
+
+            vec3 gi = GetGI(normalG, viewPos.xyz, nViewPos, depthtex0, dither, skyLightFactor, 1.0).rgb * 0.175 + color * 1.0;
+
+            // reused from reflection will work on later
+            #ifdef TEMPORAL_FILTER
+                vec3 cameraOffset = cameraPosition - previousCameraPosition;
+                vec2 prvCoord = SHalfReprojection(playerPos, cameraOffset);
+                #if defined IPBR && !defined GENERATED_NORMALS
+                    vec2 prvRefCoord = Reprojection(vec3(texCoord, max(refPos.z, z0)), cameraOffset);
+                    vec4 oldRef = texture2D(colortex7, prvRefCoord);
+                #else
+                    vec2 prvRefCoord = Reprojection(vec3(texCoord, z0), cameraOffset);
+                    vec2 prvRefCoord2 = Reprojection(vec3(texCoord, max(refPos.z, z0)), cameraOffset);
+                    vec4 oldRef1 = texture2D(colortex7, prvRefCoord);
+                    vec4 oldRef2 = texture2D(colortex7, prvRefCoord2);
+                    vec3 dif1 = gi - oldRef1.rgb;
+                    vec3 dif2 = gi - oldRef2.rgb;
+                    float dotDif1 = dot(dif1, dif1);
+                    float dotDif2 = dot(dif2, dif2);
+
+                    float oldRefMixer = clamp01((dotDif1 - dotDif2) * 500.0);
+                    vec4 oldRef = mix(oldRef1, oldRef2, oldRefMixer);
+                #endif
+
+                vec4 newRef = vec4(gi, colorMultInv);
+                vec2 oppositePreCoord = texCoord - 2.0 * (prvCoord - texCoord);
+
+                // Reduce blending at speed
+                
+                blendFactor *= float(prvCoord.x > 0.0 && prvCoord.x < 1.0 && prvCoord.y > 0.0 && prvCoord.y < 1.0);
+                float velocity = length(cameraOffset) * max(16.0 - lViewPos / gbufferProjection[1][1], 3.0);
+                blendFactor *= mix(1.0, exp(-velocity) * 0.5 + 0.5, 1.0);
+                
+                // Reduce blending if depth changed
+                float linearZDif = abs(GetLinearDepth(texture2D(colortex1, prvCoord).r) - linearZ0) * far;
+                    blendFactor *= max0(2.0 - linearZDif) * 0.5;
+                //blendFactor = linearZDif;
+                //color = mix(vec3(1,1,0), color, max0(2.0 - linearZDif) * 0.5);
+
+                
+                // Reduce blending if normal changed
+                vec3 texture5P = texture2D(colortex5, oppositePreCoord, 0).rgb;
+                vec3 texture5Dif = abs(texture5 - texture5P);
+                if (texture5Dif != clamp(texture5Dif, vec3(-0.004), vec3(0.004))) {
+                    blendFactor = 0.0;
+                    //color.rgb = vec3(1,0,1);
+                }
+
+                blendFactor = max0(blendFactor); // Prevent first frame NaN
+                newRef = max(newRef, vec4(0.0)); // Prevent random NaNs from persisting
+                refToWrite = mix(newRef, oldRef, blendFactor * 1.0);
+                refToWrite = mix(max(refToWrite, newRef), refToWrite, pow2(pow2(pow2(refToWrite.a))));
+                
+                color.rgb *= 1.0 - refToWrite.a * 1.0;
+                color.rgb += refToWrite.rgb * 1.0;
+                refToWrite *= writeFactor;
             #endif
         #endif
-        // Add soft up-bounce light under the block based on skyLightFactor
 
         #ifdef PBR_REFLECTIONS
 
@@ -344,7 +406,7 @@ void main() {
                 vec3 colorAdd = reflection.rgb * reflectColor;
                 //float colorMultInv = (0.75 - intenseFresnel * 0.5) * max(reflection.a, skyLightFactor);
                 //float colorMultInv = max(reflection.a, skyLightFactor);
-                float colorMultInv = 1.0;
+                //float colorMultInv = 1.0;
 
                 vec3 colorP = color;
 

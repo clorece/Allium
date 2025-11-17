@@ -1,5 +1,7 @@
 const float invLog2 = 1.0 / log(2.0);
 
+#include "/lib/atmospherics/weather/weatherParams.glsl"
+
 float Mie(float x, float g) {
     float t = 1.0 + g*g - 2.0*g*x;
     return (1.0 - g*g) / ((6.0*3.14159265) * t * (t*0.5 + 0.5)) * 0.85;
@@ -11,7 +13,7 @@ float PhaseHG(float cosTheta, float g) {
     return mix(mie1 * 0.1, mie2 * 2.0, 0.35);
 }
 
-float getCloudMap(vec3 p){
+float getCloudMap(vec3 p) {
     vec2 uv = 0.5 + 0.5 * (p.xz/(1.8 * 100.0));
     return texture2D(noisetex, uv).x;
 }

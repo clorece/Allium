@@ -43,7 +43,7 @@ float SampleCloudAO(vec3 tracePos, int cloudAltitude, float stretch, float size,
                                         dxAO, yAO - float(cloudAltitude),
                                         ALTOCUMULUS_CLOUD_GRANULARITY, 1.0, size);
         }
-        if (density < 0.005) break;
+        //if (density < 0.005) break;
         ao += density;
     }
     

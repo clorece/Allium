@@ -48,9 +48,13 @@ float GetCumulusCloud(vec3 tracePos, int steps, int cloudAltitude, float lTraceP
     combined = max(combined - 0.2, 0.0);
     combined = pow(combined, 1.35) * mult;
 
+    dayWeatherCycle();
+    float coverageMap = getCloudMap(tracePosM * 5.0 + offset * 2.0) * dailyCoverage;
+    coverageMap = smoothstep(0.1, 0.5, coverageMap);
+
     float fadeTop = smoothstep(0.0, cumulusLayerStretch, cloudAltitude + cumulusLayerStretch - tracePos.y);
     float fadeBottom = smoothstep(cumulusLayerStretch * 0.85, cumulusLayerStretch, tracePos.y - (cloudAltitude - cumulusLayerStretch));
     float verticalFade = fadeTop * fadeBottom;
 
-    return combined * verticalFade;
+    return combined * verticalFade * coverageMap;
 }
