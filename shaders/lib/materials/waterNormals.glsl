@@ -75,7 +75,7 @@ vec2 GetCombinedWaves(vec2 uv, vec2 wind) {
     //vec2 n = (nSmall * WATER_BUMP_SMALL) * 0.65;
     vec2 n = (nMed * WATER_BUMP_MED +
             nSmall * WATER_BUMP_SMALL * 0.75 +
-            nBig * WATER_BUMP_BIG) * 0.7;
+            nBig * WATER_BUMP_BIG) * 1.0;
     vec2 g = (gMed * WATER_BUMP_MED +
             gSmall * WATER_BUMP_SMALL +
             gBig * WATER_BUMP_BIG) * 5.0;

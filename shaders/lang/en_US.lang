@@ -1101,14 +1101,20 @@ screen.DIRECT_LIGHTING=Direct Lighting
 screen.INDIRECT_LIGHTING=Indirect Lighting
     option.SSAO_QUALI_DEFINE=Ambient Occlusion Method
         option.SSAO_QUALI_DEFINE.comment=Changes the SSAO Quality.
+    option.GLOBAL_ILLUMINATION=Indirect Lighting
+    option.GLOBAL_ILLUMINATION.comment=Sets Indirect Lighting Mode
+        value.GLOBAL_ILLUMINATION.0=Off
+        value.GLOBAL_ILLUMINATION.1=SSAO
+        value.GLOBAL_ILLUMINATION.2=RTAO + RTGI
+        option.GI_I=Global Illumination Intensity
+        option.AO_I=Ambient Occlusion Intensity
+        option.RT_SAMPLES=Raytrace Samples
+            option.RT_SAMPLES.comment=Change to increase Raytrace Quality, higher = less noise
+        option.RT_REFINEMENT_STEPS=Raytrace Steps
+            option.RT_REFINEMENT_STEPS.comment=Change to increase GI distance
 
 option.WHITE_WORLD=White World
     option.WHITE_WORLD.comment=Ambient Occlusion Debug View.
-
-option.SKY_ILLUMINATION=Skylight Illumination
-    option.SKY_ILLUMINATION.comment=Skylight only global illumination. Detail Quality must be set to 3 or more to enable.
-option.SKY_ILLUMINATION_VIEW=SI Debug
-    option.SKY_ILLUMINATION_VIEW.comment=Debug View for Skylight Illumination.
 
 option.FILM_GRAIN_I=Film Grain Strength
     option.FILM_GRAIN_I.comment=Adds or changes the intensity of camera noise throughout the image. Set slider to 0 to turn off.

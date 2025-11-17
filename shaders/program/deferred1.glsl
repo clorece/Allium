@@ -296,7 +296,7 @@ void main() {
 
             normalG += roughNoise;
 
-            vec3 gi = GetGI(normalG, viewPos.xyz, nViewPos, depthtex0, dither, skyLightFactor, 1.0).rgb * 0.175 + color * 1.0;
+            vec3 gi = GetGI(normalG, viewPos.xyz, nViewPos, depthtex0, dither, skyLightFactor, 1.0, VdotU, VdotS).rgb * GI_I + color * 1.0;
 
             // reused from reflection will work on later
             #ifdef TEMPORAL_FILTER

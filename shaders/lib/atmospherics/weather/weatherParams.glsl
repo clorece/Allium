@@ -1,4 +1,4 @@
-#define CURRENT_DAY 0 // [0 1 2 3 4 5 6 7]
+#define CURRENT_DAY 1 // [0 1 2 3 4 5 6 7]
 /* clouds:
     0 - auto
     1 - normal

@@ -94,7 +94,7 @@
         }
         ao /= samples;
 
-        #define SSAO_IM SSAO_I * SSAO_I_FACTOR
+        #define SSAO_IM AO_I * SSAO_I_FACTOR
         return pow(ao, SSAO_IM);
     }
 #elif GLOBAL_ILLUMINATION == 2
@@ -119,11 +119,9 @@
         return ((tangent * hemi.x) + (bitangent * hemi.y) + (normal * hemi.z));
     }
 
-    vec3 giScreenPos = vec3(0.0); // Moved outside function, or pass as out parameter
+    vec3 giScreenPos = vec3(0.0);
 
-    vec4 GetGI(vec3 normalM, vec3 viewPos, vec3 nViewPos,
-                    sampler2D depthtex, float dither, float skyLightFactor, float smoothness) {
-        // ============================== Step 1: Prepare ============================== //
+    vec4 GetGI(vec3 normalM, vec3 viewPos, vec3 nViewPos, sampler2D depthtex, float dither, float skyLightFactor, float smoothness, float VdotU, float VdotS) {
         vec2 screenEdge = vec2(0.6, 0.55);
         vec3 normalMR = normalM;
 
@@ -147,8 +145,8 @@
         
         int refinementSteps = int(RT_REFINEMENT_STEPS);
         
-        float aoRadius = 2.0;
-        float aoIntensity = 1.0 * AO_I;
+        float aoRadius = 1.0;
+        float aoIntensity = 1.2 * AO_I;
         
         for (int i = 0; i < int(RT_SAMPLES); i++) {
             rayPos += rayDir * stepSize;
@@ -240,7 +238,7 @@
                 gi.a = border * edgeFactor.x * edgeFactor.y;
             }
         } else {
-            gi.rgb = ambientColor * 0.2 * skyLightFactor * NdotL * ao;
+            gi.rgb = GetSky(VdotU, VdotS, dither, false, false) * 0.175 * skyLightFactor * ao;
         }
         
         #if defined DEFERRED1 && defined TEMPORAL_FILTER

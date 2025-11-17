@@ -1,6 +1,6 @@
 #include "/lib/colors/cloudColors.glsl"
 
-//#define PLANAR_CLOUDS
+#define PLANAR_CLOUDS
 
 // Map view position to planar cloud coordinates
 #ifdef PLANAR_CLOUDS
@@ -42,7 +42,7 @@ vec3 GetPlanarClouds(vec3 viewPos, float VdotU, float VdotS, float dither) {
         amplitude *= 0.77;
         swirliness *= 1.15;
     }
-
+    cloudPattern *= 0.9;
     cloudPattern -= moonFactor * 0.5;
 
     // Soft edge with smoothstep

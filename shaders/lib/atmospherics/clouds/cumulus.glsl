@@ -31,8 +31,8 @@ float GetCumulusCloud(vec3 tracePos, int steps, int cloudAltitude, float lTraceP
     vec3 tracePosM = shearMatrix * tracePos * (0.00018 * size);
 
     float shearAmount = 0.25;
-    tracePosM.x += tracePosM.y * windDir.x * shearAmount;
-    tracePosM.z += tracePosM.y * windDir.z * shearAmount;
+    //tracePosM.x += tracePosM.y * windDir.x * shearAmount;
+    //tracePosM.z += tracePosM.y * windDir.z * shearAmount;
 
     vec3 offset = Offset(GetWind() * size);
     offset *= 1.0;
@@ -53,7 +53,7 @@ float GetCumulusCloud(vec3 tracePos, int steps, int cloudAltitude, float lTraceP
     coverageMap = smoothstep(0.1, 0.5, coverageMap);
 
     float fadeTop = smoothstep(0.0, cumulusLayerStretch, cloudAltitude + cumulusLayerStretch - tracePos.y);
-    float fadeBottom = smoothstep(cumulusLayerStretch * 0.7, cumulusLayerStretch, tracePos.y - (cloudAltitude - cumulusLayerStretch));
+    float fadeBottom = smoothstep(cumulusLayerStretch * 0.9, cumulusLayerStretch, tracePos.y - (cloudAltitude - cumulusLayerStretch));
     float verticalFade = fadeTop * fadeBottom;
 
     return combined * verticalFade * coverageMap;
