@@ -53,7 +53,7 @@ float GetCumulusCloud(vec3 tracePos, int steps, int cloudAltitude, float lTraceP
     coverageMap = smoothstep(0.1, 0.5, coverageMap);
 
     float fadeTop = smoothstep(0.0, cumulusLayerStretch, cloudAltitude + cumulusLayerStretch - tracePos.y);
-    float fadeBottom = smoothstep(cumulusLayerStretch * 0.85, cumulusLayerStretch, tracePos.y - (cloudAltitude - cumulusLayerStretch));
+    float fadeBottom = smoothstep(cumulusLayerStretch * 0.7, cumulusLayerStretch, tracePos.y - (cloudAltitude - cumulusLayerStretch));
     float verticalFade = fadeTop * fadeBottom;
 
     return combined * verticalFade * coverageMap;

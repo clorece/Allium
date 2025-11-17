@@ -86,45 +86,47 @@
             #define WATER_BUMPINESS_M WATER_BUMPINESS * 0.8
 
            #if WATER_STYLE >= 2
-            #ifdef WATER_PARALLAX
-                const int steps = 8;
-                const float stepSize = inversesqrt(float(steps));
-                const float maxHeight = 0.025;
+                #ifdef WATER_PARALLAX
+                    const int steps = 8;
+                    const float stepSize = inversesqrt(float(steps));
+                    const float maxHeight = 0.01;
 
-                vec3 rayStep = stepSize * vec3(viewVector.xy, viewVector.z) / viewVector.z;
+                    vec3 rayStep = stepSize * vec3(viewVector.xy, viewVector.z) / viewVector.z;
 
-                vec3 offset = vec3(0.0);
-                float height = 0.0;
+                    vec3 offset = vec3(0.0);
+                    float height = 0.0;
+                    float maxHeightSampled = 0.0; // Track the maximum height sampled
 
-                
-                for (int i = 0; i < steps; ++i) {
-                    vec2 sampleUV = waterPosM + offset.xy;
-                    height = dot(GetCombinedWaves(sampleUV, wind), vec2(0.5)) * maxHeight;
+                    for (int i = 0; i < steps; ++i) {
+                        vec2 sampleUV = waterPosM + offset.xy;
+                        height = dot(GetCombinedWaves(sampleUV, wind), vec2(0.5)) * maxHeight;
+                        
+                        maxHeightSampled = max(maxHeightSampled, height); // Update max height
 
-                    if (offset.z >= height) break;
+                        if (offset.z >= height) break;
 
+                        float dz = height - offset.z;
+                        offset += rayStep * dz;
+                    }
+
+                    height = dot(GetCombinedWaves(waterPosM + offset.xy, wind), vec2(0.5)) * maxHeight;
+                    maxHeightSampled = max(maxHeightSampled, height); // Final height check
                     float dz = height - offset.z;
-                    offset += rayStep * dz;
-                }
-                
+                    offset.xy += rayStep.xy * dz;
 
-                height = dot(GetCombinedWaves(waterPosM + offset.xy, wind), vec2(0.5)) * maxHeight;
-                float dz = height - offset.z;
-                offset.xy += rayStep.xy * dz;
-
-                waterPosM += offset.xy;
-            #endif
+                    waterPosM += offset.xy;
+                #endif
 
             vec2 finalNormal = GetCombinedWaves(waterPosM, wind);
-            normalMap.xy = finalNormal * 6.0 * (1.0 - 0.7 * fresnel) * WATER_BUMPINESS_M;
+            normalMap.xy = finalNormal * 1.0 * (1.0 - 0.7 * fresnel) * WATER_BUMPINESS_M;
         #endif
 
-            normalMap.xy *= 0.05 * lmCoordM.y + 0.01;
+            normalMap.xy *= 0.075 * lmCoordM.y + 0.025;
             normalMap.z = sqrt(1.0 - (pow2(normalMap.x) + pow2(normalMap.y)));
             normalM = clamp(normalize(normalMap * tbnMatrix), vec3(-1.0), vec3(1.0));
 
             vec3 vector = reflect(nViewPos, normalize(normalM));
-            float norMix = pow2(pow2(pow2(1.0 - max0(dot(normal, vector))))) * 1.0;
+            float norMix = pow2(pow2(pow2(pow2((1.0 - max0(dot(normal, vector))))))) * 1.0; // Reduced from pow2(pow2(pow2(...))) and added 0.5 multiplier
             normalM = mix(normalM, normal, norMix); // Fixes normals pointing inside water
 
             float fresnelP = fresnel;
@@ -255,12 +257,14 @@
         #if WATER_STYLE == 3 || WATER_STYLE == 2 && SUN_MOON_STYLE >= 2
             smoothnessG = 1.0;
 
-            const float WATER_BUMPINESS_M2 = min(WATER_BUMP_MED * WATER_BUMP_SMALL * WATER_BUMPINESS * 0.65, 1.0);
-            vec2 lightNormalP = WATER_BUMPINESS_M2 * ((texture2D(gaux4, waterPosM + wind).rg - 0.5) + 0.5 * (texture2D(gaux4, waterPosM * 2.0 - 2.0 * wind).rg - 0.5));
+            const float WATER_BUMPINESS_M2 = min(WATER_BUMP_MED * WATER_BUMP_SMALL * WATER_BUMPINESS * 0.65, 1.0) * 5.0;
+            //vec2 lightNormalP = WATER_BUMPINESS_M2 * ((texture2D(gaux4, waterPosM + wind).rg - 0.5) + 0.5 * (texture2D(gaux4, waterPosM * 2.0 - 2.0 * wind).rg - 0.5));
+            vec2 lightNormalP = GetCombinedWaves(waterPosM, wind) * WATER_BUMPINESS_M2;
+            //normalMap.xy = finalNormal * 6.0 * (1.0 - 0.7 * fresnel) * WATER_BUMPINESS_M;
             vec3 lightNormal = normalize(vec3(lightNormalP, 1.0) * tbnMatrix);
             highlightMult = dot(lightNormal, lightVec);
             highlightMult = max0(highlightMult) / max(dot(normal, lightVec), 0.17);
-            highlightMult = mix(pow2(pow2(highlightMult * 1.1)), 1.0, min1(sqrt(miplevel) * 0.45));
+            highlightMult = mix(pow2(pow2(highlightMult * 1.1)), 1.0, 1.0) * 15.0;
         #else
             smoothnessG = 0.5;
 
