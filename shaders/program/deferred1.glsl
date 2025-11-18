@@ -274,6 +274,7 @@ void main() {
             //ao = clamp( 1.0 - (1.0 - ao) * AO_I, 0.0, 1.0 );
             if (!entityOrHand) color.rgb *= ao;
         #else
+        if (!entityOrHand) {
             vec3 normalG = normalM;
             #ifdef TAA
                 float noiseMult = 1.0;
@@ -296,7 +297,7 @@ void main() {
 
             normalG += roughNoise;
 
-            vec3 gi = GetGI(normalG, viewPos.xyz, nViewPos, depthtex0, dither, skyLightFactor, 1.0, VdotU, VdotS).rgb * GI_I + color * 1.0;
+            vec3 gi = GetGI(normalG, viewPos.xyz, nViewPos, depthtex0, dither, skyLightFactor, 1.0, VdotU, VdotS, entityOrHand).rgb * 0.125 + color * 1.0;
 
             // reused from reflection will work on later
             #ifdef TEMPORAL_FILTER
@@ -352,6 +353,7 @@ void main() {
                 color.rgb += refToWrite.rgb * 1.0;
                 refToWrite *= writeFactor;
             #endif
+        }
         #endif
 
         #ifdef PBR_REFLECTIONS

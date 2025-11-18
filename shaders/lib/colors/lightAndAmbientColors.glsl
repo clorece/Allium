@@ -64,8 +64,8 @@
         vec3 dayRainAmbientColor = vec3(0.21, 0.215, 0.225) * (1.8 + 0.5 * vsBrightness);
 
         // night rain colors
-        vec3 nightRainLightColor   = vec3(0.01, 0.02, 0.03) * 1.75 * (0.5 + 0.5 * vsBrightness);
-        vec3 nightRainAmbientColor = vec3(0.053, 0.0575, 0.060) * 2.0 * (0.75 + 0.6 * vsBrightness);
+        vec3 nightRainLightColor   = vec3(0.01, 0.02, 0.03) * 3.75 * (0.5 + 0.5 * vsBrightness);
+        vec3 nightRainAmbientColor = vec3(0.053, 0.0575, 0.060) * 5.0 * (0.75 + 0.6 * vsBrightness);
 
         #ifndef COMPOSITE
             float noonFactorDM = noonFactor; //ground and cloud factor

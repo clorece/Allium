@@ -1108,6 +1108,8 @@ screen.INDIRECT_LIGHTING=Indirect Lighting
         value.GLOBAL_ILLUMINATION.2=RTAO + RTGI
         option.GI_I=Global Illumination Intensity
         option.AO_I=Ambient Occlusion Intensity
+        option.SKY_I=Skylight Contribution
+        option.SKY_I.comment=Affects how much skylight is contributing to global illumination, sort of adds a sheen to surfaces from skylight, giving it a more natural feel.
         option.RT_SAMPLES=Raytrace Samples
             option.RT_SAMPLES.comment=Change to increase Raytrace Quality, higher = less noise
         option.RT_REFINEMENT_STEPS=Raytrace Steps

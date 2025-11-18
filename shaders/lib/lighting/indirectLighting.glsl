@@ -48,6 +48,8 @@
         Chocapic13
 */
 
+vec2 texelSize = 1.0 / vec2(viewWidth, viewHeight);
+
 #if GLOBAL_ILLUMINATION == 1
     vec2 OffsetDist(float x, int s) {
         float n = fract(x * 1.414) * 3.1415;
@@ -119,20 +121,29 @@
         return ((tangent * hemi.x) + (bitangent * hemi.y) + (normal * hemi.z));
     }
 
-    vec3 giScreenPos = vec3(0.0);
+    vec3 toClipSpace3(vec3 viewSpacePosition) {
+        // Transform view space to clip space using projection matrix
+        vec4 clipSpace = gbufferProjection * vec4(viewSpacePosition, 1.0);
+        
+        // Perspective divide and remap from [-1, 1] to [0, 1] for screen coordinates
+        return clipSpace.xyz / clipSpace.w * 0.5 + 0.5;
+    }
 
-    vec4 GetGI(vec3 normalM, vec3 viewPos, vec3 nViewPos, sampler2D depthtex, float dither, float skyLightFactor, float smoothness, float VdotU, float VdotS) {
+
+
+    vec3 giScreenPos = vec3(0.0);
+    vec4 GetGI(vec3 normalM, vec3 viewPos, vec3 nViewPos, sampler2D depthtex, float dither, float skyLightFactor, float smoothness, float VdotU, float VdotS, bool entityOrHand) {
         vec2 screenEdge = vec2(0.6, 0.55);
         vec3 normalMR = normalM;
 
-        float roughness = 0.5 - smoothness;
+        float roughness = 0.75 - smoothness;
         vec3 nViewPosR = RayDirection(normalMR, dither, 0, roughness);
 
         float NdotL = max(dot(normalMR, nViewPosR), 0.0);
 
         vec4 gi = vec4(0.0);
         float ao = 1.0;
-                
+        
         vec3 start = viewPos + normalMR * 0.01;
         vec3 rayDir = nViewPosR;
         
@@ -145,8 +156,14 @@
         
         int refinementSteps = int(RT_REFINEMENT_STEPS);
         
-        float aoRadius = 1.0;
-        float aoIntensity = 1.2 * AO_I;
+        float aoRadius = 2.0;
+        float aoIntensity = 1.01 * AO_I;
+        
+        // Track depth bounds in screen space
+        vec4 initialClip = gbufferProjection * vec4(rayPos, 1.0);
+        vec3 initialScreen = initialClip.xyz / initialClip.w * 0.5 + 0.5;
+        float minZ = initialScreen.z;
+        float maxZ = initialScreen.z;
         
         for (int i = 0; i < int(RT_SAMPLES); i++) {
             rayPos += rayDir * stepSize;
@@ -158,14 +175,13 @@
                 rayScreen.y < 0.0 || rayScreen.y > 1.0) break;
             
             float sampledDepth = texture2D(depthtex, rayScreen.xy).r;
-            vec3 sampledPos = vec3(rayScreen.xy, sampledDepth);
-            sampledPos = nvec3(gbufferProjectionInverse * vec4(sampledPos * 2.0 - 1.0, 1.0));
             
-            float currentDist = length(rayPos - start);
-            float sampledDist = length(sampledPos);
-            float rayPosDist = length(rayPos);
+            float currZ = GetLinearDepth(rayScreen.z);
+            float nextZ = GetLinearDepth(sampledDepth);
             
-            if (rayPosDist > sampledDist) {
+            // Check if ray intersects geometry using bounds
+            if (nextZ < currZ && (sampledDepth <= max(minZ, maxZ) && sampledDepth >= min(minZ, maxZ))) {
+                // Binary search refinement in view space
                 vec3 refineStart = rayPos - rayDir * stepSize;
                 vec3 refineEnd = rayPos;
                 
@@ -176,13 +192,11 @@
                     vec3 refineScreen = refineClip.xyz / refineClip.w * 0.5 + 0.5;
                     
                     float refineDepth = texture2D(depthtex, refineScreen.xy).r;
-                    vec3 refinePos = vec3(refineScreen.xy, refineDepth);
-                    refinePos = nvec3(gbufferProjectionInverse * vec4(refinePos * 2.0 - 1.0, 1.0));
+                    float refineCurrZ = GetLinearDepth(refineScreen.z);
+                    float refineNextZ = GetLinearDepth(refineDepth);
                     
-                    float refineDist = length(refineMid);
-                    float refineDepthDist = length(refinePos);
-                    
-                    if (refineDist > refineDepthDist) {
+                    if (refineNextZ < refineCurrZ && 
+                        (refineDepth <= max(minZ, maxZ) && refineDepth >= min(minZ, maxZ))) {
                         refineEnd = refineMid;
                     } else {
                         refineStart = refineMid;
@@ -196,13 +210,18 @@
                 hit = true;
 
                 float aoContribution = 1.0 - clamp(hitDist / aoRadius, 0.0, 1.0);
-                ao *= 1.0 - (aoContribution * aoIntensity);
+                if (!entityOrHand) ao *= 1.0 - (aoContribution * aoIntensity);
                 
                 break;
             }
             
-            stepSize *= 2.5;
-            stepSize = min(stepSize, 1.0);
+            // Update depth bounds with bias
+            float biasamount = 0.00005;
+            minZ = maxZ - biasamount / currZ;
+            maxZ = rayScreen.z;
+            
+            //stepSize *= 2.5;
+            stepSize = min(stepSize, 0.1) * 2.0;
         }
         
         if (hit && giScreenPos.z < 0.99997) {
@@ -218,7 +237,7 @@
                 #ifdef DEFERRED1
                     float lod = log2(hitDist * 0.5) * 0.5;
                     lod = max(lod, 0.0);
-                    incomingRadiance = texture2DLod(colortex0, giScreenPos.xy, lod).rgb;
+                    incomingRadiance = texture2DLod(colortex0, giScreenPos.xy, lod).rgb * GI_I;
                 #else
                     vec4 sampledColor = texture2D(gaux2, giScreenPos.xy);
                     incomingRadiance = pow2(sampledColor.rgb + 1.0);
@@ -238,7 +257,7 @@
                 gi.a = border * edgeFactor.x * edgeFactor.y;
             }
         } else {
-            gi.rgb = GetSky(VdotU, VdotS, dither, false, false) * 0.175 * skyLightFactor * ao;
+            gi.rgb = GetSky(VdotU, VdotS, dither, false, false) * SKY_I * skyLightFactor * ao;
         }
         
         #if defined DEFERRED1 && defined TEMPORAL_FILTER
