@@ -39,6 +39,7 @@
         #define RT_SAMPLES 32 //[16 32 64 128 256]
         #define RT_REFINEMENT_STEPS 4 //[2 4 6 8 10 12 16 24]
         #define EXCLUDE_ENTITIES
+        //#define RT_VIEW
 
 
     #define COLORED_LIGHTING 0 //[0 128 256 512 768 1024]

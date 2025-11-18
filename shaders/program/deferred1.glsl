@@ -300,7 +300,11 @@ void main() {
 
             float centerViewZ = -linearZ0 * far;
             // min gi to prevent overly bright rays from rendering
-            vec3 gi = min(GetGI(normalG, viewPos.xyz, nViewPos, depthtex0, dither, skyLightFactor, 1.0, VdotU, VdotS, entityOrHand).rgb, vec3(8.0)) * 0.5 + color * 1.0;
+            #ifdef RT_VIEW
+                vec3 gi = min(GetGI(normalG, viewPos.xyz, nViewPos, depthtex0, dither, skyLightFactor, 1.0, VdotU, VdotS, entityOrHand).rgb, vec3(4.0));
+            #else
+                vec3 gi = min(GetGI(normalG, viewPos.xyz, nViewPos, depthtex0, dither, skyLightFactor, 1.0, VdotU, VdotS, entityOrHand).rgb, vec3(4.0)) * 0.5 + color * 0.9;
+            #endif
                 //gi = max(gi, vec3(0.5));
 
             // reused from reflection will work on later
