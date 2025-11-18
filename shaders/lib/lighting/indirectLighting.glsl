@@ -136,8 +136,8 @@ vec2 texelSize = 1.0 / vec2(viewWidth, viewHeight);
         vec2 screenEdge = vec2(0.6, 0.55);
         vec3 normalMR = normalM;
 
-        float roughness = 0.75 - smoothness;
-        vec3 nViewPosR = RayDirection(normalMR, dither, 0, roughness);
+        float roughness = 0.1 - smoothness;
+        vec3 nViewPosR = RayDirection(normalMR, dither, int(RT_SAMPLES), roughness);
 
         float NdotL = max(dot(normalMR, nViewPosR), 0.0);
 
@@ -156,8 +156,8 @@ vec2 texelSize = 1.0 / vec2(viewWidth, viewHeight);
         
         int refinementSteps = int(RT_REFINEMENT_STEPS);
         
-        float aoRadius = 2.0;
-        float aoIntensity = 1.01 * AO_I;
+        float aoRadius = 3.0;
+        float aoIntensity = 1.275 * AO_I;
         
         // Track depth bounds in screen space
         vec4 initialClip = gbufferProjection * vec4(rayPos, 1.0);
@@ -210,7 +210,7 @@ vec2 texelSize = 1.0 / vec2(viewWidth, viewHeight);
                 hit = true;
 
                 float aoContribution = 1.0 - clamp(hitDist / aoRadius, 0.0, 1.0);
-                if (!entityOrHand) ao *= 1.0 - (aoContribution * aoIntensity);
+                ao *= 1.0 - (aoContribution * aoIntensity);
                 
                 break;
             }
@@ -235,12 +235,11 @@ vec2 texelSize = 1.0 / vec2(viewWidth, viewHeight);
 
                 vec3 incomingRadiance = vec3(0.0);
                 #ifdef DEFERRED1
-                    float lod = log2(hitDist * 0.5) * 0.5;
+                    float lod = log2(hitDist) * 0.5;
                     lod = max(lod, 0.0);
-                    incomingRadiance = texture2DLod(colortex0, giScreenPos.xy, lod).rgb * GI_I;
-                #else
-                    vec4 sampledColor = texture2D(gaux2, giScreenPos.xy);
-                    incomingRadiance = pow2(sampledColor.rgb + 1.0);
+                    incomingRadiance = min(pow(texture2DLod(colortex0, giScreenPos.xy, lod).rgb, vec3(2.0)), vec3(2.2)) * GI_I * 0.6; // pow for a slight color boost
+                                                                                                                                        // min to fix gray pixels in distance
+
                 #endif
 
                 incomingRadiance *= NdotL;
@@ -257,7 +256,9 @@ vec2 texelSize = 1.0 / vec2(viewWidth, viewHeight);
                 gi.a = border * edgeFactor.x * edgeFactor.y;
             }
         } else {
-            gi.rgb = GetSky(VdotU, VdotS, dither, false, false) * SKY_I * skyLightFactor * ao;
+            #ifdef OVERWORLD
+                gi.rgb = GetSky(VdotU, VdotS, dither, false, false) * SKY_I * skyLightFactor * ao;
+            #endif
         }
         
         #if defined DEFERRED1 && defined TEMPORAL_FILTER
@@ -266,6 +267,7 @@ vec2 texelSize = 1.0 / vec2(viewWidth, viewHeight);
 
         gi.a *= 0.5;
         gi.rgb *= 3.14159265;
+        gi.rgb += max((dither - 0.5), 0.0);
 
         return gi;
     }

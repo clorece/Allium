@@ -135,7 +135,7 @@ vec3 Tonemap_Uchimura(vec3 color) {
 
 vec3 Tonemap_Lottes(vec3 x) {
     // Lottes 2016, "Advanced Techniques and Optimization of HDR Color Pipelines"
-    const float exposure = 0.7; // Exposure multiplier - Higher values brighten the image, lower values darken it
+    const float exposure = 0.6; // Exposure multiplier - Higher values brighten the image, lower values darken it
     const float a = 1.0;        // Contrast - Higher values increase contrast in highlights
     const float d = 0.977;      // Toe adjustment - Controls the curve in dark regions (closer to 1.0 = harder toe)
     const float hdrMax = 8.0;   // Maximum HDR input value - Defines the upper limit of the HDR range

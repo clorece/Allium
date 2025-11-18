@@ -30,6 +30,9 @@ uniform vec2 pixel;
 const bool colortex0MipmapEnabled = true;
 
 #include "/lib/commonVariables.glsl"
+#include "/lib/commonFunctions.glsl"
+
+
 
 #if defined LIGHTSHAFTS_ACTIVE && (LIGHTSHAFT_BEHAVIOUR == 1 && SHADOW_QUALITY >= 1 || defined END)
 #else
@@ -37,13 +40,6 @@ const bool colortex0MipmapEnabled = true;
 #endif
 
 //Common Functions//
-float GetLinearDepth(float depth) {
-    return (2.0 * near) / (far + near - depth * farMinusNear);
-}
-
-float GetInverseLinearDepth(float linearDepth) {
-    return (far + near - (2.0 * near) / linearDepth) / (far - near);
-}
 
 #ifdef TEMPORAL_FILTER
     float GetApproxDistance(float depth) {
@@ -162,7 +158,6 @@ vec3 ambientColor = vec3(0.5, 0.21, 0.01);
 
 #include "/lib/lighting/indirectLighting.glsl"
 
-
 //Program//
 void main() {
     vec3 color = texelFetch(colortex0, texelCoord, 0).rgb;
@@ -274,10 +269,13 @@ void main() {
             //ao = clamp( 1.0 - (1.0 - ao) * AO_I, 0.0, 1.0 );
             if (!entityOrHand) color.rgb *= ao;
         #else
+
+        #ifdef EXCLUDE_ENTITIES
         if (!entityOrHand) {
+        #endif
             vec3 normalG = normalM;
             #ifdef TAA
-                float noiseMult = 1.0;
+                float noiseMult = 0.5;
             #else
                 float noiseMult = 0.1;
             #endif
@@ -294,10 +292,16 @@ void main() {
             );
             roughNoise = fract(roughNoise + vec3(dither, dither * goldenRatio, dither * pow2(goldenRatio)));
             roughNoise = noiseMult * (roughNoise - vec3(0.5));
+            //roughNoise = fract(roughNoise + goldenRatio * mod(float(frameCounter), 360.0));
 
-            normalG += roughNoise;
+            normalG += roughNoise * 0.5;
+            //normalG += max((dither - 0.5), 0.0)/32.0;
 
-            vec3 gi = GetGI(normalG, viewPos.xyz, nViewPos, depthtex0, dither, skyLightFactor, 1.0, VdotU, VdotS, entityOrHand).rgb * 0.125 + color * 1.0;
+
+            float centerViewZ = -linearZ0 * far;
+            // min gi to prevent overly bright rays from rendering
+            vec3 gi = min(GetGI(normalG, viewPos.xyz, nViewPos, depthtex0, dither, skyLightFactor, 1.0, VdotU, VdotS, entityOrHand).rgb, vec3(8.0)) * 0.5 + color * 1.0;
+                //gi = max(gi, vec3(0.5));
 
             // reused from reflection will work on later
             #ifdef TEMPORAL_FILTER
@@ -323,19 +327,18 @@ void main() {
                 vec4 newRef = vec4(gi, colorMultInv);
                 vec2 oppositePreCoord = texCoord - 2.0 * (prvCoord - texCoord);
 
+                /*
                 // Reduce blending at speed
-                
                 blendFactor *= float(prvCoord.x > 0.0 && prvCoord.x < 1.0 && prvCoord.y > 0.0 && prvCoord.y < 1.0);
                 float velocity = length(cameraOffset) * max(16.0 - lViewPos / gbufferProjection[1][1], 3.0);
-                blendFactor *= mix(1.0, exp(-velocity) * 0.5 + 0.5, 1.0);
-                
+                blendFactor *= mix(1.0, exp(-velocity) * 0.5 + 0.5, smoothnessD);
+                */
+
                 // Reduce blending if depth changed
-                float linearZDif = abs(GetLinearDepth(texture2D(colortex1, prvCoord).r) - linearZ0) * far;
-                    blendFactor *= max0(2.0 - linearZDif) * 0.5;
-                //blendFactor = linearZDif;
+                float linearZDif = abs(GetLinearDepth(texture2D(colortex1, oppositePreCoord).r) - linearZ0) * far;
+                blendFactor *= max0(2.0 - linearZDif) * 0.5;
                 //color = mix(vec3(1,1,0), color, max0(2.0 - linearZDif) * 0.5);
 
-                
                 // Reduce blending if normal changed
                 vec3 texture5P = texture2D(colortex5, oppositePreCoord, 0).rgb;
                 vec3 texture5Dif = abs(texture5 - texture5P);
@@ -346,14 +349,16 @@ void main() {
 
                 blendFactor = max0(blendFactor); // Prevent first frame NaN
                 newRef = max(newRef, vec4(0.0)); // Prevent random NaNs from persisting
-                refToWrite = mix(newRef, oldRef, blendFactor * 1.0);
+                refToWrite = mix(newRef, oldRef, blendFactor * 0.95);
                 refToWrite = mix(max(refToWrite, newRef), refToWrite, pow2(pow2(pow2(refToWrite.a))));
                 
                 color.rgb *= 1.0 - refToWrite.a * 1.0;
                 color.rgb += refToWrite.rgb * 1.0;
                 refToWrite *= writeFactor;
             #endif
+        #ifdef EXCLUDE_ENTITIES
         }
+        #endif
         #endif
 
         #ifdef PBR_REFLECTIONS

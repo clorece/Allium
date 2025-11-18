@@ -167,6 +167,7 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
     #endif
 
     vec3 ambientColorM = ambientColor * 1.2 * AMBIENT_AMOUNT;
+    //ambientColorM *= 0.9;
     vec3 nViewPos = normalize(viewPos);
 
     #if defined LIGHT_COLOR_MULTS && !defined GBUFFERS_WATER // lightColorMult is defined early in gbuffers_water

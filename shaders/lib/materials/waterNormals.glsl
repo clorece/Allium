@@ -64,13 +64,14 @@ vec2 GetCombinedWaves(vec2 uv, vec2 wind) {
     
     vec2 gMed   = GetGerstnerLayer(uv, time * 0.25, 100u, 0.15, 2.0, 2.0, 3);
         gMed   += GetGerstnerLayer(uv * 1.25, time * 0.25, 200u, 0.12, 2.8, 1.0, 3);
+        gMed *= 0.9;
     
     vec2 gSmall = GetGerstnerLayer(uv * 1.0, time * 2.0, 300u, 0.1, 1.0, 1.95, 4);
         gSmall += GetGerstnerLayer(uv * 2.0, time * 2.0, 400u, 0.08, 0.8, 1.95, 4);
     
     vec2 gBig   = GetGerstnerLayer(uv * 0.35, time * 0.65, 500u, 0.2, 4.0, 1.28, 2);
         gBig   += GetGerstnerLayer(uv * 0.55, time * 0.75, 600u, 0.18, 3.5, 1.28, 2);
-        gBig   *= 0.85;
+        gBig   *= 0.55;
 
     //vec2 n = (nSmall * WATER_BUMP_SMALL) * 0.65;
     vec2 n = (nMed * WATER_BUMP_MED +

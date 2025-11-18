@@ -1114,6 +1114,8 @@ screen.INDIRECT_LIGHTING=Indirect Lighting
             option.RT_SAMPLES.comment=Change to increase Raytrace Quality, higher = less noise
         option.RT_REFINEMENT_STEPS=Raytrace Steps
             option.RT_REFINEMENT_STEPS.comment=Change to increase GI distance
+        option.EXCLUDE_ENTITIES=Exclude Entities in RT
+            option.EXCLUDE_ENTITIES.comment=When enabled, prevent RTGI or RTAO to render on entities or hand. Disabling this option will cause a lot of ghosting on entities when they move.
 
 option.WHITE_WORLD=White World
     option.WHITE_WORLD.comment=Ambient Occlusion Debug View.
