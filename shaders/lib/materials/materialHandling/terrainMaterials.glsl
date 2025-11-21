@@ -2586,7 +2586,7 @@ if (mat < 11024) {
                                     smoothnessD = smoothnessG * 0.25;
                                 }
                                 else /*if (mat < 10976)*/ { // Firefly Bush
-                                    subsurfaceMode = 1, noSmoothLighting = true, noDirectionalShading = true;
+                                    subsurfaceMode = 1, noSmoothLighting = true, noDirectionalShading = true; albedoS = 1.0;
 
                                     #if defined COATED_TEXTURES && defined GBUFFERS_TERRAIN
                                         doTileRandomisation = false;

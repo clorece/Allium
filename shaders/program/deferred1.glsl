@@ -341,7 +341,7 @@ void main() {
                 //float colorMultInv = 1.0;
 
                 vec3 colorP = color;
-
+                /*
                 #ifdef TEMPORAL_FILTER
                     vec3 cameraOffset = cameraPosition - previousCameraPosition;
                     vec2 prvCoord = SHalfReprojection(playerPos, cameraOffset);
@@ -392,9 +392,10 @@ void main() {
                     color.rgb += refToWrite.rgb * fresnelM;
                     refToWrite *= writeFactor;
                 #else
+                */
                     color *= 1.0 - colorMultInv * fresnelM;
                     color += colorAdd * fresnelM;
-                #endif
+                //#endif
 
                 color = max(colorP, color); // Prevents reflections from making a surface darker
                 
@@ -411,7 +412,7 @@ void main() {
             #ifdef EXCLUDE_ENTITIES
             if (!entityOrHand) {
             #endif
-                vec3 rawGI = texture2D(colortex8, texCoord).rgb;
+                vec3 rawGI = texture2D(colortex9, texCoord).rgb;
                 vec3 gi = vec3(0.0);
                 #ifdef TEMPORAL_BILATERAL_FILTER
                     float totalWeight = 0.0;
@@ -420,39 +421,31 @@ void main() {
                     
                     float centerDepth = linearZ0;
                     vec3 centerNormal = normalM;
-                    
-                    // Read center pixel variance
+
                     float centerVariance = texture2D(colortex9, texCoord).a;
                     
                     for (int i = -BLUR_SAMPLES; i <= BLUR_SAMPLES; i++) {
                         for (int j = -BLUR_SAMPLES; j <= BLUR_SAMPLES; j++) {
                             vec2 offset = vec2(i, j) / vec2(viewWidth, viewHeight);
                             vec2 sampleCoord = texCoord + offset * BLUR_AMOUNT;
-                            
-                            // Spatial Gaussian weight
+
                             float spatialWeight = giBlurWeight[abs(i)] * giBlurWeight[abs(j)];
-                            
-                            // Depth-aware weight
+
                             float sampleDepth = GetLinearDepth(texture2D(depthtex0, sampleCoord).r);
                             float depthDiff = abs(centerDepth - sampleDepth) * far;
                             float depthWeight = exp(-depthDiff * depthDiff * 2.0);
-                            
-                            // Normal-aware weight
+
                             vec3 sampleNormal = texture2D(colortex5, sampleCoord).rgb * 2.0 - 1.0;
                             sampleNormal = mat3(gbufferModelView) * sampleNormal;
                             float normalWeight = pow(max(dot(centerNormal, sampleNormal), 0.0), 4.0);
-                            
-                            // Variance-based weight (NEW!)
+
                             vec4 sampleGIData = texture2D(colortex9, sampleCoord);
                             vec3 sampleGI = sampleGIData.rgb;
                             float sampleVariance = sampleGIData.a;
-                            
-                            // Higher variance = more blur needed
-                            // Use geometric mean of center and sample variance
+
                             float varianceWeight = sqrt(centerVariance * sampleVariance + 0.001);
                             varianceWeight = 1.0 / (1.0 + varianceWeight * 5.0); // Adjust sensitivity with the 5.0 multiplier
                             
-                            // Combined weight
                             float weight = spatialWeight * depthWeight * normalWeight * varianceWeight;
                             
                             gi += sampleGI * weight;
@@ -465,10 +458,25 @@ void main() {
                     gi = rawGI;
                 #endif
 
+                /*
+    vec3 doIndirectLighting(vec3 lightColor, vec3 minimumLightColor, float lightmap) {
+        float lightmapCurve = (pow(lightmap, 2.0) * 2.0 + pow(lightmap, 2.5)) * 0.5;
+        
+        vec3 indirectLight = lightColor * lightmapCurve * 0.7;  // ambient_brightness placeholder
+        indirectLight += minimumLightColor * 0.01;  // MIN_LIGHT_AMOUNT placeholder
+        return indirectLight;
+    }*/
+
+                /*
+                vec3 colorCurve = (pow(ambientColor, vec3(16.0)) * 2.0 + pow(ambientColor, vec3(2.5))) * 0.5;
+
+                vec3 indirectLight = gi * colorCurve * 0.7;
+                indirectLight += 0.01 * 0.01; */
+
                 #ifdef RT_VIEW
                     vec3 colorAdd = gi;
                 #else
-                    vec3 colorAdd = (gi * 0.5 + color * 0.4) * 1.0;
+                    vec3 colorAdd = (gi * 0.5 + color * 0.5) * 1.0;
                 #endif
                 
                 #ifdef TEMPORAL_FILTER
@@ -478,8 +486,6 @@ void main() {
                 vec2 prvCoord = SHalfReprojection(playerPos, cameraOffset);
                 vec2 prvRefCoord = Reprojection(vec3(texCoord, z0), cameraOffset);
                 vec2 prvRefCoord2 = Reprojection(vec3(texCoord, max(refPos.z, z0)), cameraOffset);
-                
-                // Use Catmull-Rom for better history sampling
                 vec4 oldRef1 = vec4(textureCatmullRom(colortex7, prvRefCoord, vec2(viewWidth, viewHeight)), texture2D(colortex7, prvRefCoord).a);
                 vec4 oldRef2 = vec4(textureCatmullRom(colortex7, prvRefCoord2, vec2(viewWidth, viewHeight)), texture2D(colortex7, prvRefCoord2).a);
                 

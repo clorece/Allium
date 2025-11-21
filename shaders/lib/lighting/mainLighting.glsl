@@ -168,7 +168,7 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
 
     #if GLOBAL_ILLUMINATION == 2
     lightColorM *= 2.0;
-    ambientColor *= 1.1;
+    ambientColor *= 1.15;
     #endif
 
     vec3 ambientColorM = ambientColor * 1.2 * AMBIENT_AMOUNT;

@@ -126,11 +126,12 @@ vec2 texelSize = 1.0 / vec2(viewWidth, viewHeight);
     }
 
     vec3 giScreenPos = vec3(0.0);
-    vec4 GetGI(vec3 normalM, vec3 viewPos, vec3 nViewPos, sampler2D depthtex, float dither, float skyLightFactor, float smoothness, float VdotU, float VdotS, bool entityOrHand) {
+vec4 GetGI(vec3 normalM, vec3 viewPos, vec3 nViewPos, sampler2D depthtex, float dither, float skyLightFactor, float smoothness, float VdotU, float VdotS, bool entityOrHand) {
     vec2 screenEdge = vec2(0.6, 0.55);
     vec3 normalMR = normalM;
 
     vec4 gi = vec4(0.0);
+    vec3 radiance = vec3(0.0);  // Change: separate radiance from occlusion
     vec3 occlusion = vec3(0.0);
     
     vec3 start = viewPos + normalMR * 0.01;
@@ -140,12 +141,6 @@ vec2 texelSize = 1.0 / vec2(viewWidth, viewHeight);
     float stepSize = dist / 10.0;
 
     float foliage = texture2D(colortex10, texCoord).a;
-    
-    #ifdef OVERWORLD
-        vec3 skyContribution = (ambientColor * 0.5 + GetSky(VdotU, VdotS, dither, false, false) * 0.5) * SKY_I * skyLightFactor;
-    #else
-        vec3 skyContribution = ambientColor * 0.1;
-    #endif
 
     vec3 startWorldPos = mat3(gbufferModelViewInverse) * start;
     float distanceScale = clamp(1.0 - start.z / far, 0.1, 1.0);
@@ -154,6 +149,15 @@ vec2 texelSize = 1.0 / vec2(viewWidth, viewHeight);
     for (int i = 0; i < maxIterations; i++) {
         vec3 rayDir = RayDirection(normalMR, dither, i);
         float NdotL = max(dot(normalMR, rayDir), 0.0);
+
+        #ifdef OVERWORLD
+            vec3 sampledSky = pow((ambientColor * 0.5 + GetSky(VdotU, VdotS, dither, false, false) * 0.5), vec3(1.0 / 2.2)) * SKY_I;
+            float skyWeight = max(rayDir.y, pow(skyLightFactor, 2.0)) * 1.0 + 0.05;
+            
+            vec3 skyContribution = sampledSky * skyWeight;
+        #else
+            vec3 skyContribution = ambientColor * 0.1 * skyWeight;
+        #endif
 
         vec4 clipPos4 = gbufferProjection * vec4(start, 1.0);
         vec3 clipPosition = clipPos4.xyz / clipPos4.w * 0.5 + 0.5;
@@ -187,6 +191,8 @@ vec2 texelSize = 1.0 / vec2(viewWidth, viewHeight);
         float biasamount = 0.00005;
         float minZ = spos.z - biasamount / GetLinearDepth(spos.z);
         float maxZ = spos.z;
+        
+        float CURVE = 0.0;
 
         for (int j = 0; j < iterations; j++) {
             // check bounds
@@ -218,12 +224,18 @@ vec2 texelSize = 1.0 / vec2(viewWidth, viewHeight);
             minZ = maxZ - biasamount / currZ;
             maxZ += stepv.z;
             
-            spos += stepv * dither;
+            spos += stepv;
+            CURVE += 1.0 / float(iterations);
         }
 
-        gi.rgb += skyContribution;
+        // Always add sky contribution to radiance
+        radiance += skyContribution;
         
         if (hit && giScreenPos.z < 0.99997) {
+            // Apply distance-based curve falloff (less occlusion from distant hits)
+            CURVE = 1.0 - pow(1.0 - pow(1.0 - CURVE, 2.0), 5.0);
+            CURVE = mix(CURVE, 1.0, clamp(start.z / far, 0.0, 1.0));
+            
             vec2 absPos = abs(giScreenPos.xy - 0.5);
             vec2 cdist = absPos / screenEdge;
             float border = clamp(1.0 - pow(max(cdist.x, cdist.y), 50.0), 0.0, 1.0);
@@ -241,10 +253,10 @@ vec2 texelSize = 1.0 / vec2(viewWidth, viewHeight);
                 if (hitFoliage > 0.9) {
                     incomingRadiance *= 0.1;
                 }
+
+                radiance += incomingRadiance;
                 
-                gi.rgb += incomingRadiance;
-                
-                occlusion += skyContribution;
+                occlusion += skyContribution * CURVE * 3.0;
                 
                 edgeFactor.x = pow2(edgeFactor.x);
                 edgeFactor = 1.0 - edgeFactor;
@@ -252,8 +264,8 @@ vec2 texelSize = 1.0 / vec2(viewWidth, viewHeight);
             }
         }
     }
-    gi.rgb -= occlusion * AO_I * 2.0;
-    gi /= float(maxIterations);
+    gi.rgb = max((radiance) / float(maxIterations), 0.0);
+    gi.rgb -= occlusion;
     
     #if defined DEFERRED1 && defined TEMPORAL_FILTER
         if (gi.a < 0.001) giScreenPos.z = 1.0;

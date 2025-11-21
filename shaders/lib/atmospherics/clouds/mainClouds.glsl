@@ -325,7 +325,7 @@ vec4 GetVolumetricClouds(int cloudAltitude,
         if (firstHitPos > 0.0) {
             float fadeDistance = distanceThreshold * 1.2;
             float distF = clamp((fadeDistance - lastLxz) / fadeDistance, 0.0, 1.0);
-            cloudFogFactor = pow(distF, 2.0) ;
+            cloudFogFactor = pow(distF, 1.75) ;
         }
 
         float skyMult1 = 1.0 - 0.2 * max(sunVisibility2, nightFactor);
@@ -336,7 +336,7 @@ vec4 GetVolumetricClouds(int cloudAltitude,
         if (layer == 1) {
             // nothing yet...
         } else if (layer == 2) {
-            finalColor = mix(skyColor, cloudCol * skyMult1, cloudFogFactor * skyMult2 * 0.5);
+            finalColor = mix(skyColor, cloudCol * skyMult1, cloudFogFactor * skyMult2 * 0.6);
         } else if (layer == 3) {
             finalColor = mix(skyColor, cloudCol * skyMult1, cloudFogFactor * skyMult2 * 0.15);
         }
