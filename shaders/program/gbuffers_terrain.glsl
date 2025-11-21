@@ -217,7 +217,7 @@ void main() {
     vec3 normalM = normal, geoNormal = normal, shadowMult = vec3(1.0);
     vec3 worldGeoNormal = normalize(ViewToPlayer(geoNormal * 10000.0));
     //vec3 worldGeoNormal = normalize((gbufferModelViewInverse * vec4(normal, 0.0)).xyz);
-    float albedoS = 1.0;
+    float albedoS = 0.0;
     #ifdef IPBR
         vec3 maRecolor = vec3(0.0);
         #include "/lib/materials/materialHandling/terrainMaterials.glsl"
@@ -354,17 +354,14 @@ void main() {
         ColorCodeProgram(color, mat);
     #endif
 
-    /* DRAWBUFFERS:069 */
-    gl_FragData[0] = color;
-    #ifdef WHITE_WORLD
-        gl_FragData[0] = vec4(1.0, 1.0, 1.0, 1.0);    // white world debug
-    #endif 
-    gl_FragData[1] = vec4(smoothnessD, materialMask, skyLightFactor, subsurfaceMode);
-    gl_FragData[2] = vec4(flux, 1.0);
+    /* RENDERTARGETS: 0,6,10 */
+    gl_FragData[0] = color;  // colortex0: fully lit
+    gl_FragData[1] = vec4(smoothnessD, materialMask, skyLightFactor, subsurfaceMode);  // colortex6
+    gl_FragData[2] = vec4(texture2D(tex, texCoord).rgb, albedoS);  // colortex10: PURE ALBEDO
 
     #if BLOCK_REFLECT_QUALITY >= 2 && RP_MODE != 0
-        /* DRAWBUFFERS:0695 */
-        gl_FragData[3] = vec4(mat3(gbufferModelViewInverse) * normalM, 1.0);
+        /* RENDERTARGETS: 0,6,10,5 */
+        gl_FragData[3] = vec4(mat3(gbufferModelViewInverse) * normalM, 1.0);  // colortex5
     #endif
 }
 

@@ -1112,11 +1112,21 @@ screen.INDIRECT_LIGHTING=Indirect Lighting
         option.SKY_I.comment=Affects how much skylight is contributing to global illumination, sort of adds a sheen to surfaces from skylight, giving it a more natural feel.
         option.RT_SAMPLES=Raytrace Samples
             option.RT_SAMPLES.comment=Change to increase Raytrace Quality, higher = less noise
-        option.RT_REFINEMENT_STEPS=Raytrace Steps
-            option.RT_REFINEMENT_STEPS.comment=Change to increase GI distance
+        option.RT_STEPS=Raytrace Steps
+            option.RT_STEPS.comment=Change to increase the distance a ray can travel (gi range)
         option.EXCLUDE_ENTITIES=Exclude Entities in RT
             option.EXCLUDE_ENTITIES.comment=When enabled, prevent RTGI or RTAO to render on entities or hand. Disabling this option will cause a lot of ghosting on entities when they move.
-
+        screen.DENOISER=Denoiser
+            option.TEMPORAL_BILATERAL_FILTER=Temporal Bilateral Filter
+                option.TEMPORAL_BILATERAL_FILTER.comment=Denoiser Toggle
+            option.BLUR_SAMPLES=Blur Quality
+                option.BLUR_SAMPLES.comment=Overall quality of blur filter, balance with blur amount to save performance. HOWEVER, this setting is very performance intensive the higher you go
+            option.BLUR_AMOUNT=Blur Strength
+                option.BLUR_AMOUNT.comment=How strong or how big each ray is blurred. You can balance this with blur quality using a high amount of blur and a low quality to get a good framerate, while still getting acceptable rt quality.
+            option.BLEND_WEIGHT=Blend Weight
+                option.BLEND_WEIGHT.comment=Controls the temporal accumulation strength. Lower values reduce noise but increase ghosting, higher values reduce ghosting but increase jitter.
+            option.GHOST_REDUCTION=Ghosting Reduction
+                option.GHOST_REDUCTION.comment=Changes blend weight when the camera is moving, higher values the stronger the reduction, but more ray jitter when camera is moving.
 option.WHITE_WORLD=White World
     option.WHITE_WORLD.comment=Ambient Occlusion Debug View.
 

@@ -99,96 +99,97 @@ vec2 texelSize = 1.0 / vec2(viewWidth, viewHeight);
         #define SSAO_IM AO_I * SSAO_I_FACTOR
         return pow(ao, SSAO_IM);
     }
+
 #elif GLOBAL_ILLUMINATION == 2
+
     float rand(float dither, int i) {
         return fract(dither + float(i) * 0.61803398875);
     }
 
-    vec3 cosineHemisphereSampleRough(vec2 Xi, float roughness) {
-        float exponent = 1.0 / max(roughness * roughness, 0.001);
-        float phi = 2.0 * 3.14159265 * Xi.y;
-        float cosTheta = pow(1.0 - Xi.x, 1.0 / (exponent + 1.0));
-        float sinTheta = sqrt(1.0 - cosTheta * cosTheta);
-        return vec3(cos(phi) * sinTheta, sin(phi) * sinTheta, cosTheta);
-    }
-
-    vec3 RayDirection(vec3 normal, float dither, int i, float roughness) {
-        vec3 up = abs(normal.y) < 0.999 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0);
-        vec3 tangent = normalize(cross(up, normal));
-        vec3 bitangent = cross(normal, tangent);
-        vec2 Xi = vec2(rand(dither, i));
-        vec3 hemi = normalize(cosineHemisphereSampleRough(Xi, roughness));
-        return ((tangent * hemi.x) + (bitangent * hemi.y) + (normal * hemi.z));
+    vec3 RayDirection(vec3 normal, float dither, int i) {
+        vec2 Xi = vec2(rand(dither, i), rand(dither, i + 1));
+        
+        float theta = 6.28318530718 * Xi.y;
+        float r = sqrt(Xi.x);
+        vec3 hemi = vec3(r * cos(theta), r * sin(theta), sqrt(1.0 - Xi.x));
+        
+        vec3 T = normalize(cross(abs(normal.z) < 0.999 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0), normal));
+        vec3 B = cross(normal, T);
+        
+        return (T * hemi.x) + (B * hemi.y) + (normal * hemi.z);
     }
 
     vec3 toClipSpace3(vec3 viewSpacePosition) {
-        // Transform view space to clip space using projection matrix
         vec4 clipSpace = gbufferProjection * vec4(viewSpacePosition, 1.0);
-        
-        // Perspective divide and remap from [-1, 1] to [0, 1] for screen coordinates
+
         return clipSpace.xyz / clipSpace.w * 0.5 + 0.5;
     }
 
-
-
     vec3 giScreenPos = vec3(0.0);
     vec4 GetGI(vec3 normalM, vec3 viewPos, vec3 nViewPos, sampler2D depthtex, float dither, float skyLightFactor, float smoothness, float VdotU, float VdotS, bool entityOrHand) {
-        vec2 screenEdge = vec2(0.6, 0.55);
-        vec3 normalMR = normalM;
+    vec2 screenEdge = vec2(0.6, 0.55);
+    vec3 normalMR = normalM;
 
-        float roughness = 0.1 - smoothness;
-        vec3 nViewPosR = RayDirection(normalMR, dither, 0, roughness);
+    vec4 gi = vec4(0.0);
+    vec3 occlusion = vec3(0.0);
+    
+    vec3 start = viewPos + normalMR * 0.01;
 
-        float NdotL = max(dot(normalMR, nViewPosR), 0.0);
+    vec3 worldpos = mat3(gbufferModelViewInverse) * start;
+    float dist = 1.0 + 2.0 * length(worldpos) / far;
+    float stepSize = dist / 10.0;
 
-        vec4 gi = vec4(0.0);
-        float ao = 1.0;
-        
-        vec3 start = viewPos + normalMR * 0.01;
-        vec3 rayDir = nViewPosR;
-        
-        // Convert to clip space
+    float foliage = texture2D(colortex10, texCoord).a;
+    
+    #ifdef OVERWORLD
+        vec3 skyContribution = (ambientColor * 0.5 + GetSky(VdotU, VdotS, dither, false, false) * 0.5) * SKY_I * skyLightFactor;
+    #else
+        vec3 skyContribution = ambientColor * 0.1;
+    #endif
+
+    vec3 startWorldPos = mat3(gbufferModelViewInverse) * start;
+    float distanceScale = clamp(1.0 - start.z / far, 0.1, 1.0);
+    int maxIterations = int(RT_SAMPLES * distanceScale);
+    
+    for (int i = 0; i < maxIterations; i++) {
+        vec3 rayDir = RayDirection(normalMR, dither, i);
+        float NdotL = max(dot(normalMR, rayDir), 0.0);
+
         vec4 clipPos4 = gbufferProjection * vec4(start, 1.0);
         vec3 clipPosition = clipPos4.xyz / clipPos4.w * 0.5 + 0.5;
-        
-        // Calculate ray length considering near/far planes
+
         float rayLength = ((start.z + rayDir.z * sqrt(3.0) * far) > -sqrt(3.0) * near) ?
                         (-sqrt(3.0) * near - start.z) / rayDir.z : sqrt(3.0) * far;
-        
-        // Convert end position to clip space
+
         vec3 endPos = start + rayDir * rayLength;
         vec4 endClip4 = gbufferProjection * vec4(endPos, 1.0);
         vec3 end = endClip4.xyz / endClip4.w * 0.5 + 0.5;
-        
-        // Direction in clip space
+
         vec3 direction = end - clipPosition;
         
-        // Calculate step count based on screen-space distance
-        float len = max(abs(direction.x) / texelSize.x, abs(direction.y) / texelSize.y) / 10.0;
-        
-        // Get at which length the ray intersects with the edge of the screen
+        float len = max(abs(direction.x) / texelSize.x, abs(direction.y) / texelSize.y) * stepSize;
+
         vec3 maxLengths = (step(0.0, direction) - clipPosition) / direction;
         float mult = min(min(maxLengths.x, maxLengths.y), maxLengths.z) * 2000.0;
         
         vec3 stepv = direction / len;
         
-        int iterations = min(int(min(len, mult * len) - 2.0), int(RT_SAMPLES));
+        int iterations = min(int(min(len, mult * len) - 2.0), RT_STEPS);
         
         vec3 spos = clipPosition;
+        spos += stepv * dither;
+        spos += stepv * 0.3;
         
         bool hit = false;
         float hitDist = 0.0;
         vec3 hitPos = vec3(0.0);
         
-        int refinementSteps = int(RT_REFINEMENT_STEPS);
-        
-        float aoRadius = 2.0;
-        float aoIntensity = 1.75 * AO_I;
-
-        float minZ = spos.z;
+        float biasamount = 0.00005;
+        float minZ = spos.z - biasamount / GetLinearDepth(spos.z);
         float maxZ = spos.z;
-        
-        for (int i = 0; i < iterations; i++) {
+
+        for (int j = 0; j < iterations; j++) {
+            // check bounds
             if (spos.x < 0.0 || spos.y < 0.0 || spos.z < 0.0 || 
                 spos.x > 1.0 || spos.y > 1.0 || spos.z > 1.0) break;
             
@@ -197,27 +198,9 @@ vec2 texelSize = 1.0 / vec2(viewWidth, viewHeight);
             float currZ = GetLinearDepth(spos.z);
             float nextZ = GetLinearDepth(sp);
             
-            // Check if ray intersects geometry using bounds
+            // check if ray intersects geometry using bounds
             if (nextZ < currZ && (sp <= max(minZ, maxZ) && sp >= min(minZ, maxZ))) {
-                vec3 refineStart = spos - stepv;
-                vec3 refineEnd = spos;
-                
-                for (int j = 0; j < refinementSteps; j++) {
-                    vec3 refineMid = (refineStart + refineEnd) * 0.5;
-                    
-                    float refineDepth = texture2D(depthtex, refineMid.xy).r;
-                    float refineCurrZ = GetLinearDepth(refineMid.z);
-                    float refineNextZ = GetLinearDepth(refineDepth);
-                    
-                    if (refineNextZ < refineCurrZ && 
-                        (refineDepth <= max(minZ, maxZ) && refineDepth >= min(minZ, maxZ))) {
-                        refineEnd = refineMid;
-                    } else {
-                        refineStart = refineMid;
-                    }
-                }
-                
-                hitPos = (refineStart + refineEnd) * 0.5;
+                hitPos = spos;
                 giScreenPos = hitPos;
                 
                 vec3 hitViewPos = vec3(hitPos.xy, texture2D(depthtex, hitPos.xy).r);
@@ -227,21 +210,18 @@ vec2 texelSize = 1.0 / vec2(viewWidth, viewHeight);
                 
                 hitDist = length(hitViewPos - start);
                 hit = true;
-
-                float aoContribution = 1.0 - clamp(hitDist / aoRadius, 0.0, 1.0);
-                if (!entityOrHand) ao *= 1.0 - (aoContribution * aoIntensity);
                 
                 break;
             }
-            float biasamount = 0.00005;
+            
+            // update depth bounds
             minZ = maxZ - biasamount / currZ;
             maxZ += stepv.z;
             
-            //stepv *= 2.5;
-            //stepv = min(stepv, 0.1);
-            spos += stepv * 2.5 * dither * dither;
-            //spos = min(spos, 0.1);
+            spos += stepv * dither;
         }
+
+        gi.rgb += skyContribution;
         
         if (hit && giScreenPos.z < 0.99997) {
             vec2 absPos = abs(giScreenPos.xy - 0.5);
@@ -253,40 +233,36 @@ vec2 texelSize = 1.0 / vec2(viewWidth, viewHeight);
                 giScreenPos.y += (dither - 0.5) * (0.05 * (edgeFactor.x + edgeFactor.y));
 
                 vec3 incomingRadiance = vec3(0.0);
-                #ifdef DEFERRED1
-                    float lod = log2(hitDist * 0.5) * 0.5;
-                    lod = max(lod, 0.0);
-                    incomingRadiance = pow(texture2DLod(colortex0, giScreenPos.xy, lod).rgb, vec3(2.2)) * 0.8 * GI_I;
-                #else
-                    vec4 sampledColor = texture2D(gaux2, giScreenPos.xy);
-                    incomingRadiance = pow2(sampledColor.rgb + 1.0);
-                #endif
+                float lod = log2(hitDist * 0.5) * 0.5;
+                lod = max(lod, 0.0);
+                incomingRadiance = pow(texture2DLod(colortex0, giScreenPos.xy, lod).rgb, vec3(1.5)) * 0.15 * GI_I;
+                float hitFoliage = texture2D(colortex10, giScreenPos.xy).a;
 
-                incomingRadiance *= NdotL;
-
-                float attenuation = 1.0 / (1.0 + hitDist * hitDist * 0.1);
-                incomingRadiance *= attenuation;
+                if (hitFoliage > 0.9) {
+                    incomingRadiance *= 0.1;
+                }
                 
-                incomingRadiance *= ao;
+                gi.rgb += incomingRadiance;
                 
-                gi.rgb = incomingRadiance;
+                occlusion += skyContribution;
                 
                 edgeFactor.x = pow2(edgeFactor.x);
                 edgeFactor = 1.0 - edgeFactor;
-                gi.a = border * edgeFactor.x * edgeFactor.y;
+                gi.a += border * edgeFactor.x * edgeFactor.y;
             }
-        } else {
-            gi.rgb = GetSky(VdotU, VdotS, dither, false, false) * SKY_I * skyLightFactor;
         }
-        
-        #if defined DEFERRED1 && defined TEMPORAL_FILTER
-            if (!hit) giScreenPos.z = 1.0;
-        #endif
-
-        gi.a *= 0.5;
-        gi.rgb *= 3.14159265;
-        gi.rgb += max((dither - 0.5), 0.0);
-
-        return gi;
     }
+    gi.rgb -= occlusion * AO_I * 2.0;
+    gi /= float(maxIterations);
+    
+    #if defined DEFERRED1 && defined TEMPORAL_FILTER
+        if (gi.a < 0.001) giScreenPos.z = 1.0;
+    #endif
+
+    gi.rgb *= 3.14159265;
+    gi.rgb += max((dither - 0.5), 0.0);
+    gi.rgb = max(gi.rgb, vec3(0.0));
+
+    return gi;
+}
 #endif

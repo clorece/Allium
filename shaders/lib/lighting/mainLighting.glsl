@@ -166,8 +166,13 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
     vec3 lightColorM = lightColor * 4.5 * SUNLIGHT_AMOUNT;
     #endif
 
+    #if GLOBAL_ILLUMINATION == 2
+    lightColorM *= 2.0;
+    ambientColor *= 1.1;
+    #endif
+
     vec3 ambientColorM = ambientColor * 1.2 * AMBIENT_AMOUNT;
-    //ambientColorM *= 0.9;
+
     vec3 nViewPos = normalize(viewPos);
 
     #if defined LIGHT_COLOR_MULTS && !defined GBUFFERS_WATER // lightColorMult is defined early in gbuffers_water
@@ -463,6 +468,11 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
             specialLighting = mix(blockLighting, specialLighting, COLORED_LIGHT_SATURATION * 0.01);
         #endif
 
+        
+        #if GLOBAL_ILLUMINATION == 2
+            specialLighting *= 1.5;
+        #endif
+
         // Serve with distance fade
         vec3 absPlayerPosM = abs(playerPos);
         #if COLORED_LIGHTING_INTERNAL <= 512
@@ -477,6 +487,10 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
         //if (heldItemId != 40000 || heldItemId2 == 40000) // Hold spider eye to see vanilla lighting
         blockLighting = mix(specialLighting, blockLighting, blocklightDecider);
         //if (heldItemId2 == 40000 && heldItemId != 40000) blockLighting = lightVolume.rgb; // Hold spider eye to see light volume
+    #endif
+
+    #if GLOBAL_ILLUMINATION == 2
+        blockLighting *= 3.0;
     #endif
 
     #if HELD_LIGHTING_MODE >= 1
@@ -709,5 +723,6 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
     color.rgb += lightHighlight * 2.5;
     color.rgb *= pow2(1.0 - darknessLightFactor);
 }
+
 
 // pow2(emission * 0.25)

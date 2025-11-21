@@ -70,7 +70,7 @@ vec3 AcesTonemap(vec3 color) {
     // === Adjustable parameters ===
 
     float exposure = 0.35;   // >1.0 = brighter, <1.0 = darker
-    float saturation = 1.05; // >1.0 = more vibrant, <1.0 = more gray
+    float saturation = 1.01; // >1.0 = more vibrant, <1.0 = more gray
     float gamma = 2.2;      // sRGB standard gamma
     float contrast = 0.998;   // >1.0 = higher contrast, <1.0 = flatter
 
@@ -135,7 +135,7 @@ vec3 Tonemap_Uchimura(vec3 color) {
 
 vec3 Tonemap_Lottes(vec3 x) {
     // Lottes 2016, "Advanced Techniques and Optimization of HDR Color Pipelines"
-    const float exposure = 0.6; // Exposure multiplier - Higher values brighten the image, lower values darken it
+    const float exposure = 0.7; // Exposure multiplier - Higher values brighten the image, lower values darken it
     const float a = 1.0;        // Contrast - Higher values increase contrast in highlights
     const float d = 0.977;      // Toe adjustment - Controls the curve in dark regions (closer to 1.0 = harder toe)
     const float hdrMax = 8.0;   // Maximum HDR input value - Defines the upper limit of the HDR range
@@ -386,7 +386,7 @@ void main() {
     color = Tonemap_Lottes(color);
 
     float luminance = dot(color, vec3(0.2126, 0.7152, 0.0722));
-    color = mix(vec3(luminance), color, 1.1);
+    //color = mix(vec3(luminance), color, 1.01);
 
     #if defined GREEN_SCREEN_LIME || SELECT_OUTLINE == 4
         int materialMaskInt = int(texelFetch(colortex6, texelCoord, 0).g * 255.1);

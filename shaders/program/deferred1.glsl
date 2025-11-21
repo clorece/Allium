@@ -158,6 +158,32 @@ vec3 ambientColor = vec3(0.5, 0.21, 0.01);
 
 #include "/lib/lighting/indirectLighting.glsl"
 
+vec3 textureCatmullRom(sampler2D colortex, vec2 texcoord, vec2 view) {
+        vec2 position = texcoord * view;
+        vec2 centerPosition = floor(position - 0.5) + 0.5;
+        vec2 f = position - centerPosition;
+        vec2 f2 = f * f;
+        vec2 f3 = f * f2;
+
+        float c = 0.7;
+        vec2 w0 =        -c  * f3 +  2.0 * c         * f2 - c * f;
+        vec2 w1 =  (2.0 - c) * f3 - (3.0 - c)        * f2         + 1.0;
+        vec2 w2 = -(2.0 - c) * f3 + (3.0 -  2.0 * c) * f2 + c * f;
+        vec2 w3 =         c  * f3 -                c * f2;
+
+        vec2 w12 = w1 + w2;
+        vec2 tc12 = (centerPosition + w2 / w12) / view;
+
+        vec2 tc0 = (centerPosition - 1.0) / view;
+        vec2 tc3 = (centerPosition + 2.0) / view;
+        vec4 color = vec4(texture2DLod(colortex, vec2(tc12.x, tc0.y ), 0).rgb, 1.0) * (w12.x * w0.y ) +
+                    vec4(texture2DLod(colortex, vec2(tc0.x,  tc12.y), 0).rgb, 1.0) * (w0.x  * w12.y) +
+                    vec4(texture2DLod(colortex, vec2(tc12.x, tc12.y), 0).rgb, 1.0) * (w12.x * w12.y) +
+                    vec4(texture2DLod(colortex, vec2(tc3.x,  tc12.y), 0).rgb, 1.0) * (w3.x  * w12.y) +
+                    vec4(texture2DLod(colortex, vec2(tc12.x, tc3.y ), 0).rgb, 1.0) * (w12.x * w3.y );
+        return color.rgb / color.a;
+    }
+
 //Program//
 void main() {
     vec3 color = texelFetch(colortex0, texelCoord, 0).rgb;
@@ -227,7 +253,7 @@ void main() {
         vec3 texture5 = texelFetch(colortex5, texelCoord, 0).rgb;
         vec3 normalM = mat3(gbufferModelView) * texture5;
 
-        float albedoS = texelFetch(colortex6, texelCoord, 0).a;
+        float albedoS = texelFetch(colortex10, texelCoord, 0).a;
 
         float foliage = texelFetch(colortex6, texelCoord, 0).a;
         bool isFoliage = foliage > 0.5;
@@ -259,111 +285,6 @@ void main() {
                 entityOrHand = true;
             }
         }
-
-        
-        #if GLOBAL_ILLUMINATION == 0
-            ao = 1.0;
-            if (!entityOrHand) color.rgb *= ao;
-        #elif GLOBAL_ILLUMINATION == 1
-            ao = DoAmbientOcclusion(z0, linearZ0, dither, playerPos);
-            //ao = clamp( 1.0 - (1.0 - ao) * AO_I, 0.0, 1.0 );
-            if (!entityOrHand) color.rgb *= ao;
-        #else
-
-        #ifdef EXCLUDE_ENTITIES
-        if (!entityOrHand) {
-        #endif
-            vec3 normalG = normalM;
-            #ifdef TAA
-                float noiseMult = 0.5;
-            #else
-                float noiseMult = 0.1;
-            #endif
-            #ifdef TEMPORAL_FILTER
-                float blendFactor = 1.0;
-                float writeFactor = 1.0;
-            #endif
-
-            vec2 roughCoord = gl_FragCoord.xy / 128.0;
-            vec3 roughNoise = vec3(
-                texture2D(noisetex, roughCoord).r,
-                texture2D(noisetex, roughCoord + 0.09375).r,
-                texture2D(noisetex, roughCoord + 0.1875).r
-            );
-            roughNoise = fract(roughNoise + vec3(dither, dither * goldenRatio, dither * pow2(goldenRatio)));
-            roughNoise = noiseMult * (roughNoise - vec3(0.5));
-            //roughNoise = fract(roughNoise + goldenRatio * mod(float(frameCounter), 360.0));
-
-            normalG += roughNoise * 0.5;
-            //normalG += max((dither - 0.5), 0.0)/32.0;
-
-
-            float centerViewZ = -linearZ0 * far;
-            // min gi to prevent overly bright rays from rendering
-            #ifdef RT_VIEW
-                vec3 gi = min(GetGI(normalG, viewPos.xyz, nViewPos, depthtex0, dither, skyLightFactor, 1.0, VdotU, VdotS, entityOrHand).rgb, vec3(4.0));
-            #else
-                vec3 gi = min(GetGI(normalG, viewPos.xyz, nViewPos, depthtex0, dither, skyLightFactor, 1.0, VdotU, VdotS, entityOrHand).rgb, vec3(4.0)) * 0.5 + color * 0.9;
-            #endif
-                //gi = max(gi, vec3(0.5));
-
-            // reused from reflection will work on later
-            #ifdef TEMPORAL_FILTER
-                vec3 cameraOffset = cameraPosition - previousCameraPosition;
-                vec2 prvCoord = SHalfReprojection(playerPos, cameraOffset);
-                #if defined IPBR && !defined GENERATED_NORMALS
-                    vec2 prvRefCoord = Reprojection(vec3(texCoord, max(refPos.z, z0)), cameraOffset);
-                    vec4 oldRef = texture2D(colortex7, prvRefCoord);
-                #else
-                    vec2 prvRefCoord = Reprojection(vec3(texCoord, z0), cameraOffset);
-                    vec2 prvRefCoord2 = Reprojection(vec3(texCoord, max(refPos.z, z0)), cameraOffset);
-                    vec4 oldRef1 = texture2D(colortex7, prvRefCoord);
-                    vec4 oldRef2 = texture2D(colortex7, prvRefCoord2);
-                    vec3 dif1 = gi - oldRef1.rgb;
-                    vec3 dif2 = gi - oldRef2.rgb;
-                    float dotDif1 = dot(dif1, dif1);
-                    float dotDif2 = dot(dif2, dif2);
-
-                    float oldRefMixer = clamp01((dotDif1 - dotDif2) * 500.0);
-                    vec4 oldRef = mix(oldRef1, oldRef2, oldRefMixer);
-                #endif
-
-                vec4 newRef = vec4(gi, colorMultInv);
-                vec2 oppositePreCoord = texCoord - 2.0 * (prvCoord - texCoord);
-
-                /*
-                // Reduce blending at speed
-                blendFactor *= float(prvCoord.x > 0.0 && prvCoord.x < 1.0 && prvCoord.y > 0.0 && prvCoord.y < 1.0);
-                float velocity = length(cameraOffset) * max(16.0 - lViewPos / gbufferProjection[1][1], 3.0);
-                blendFactor *= mix(1.0, exp(-velocity) * 0.5 + 0.5, smoothnessD);
-                */
-
-                // Reduce blending if depth changed
-                float linearZDif = abs(GetLinearDepth(texture2D(colortex1, oppositePreCoord).r) - linearZ0) * far;
-                blendFactor *= max0(2.0 - linearZDif) * 0.5;
-                //color = mix(vec3(1,1,0), color, max0(2.0 - linearZDif) * 0.5);
-
-                // Reduce blending if normal changed
-                vec3 texture5P = texture2D(colortex5, oppositePreCoord, 0).rgb;
-                vec3 texture5Dif = abs(texture5 - texture5P);
-                if (texture5Dif != clamp(texture5Dif, vec3(-0.004), vec3(0.004))) {
-                    blendFactor = 0.0;
-                    //color.rgb = vec3(1,0,1);
-                }
-
-                blendFactor = max0(blendFactor); // Prevent first frame NaN
-                newRef = max(newRef, vec4(0.0)); // Prevent random NaNs from persisting
-                refToWrite = mix(newRef, oldRef, blendFactor * 0.95);
-                refToWrite = mix(max(refToWrite, newRef), refToWrite, pow2(pow2(pow2(refToWrite.a))));
-                
-                color.rgb *= 1.0 - refToWrite.a * 1.0;
-                color.rgb += refToWrite.rgb * 1.0;
-                refToWrite *= writeFactor;
-            #endif
-        #ifdef EXCLUDE_ENTITIES
-        }
-        #endif
-        #endif
 
         #ifdef PBR_REFLECTIONS
 
@@ -459,7 +380,7 @@ void main() {
                     vec3 texture5Dif = abs(texture5 - texture5P);
                     if (texture5Dif != clamp(texture5Dif, vec3(-0.004), vec3(0.004))) {
                         blendFactor = 0.0;
-                        //color.rgb = vec3(1,0,1);
+                           //color.rgb = vec3(1,0,1);
                     }
 
                     blendFactor = max0(blendFactor); // Prevent first frame NaN
@@ -476,9 +397,146 @@ void main() {
                 #endif
 
                 color = max(colorP, color); // Prevents reflections from making a surface darker
-
-                //if (gl_FragCoord.x > 960) color = vec3(5.25,0,5.25);
+                
             }
+        #endif
+
+        #if GLOBAL_ILLUMINATION == 0
+            ao = 1.0;
+            if (!entityOrHand) color.rgb *= ao;
+        #elif GLOBAL_ILLUMINATION == 1
+            ao = DoAmbientOcclusion(z0, linearZ0, dither, playerPos);
+            if (!entityOrHand) color.rgb *= ao;
+        #else
+            #ifdef EXCLUDE_ENTITIES
+            if (!entityOrHand) {
+            #endif
+                vec3 rawGI = texture2D(colortex8, texCoord).rgb;
+                vec3 gi = vec3(0.0);
+                #ifdef TEMPORAL_BILATERAL_FILTER
+                    float totalWeight = 0.0;
+                    
+                    float giBlurWeight[7] = float[7](1.0, 6.0, 15.0, 20.0, 15.0, 6.0, 1.0);
+                    
+                    float centerDepth = linearZ0;
+                    vec3 centerNormal = normalM;
+                    
+                    // Read center pixel variance
+                    float centerVariance = texture2D(colortex9, texCoord).a;
+                    
+                    for (int i = -BLUR_SAMPLES; i <= BLUR_SAMPLES; i++) {
+                        for (int j = -BLUR_SAMPLES; j <= BLUR_SAMPLES; j++) {
+                            vec2 offset = vec2(i, j) / vec2(viewWidth, viewHeight);
+                            vec2 sampleCoord = texCoord + offset * BLUR_AMOUNT;
+                            
+                            // Spatial Gaussian weight
+                            float spatialWeight = giBlurWeight[abs(i)] * giBlurWeight[abs(j)];
+                            
+                            // Depth-aware weight
+                            float sampleDepth = GetLinearDepth(texture2D(depthtex0, sampleCoord).r);
+                            float depthDiff = abs(centerDepth - sampleDepth) * far;
+                            float depthWeight = exp(-depthDiff * depthDiff * 2.0);
+                            
+                            // Normal-aware weight
+                            vec3 sampleNormal = texture2D(colortex5, sampleCoord).rgb * 2.0 - 1.0;
+                            sampleNormal = mat3(gbufferModelView) * sampleNormal;
+                            float normalWeight = pow(max(dot(centerNormal, sampleNormal), 0.0), 4.0);
+                            
+                            // Variance-based weight (NEW!)
+                            vec4 sampleGIData = texture2D(colortex9, sampleCoord);
+                            vec3 sampleGI = sampleGIData.rgb;
+                            float sampleVariance = sampleGIData.a;
+                            
+                            // Higher variance = more blur needed
+                            // Use geometric mean of center and sample variance
+                            float varianceWeight = sqrt(centerVariance * sampleVariance + 0.001);
+                            varianceWeight = 1.0 / (1.0 + varianceWeight * 5.0); // Adjust sensitivity with the 5.0 multiplier
+                            
+                            // Combined weight
+                            float weight = spatialWeight * depthWeight * normalWeight * varianceWeight;
+                            
+                            gi += sampleGI * weight;
+                            totalWeight += weight;
+                        }
+                    }
+                    
+                    gi /= totalWeight;
+                #else
+                    gi = rawGI;
+                #endif
+
+                #ifdef RT_VIEW
+                    vec3 colorAdd = gi;
+                #else
+                    vec3 colorAdd = (gi * 0.5 + color * 0.4) * 1.0;
+                #endif
+                
+                #ifdef TEMPORAL_FILTER
+                float blendFactor = 1.0;
+                float writeFactor = 1.0;
+                vec3 cameraOffset = cameraPosition - previousCameraPosition;
+                vec2 prvCoord = SHalfReprojection(playerPos, cameraOffset);
+                vec2 prvRefCoord = Reprojection(vec3(texCoord, z0), cameraOffset);
+                vec2 prvRefCoord2 = Reprojection(vec3(texCoord, max(refPos.z, z0)), cameraOffset);
+                
+                // Use Catmull-Rom for better history sampling
+                vec4 oldRef1 = vec4(textureCatmullRom(colortex7, prvRefCoord, vec2(viewWidth, viewHeight)), texture2D(colortex7, prvRefCoord).a);
+                vec4 oldRef2 = vec4(textureCatmullRom(colortex7, prvRefCoord2, vec2(viewWidth, viewHeight)), texture2D(colortex7, prvRefCoord2).a);
+                
+                vec3 dif1 = colorAdd - oldRef1.rgb;
+                vec3 dif2 = colorAdd - oldRef2.rgb;
+                float dotDif1 = dot(dif1, dif1);
+                float dotDif2 = dot(dif2, dif2);
+                float oldRefMixer = clamp01((dotDif1 - dotDif2) * 500.0);
+                vec4 oldRef = mix(oldRef1, oldRef2, oldRefMixer);
+                vec4 newRef = vec4(colorAdd, colorMultInv);
+                vec2 oppositePreCoord = texCoord - 2.0 * (prvCoord - texCoord);
+                
+                // Reduce blending at screen edges
+                blendFactor *= float(prvCoord.x > 0.0 && prvCoord.x < 1.0 && prvCoord.y > 0.0 && prvCoord.y < 1.0);
+                
+                // Camera velocity reduction
+                vec2 screenVelocity = (texCoord - prvCoord) * vec2(viewWidth, viewHeight);
+                float pixelVelocity = length(screenVelocity);
+
+                // Use pixel velocity instead
+                blendFactor *= mix(1.0, exp(-pixelVelocity * 0.1) * 0.5 + 0.5, GHOST_REDUCTION);
+                
+                vec3 colorDiff = abs(colorAdd - oldRef.rgb);
+                float colorChange = dot(colorDiff, vec3(0.299, 0.587, 0.114)); // Luminance weighted
+                
+                // Reduce blending on significant color changes (moving objects/GI)
+                float antiGhostFactor = exp(-colorChange * 0.0);
+                blendFactor *= antiGhostFactor;
+                
+                // Reduce blending if depth changed
+                float linearZDif = abs(GetLinearDepth(texture2D(colortex1, oppositePreCoord).r) - linearZ0) * far;
+                blendFactor *= max0(1.0 - linearZDif * BLEND_WEIGHT);
+
+                vec3 texture5P = texture2D(colortex5, oppositePreCoord, 0).rgb;
+                vec3 texture5Dif = abs(texture5 - texture5P);
+                if (texture5Dif != clamp(texture5Dif, vec3(-0.004), vec3(0.004))) {
+                    blendFactor = 0.0;
+                }
+                
+                blendFactor = max0(blendFactor);
+                newRef = max(newRef, vec4(0.0));
+                refToWrite = mix(newRef, oldRef, blendFactor * 0.95);
+                refToWrite = mix(max(refToWrite, newRef), refToWrite, pow2(pow2(pow2(refToWrite.a))));
+                color.rgb *= 1.0 - refToWrite.a * 1.0;
+                color.rgb += refToWrite.rgb * 1.0;
+                refToWrite *= writeFactor;
+
+                #else
+                    #ifdef RT_VIEW
+                        color.rgb = colorAdd;
+                    #else
+                        color.rgb = colorAdd;
+                    #endif
+                #endif
+            #ifdef EXCLUDE_ENTITIES
+            }
+            #endif
         #endif
 
         #ifdef WORLD_OUTLINE

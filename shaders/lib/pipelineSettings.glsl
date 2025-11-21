@@ -7,8 +7,8 @@ const int colortex4Format = R8;             //volumetric cloud linear depth & vo
 const int colortex5Format = RGBA8_SNORM;    //normalM & scene image for water reflections
 const int colortex6Format = RGBA8;          //smoothnessD & materialMask & skyLightFactor
 const int colortex7Format = RGBA16F;        //(cloud/water map on gbuffer) | temporal filter
-
-const int colortex9Format = R11F_G11F_B10F; // low-res volumetric clouds buffer
+const int colortex9Format = RGBA16F;        //global illumination
+const int colortex11Format = RGBA16F;       //atrous filter
 */
 
 const bool colortex0Clear = true;
@@ -19,7 +19,9 @@ const bool colortex4Clear = false;
 const bool colortex5Clear = false;
 const bool colortex6Clear = true;
 const bool colortex7Clear = false;
-const bool colortex9Clear = true; // Clear cloud buffer
+const bool colortex9Clear = true;
+const bool colortex10Clear = false;
+const bool colortex11Clear = false;
 //
 
 const int noiseTextureResolution = 128;
