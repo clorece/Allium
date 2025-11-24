@@ -195,11 +195,11 @@ vec4 GetVolumetricClouds(int cloudAltitude,
             shadow -= rainFactor * 0.05;
 
             #if CLOUD_LIGHTING_QUALITY == 7
-                float shadowMult = 2.8;
+                float shadowMult = 2.4;
             #elif CLOUD_LIGHTING_QUALITY == 14
-                float shadowMult = 5.45;
+                float shadowMult = 5.05;
             #elif CLOUD_LIGHTING_QUALITY == 30
-                float shadowMult = 11.95;
+                float shadowMult = 11.55;
             #else
                 float shadowMult = 1.0;
             #endif
@@ -305,6 +305,8 @@ vec4 GetClouds(inout float cloudLinearDepth, float skyFade, vec3 cameraPos, vec3
     #ifdef NIGHT_NEBULA
         clouds.rgb += nightNebula * 0.2;
     #endif
+
+    clouds = max(clouds, vec4(0.0));
 
     return clouds;
 }

@@ -289,6 +289,7 @@ void main() {
                 entityOrHand = true;
             }
         }
+        
 
         #ifdef PBR_REFLECTIONS
 
@@ -505,7 +506,7 @@ void main() {
 
                 // Reduce blending if depth changed
                 float linearZDif = abs(GetLinearDepth(texture2D(colortex1, oppositePreCoord).r) - linearZ0) * far;
-                blendFactor *= max0(2.0 - linearZDif) * 0.5;
+                blendFactor *= max0(1.0 - linearZDif * BLEND_WEIGHT);
                 //color = mix(vec3(1,1,0), color, max0(2.0 - linearZDif) * 0.5);
 
                 // Reduce blending if normal changed
@@ -522,6 +523,7 @@ void main() {
                 refToWrite = mix(max(refToWrite, newRef), refToWrite, pow2(pow2(pow2(refToWrite.a))));
                 color.rgb *= 1.0 - refToWrite.a * 1.0;
                 color.rgb += refToWrite.rgb * 1.0;
+                color = max(color, vec3(0.0));
                 refToWrite *= writeFactor;
 
                 #else

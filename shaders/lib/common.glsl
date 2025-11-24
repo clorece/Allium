@@ -36,6 +36,7 @@
         #define AO_I 1.0 //[0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0]
         #define GI_I 1.0 //[0.5 0.6 0.7 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0]
         #define SKY_I 0.035 //[0.01 0.015 0.02 0.025 0.03 0.035 0.04 0.045 0.05 0.055 0.06 0.065 0.07 0.075 0.08 0.085 0.09 0.095 0.1]
+        #define RT_QUALITY_PRESET 0 //[0 1 2]
         #define RT_SAMPLES 1 //[1 2 4 6 8 10 12 16 20 24 32]
         #define RT_STEPS 30 //[10 15 25 30 35 40 45 50 65 70 75 80]
         #define EXCLUDE_ENTITIES
@@ -43,8 +44,8 @@
 
     #define TEMPORAL_BILATERAL_FILTER
         #define BLUR_SAMPLES 2 //[1 2 3 4]
-        #define BLUR_AMOUNT 3.0 //[0.5 0.6 0.7 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0]
-        #define BLEND_WEIGHT 0.001 //[0.0001 0.00015 0.0002 0.00025 0.0003 0.00035 0.0004 0.00045 0.0005 0.0006 0.0007 0.0008 0.0009 0.001 0.002 0.003 0.004 0.005 0.006 0.007 0.008 0.009 0.01]
+        #define BLUR_AMOUNT 3.0 //[0.5 0.6 0.7 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0 3.0]
+        #define BLEND_WEIGHT 0.005 //[0.0001 0.00015 0.0002 0.00025 0.0003 0.00035 0.0004 0.00045 0.0005 0.0006 0.0007 0.0008 0.0009 0.001 0.002 0.003 0.004 0.005 0.006 0.007 0.008 0.009 0.01]
         #define GHOST_REDUCTION 0.0 //[0.0 1.0 2.0 4.0 6.0 8.0 10.0 12.0 16.0 24.0 32.0 48.0 64.0 92.0 128.0]
 
 
@@ -495,6 +496,7 @@
         #define FXAA_TAA_INTERACTION
         #define TAA_MOVEMENT_IMPROVEMENT_FILTER
     #endif
+    
     #if DETAIL_QUALITY >= 3 // High
         #undef WATER_MAT_QUALITY
         #define WATER_MAT_QUALITY 3 // we use DETAIL_QUALITY >= 3 when writing in gbuffers_water because optifine bad
