@@ -8,7 +8,8 @@ const int colortex5Format = RGBA8_SNORM;    //normalM & scene image for water re
 const int colortex6Format = RGBA8;          //smoothnessD & materialMask & skyLightFactor
 const int colortex7Format = RGBA16F;        //(cloud/water map on gbuffer) | temporal filter
 const int colortex9Format = RGBA16F;        //global illumination
-const int colortex11Format = RGBA16F;       //atrous filter
+const int colortex10Format = RGBA8; 
+const int colortex11Format = RGBA16F;       //rtao
 */
 
 const bool colortex0Clear = true;

@@ -46,28 +46,6 @@
 
         return finalSky;
     }
-    
-    #define saturate(x) clamp((x), 0.0, 1.0)
-    #define PI 3.14159265359
-
-    float rayleighPhase(float mu) { return 1.0/(16.0*PI) * (1.0 + mu*mu); }
-
-    float hgPhase(float cosTheta, float g) {
-        float g2 = g * g;
-        return (1.0 - g2) / (4.0 * 3.14159265359 * pow(1.0 + g2 - 2.0 * g * cosTheta, 1.5));
-    }
-
-    vec3 rayleighRGB()
-    {
-        const vec3 nm = vec3(680.0, 550.0, 440.0);
-        vec3 inv = 1.0 / (nm*nm*nm*nm);
-        return inv / dot(inv, vec3(1.0)); // normalize
-    }
-
-    vec3 ozoneXS()
-    {
-        return vec3(0.35, 1.0, 0.15);
-    }
 
     vec3 GetSky(float VdotU, float VdotS, float dither, bool doGlare, bool doGround)
     {
@@ -97,16 +75,16 @@
         float VdotUM2 = pow2(1.0 - abs(VdotU + 0.08));
             VdotUM2 = VdotUM2*VdotUM2*(3.0 - 2.0*VdotUM2);
             VdotUM2 *= (0.7 - nightFactorM + VdotSM1*(0.3 + nightFactorM)) * invNoonFactor * sunFactor;
-        finalSky = mix(finalSky, lightColor*(1.0 + VdotSM1*0.3), VdotUM2*invRainFactor);
+        finalSky = mix(finalSky, downColor*(1.0 + VdotSM1*0.3), VdotUM2*invRainFactor);
 
         // ground scatter blend
-        float VdotUM3 = min(max0(-VdotU + 0.125)/0.35, 1.0);
+        float VdotUM3 = min(max0(-VdotU + 0.05)/0.25, 1.0);
             VdotUM3 = smoothstep1(VdotUM3);
         vec3 scatteredGroundMixer = vec3(VdotUM3 * VdotUM3, sqrt1(VdotUM3), sqrt3(VdotUM3));
             scatteredGroundMixer = mix(vec3(VdotUM3), scatteredGroundMixer, 0.75 - 0.5*rainFactor);
-        finalSky = mix(finalSky, pow(downColor * 1.5, vec3(1.5)) + nightFactor * 0.1, scatteredGroundMixer) * 1.5;
-        finalSky = mix(finalSky, rainAmbientColor * 0.5 - nightFactor * 0.1, rainFactor);
-        //finalSky += invNoonFactor2 * 0.1;
+        finalSky = mix(finalSky, pow(downColor * 2.0, vec3(2.2)) + nightFactor * 0.1, scatteredGroundMixer) * 1.5;
+        //finalSky = mix(finalSky, rainAmbientColor * 0.5 - nightFactor * 0.1, rainFactor);
+        finalSky += invNoonFactor2 * 0.1;
 
         if (doGround) finalSky *= smoothstep1(pow2(1.0 + min(VdotU, 0.0)));
 
@@ -114,23 +92,57 @@
 
         
         if (doGlare) {
-            float glareScatter = 4.0*(2.0 - clamp01(VdotS*1000.0));
-            float VdotSM4 = pow(abs(VdotS), glareScatter);
+            // --- SUN GLARE ---
+            // We use max(VdotS, 0.0) to ensure this only happens when looking AT the sun
+            float sunDot = max(VdotS, 0.0);
+            float sunScatter = 4.0 * (2.0 - clamp01(sunDot * 1000.0));
+            float sunDotPow = pow(sunDot, sunScatter);
+            
             float visfactor = 0.075;
-            float glare = visfactor/(1.0 - (1.0 - visfactor)*VdotSM4) - visfactor;
-            glare *= 0.5 + pow2(noonFactor)*1.2;
-            glare *= 1.0 - rainFactor*0.5;
-            float glareWaterFactor = isEyeInWater * sunVisibility;
-            vec3 glareColor = mix(vec3(0.38,0.4,0.5)*0.7, vec3(0.5), sunVisibility);
-                glareColor += glareWaterFactor*vec3(7.0);
-            finalSky += glare*shadowTime*lightColor;
+            float sunGlare = visfactor / (1.0 - (1.0 - visfactor) * sunDotPow) - visfactor;
+            
+            // Apply modifiers
+            sunGlare *= 0.5 + pow2(invNoonFactor2) * 1.2;
+            sunGlare *= 1.0 - rainFactor * 0.5;
+            
+            // Add Sun Glare to Sky (Uses lightColor so it matches the sunset/sunrise)
+            finalSky += sunGlare * shadowTime * lightColor * 0.5;
+
+
+            // --- MOON GLARE ---
+            // We use max(-VdotS, 0.0) assuming the moon is opposite the sun
+            float moonDot = max(-VdotS, 0.0);
+            
+            // You can tweak 'moonScatter' to make the moon glare wider or tighter
+            float moonScatter = 4.0 * (2.0 - clamp01(moonDot * 500.0)); 
+            float moonDotPow = pow(moonDot, moonScatter);
+            
+            float moonGlare = visfactor / (1.0 - (1.0 - visfactor) * moonDotPow) - visfactor;
+            
+            // Clean up moon glare (reduce intensity during rain, etc)
+            moonGlare *= 1.0 - rainFactor * 0.8;
+
+            // DEFINE YOUR MOON COLOR HERE
+            // A nice cold, pale blue-white to contrast the orange sunset
+            vec3 moonColor = vec3(0.15, 0.2, 0.35); 
+            
+            // Add Moon Glare to Sky (Uses nightFactor to fade out during the day)
+            finalSky += moonGlare * moonColor * 1.0 * nightFactor;
+
+
+            // --- WATER REFLECTION HIGHLIGHTS ---
+            // Kept this logic but cleaned it up to work with the new split
+            if (isEyeInWater == 1) {
+                vec3 glareColor = mix(vec3(0.38, 0.4, 0.6) * 0.7, vec3(0.5), sunVisibility);
+                finalSky += (sunGlare + moonGlare) * sunVisibility * vec3(7.0);
+            }
         }
 
         #ifdef CAVE_FOG
             finalSky = mix(finalSky, caveFogColor, GetCaveFactor()*VdotUmax0M);
         #endif
-        finalSky += max((dither - 0.5), 0.0)/32.0;
+        finalSky += max((dither - 0.5), 0.0)/128.0;
         finalSky = max(finalSky, 0.0);
-        return pow(finalSky * 1.5, vec3(1.0 / 1.2));
+        return pow(finalSky * 1.6, vec3(1.0 / 1.3));
     }
 #endif //INCLUDE_SKY

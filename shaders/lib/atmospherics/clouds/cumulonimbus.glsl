@@ -26,8 +26,8 @@ float GetCumulonimbusCloud(vec3 tracePos, int steps, int cloudAltitude, float lT
 
     float shearAmount = 0.6; // adjust to control wind distortion
     tracePosM.y *= shearAmount;
-    tracePosM.x += tracePosM.y * windDir.x * shearAmount;
-    tracePosM.z += tracePosM.y * windDir.z * shearAmount;
+    //tracePosM.x += tracePosM.y * windDir.x * shearAmount;
+    //tracePosM.z += tracePosM.y * windDir.z * shearAmount;
 
     vec3 offset = Offset(GetWind() * size);
     offset *= 1.0;
@@ -39,12 +39,12 @@ float GetCumulonimbusCloud(vec3 tracePos, int steps, int cloudAltitude, float lT
 
     float detail = GetCumulonimbusDetail(tracePosM, offset, noisePersistence);
 
-    float combined = mix(base, base * detail, 0.55);
+    float combined = mix(base, base * detail, 0.95);
     combined = max(combined - 0.2, 0.0);
     combined = pow(combined, 1.35) * mult;
 
     float fadeTop    = smoothstep(0.0, cumulonimbusCloudStretch, cloudAltitude + cumulonimbusCloudStretch - tracePos.y);
-    float fadeBottom = smoothstep(cumulonimbusCloudStretch * 0.85, cumulonimbusCloudStretch, tracePos.y - (cloudAltitude - cumulonimbusCloudStretch));
+    float fadeBottom = smoothstep(cumulonimbusCloudStretch * 0.75, cumulonimbusCloudStretch, tracePos.y - (cloudAltitude - cumulonimbusCloudStretch));
     float verticalFade = fadeTop * fadeBottom;
 
     return combined * verticalFade;

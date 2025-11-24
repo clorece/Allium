@@ -1,4 +1,5 @@
 if (entityId < 50064) {
+    isMissingEntity = 1.0;
     if (entityId < 50032) {
         if (entityId < 50016) {
             if (entityId < 50008) {
@@ -33,7 +34,7 @@ if (entityId < 50064) {
                             for (int i = 63; i >= 56; i--) {
                                 vec3 dif = color.rgb - texelFetch(tex, ivec2(i, 0), 0).rgb;
                                 if (dif == clamp(dif, vec3(-0.001), vec3(0.001))) {
-                                    emission = 2.0 * texelFetch(tex, ivec2(i, 1), 0).r;
+                                    //emission = 2.0 * texelFetch(tex, ivec2(i, 1), 0).r;
                                 }
                             }
                         }

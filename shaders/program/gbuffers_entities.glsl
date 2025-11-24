@@ -110,6 +110,7 @@ void main() {
         // Fixes artifacts on fragment edges with non-nvidia gpus
         alphaCheck = max(fwidth(color.a), alphaCheck);
     #endif
+    float isMissingEntity = 1.0;
 
     if (alphaCheck > 0.001) {
         vec3 screenPos = vec3(gl_FragCoord.xy / vec2(viewWidth, viewHeight), gl_FragCoord.z);
@@ -123,8 +124,9 @@ void main() {
         float smoothnessG = 0.0, highlightMult = 0.0, emission = 0.0, noiseFactor = 0.75;
         vec2 lmCoordM = lmCoord;
         vec3 shadowMult = vec3(1.0);
+
+        #include "/lib/materials/materialHandling/entityMaterials.glsl"
         #ifdef IPBR
-            #include "/lib/materials/materialHandling/entityMaterials.glsl"
 
             #ifdef IS_IRIS
                 vec3 maRecolor = vec3(0.0);
@@ -185,13 +187,14 @@ void main() {
         ColorCodeProgram(color, -1);
     #endif
 
-    /* DRAWBUFFERS:06 */
+    /* DRAWBUFFERS:069 */
     gl_FragData[0] = color;
     gl_FragData[1] = vec4(smoothnessD, materialMask, skyLightFactor, foliage);
+    gl_FragData[2] = vec4(isMissingEntity, vec3(0.0));
 
     #if BLOCK_REFLECT_QUALITY >= 2 && RP_MODE >= 1
-        /* DRAWBUFFERS:065 */
-        gl_FragData[2] = vec4(mat3(gbufferModelViewInverse) * normalM, 1.0);
+        /* DRAWBUFFERS:0695 */
+        gl_FragData[3] = vec4(mat3(gbufferModelViewInverse) * normalM, 1.0);
     #endif
 }
 

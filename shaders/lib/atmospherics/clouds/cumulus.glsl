@@ -1,60 +1,55 @@
-float cumulusCloudSizeMult = CUMULUS_CLOUD_SIZE_MULT;
+float CloudSizeMultiplier = CUMULUS_CLOUD_SIZE_MULT;
 
-float GetCumulonimbusDetail(vec3 pos, vec3 offset, float persistence) {
+float CalculateCloudDetail(vec3 position, vec3 offset, float persistence) {
     float amplitude = 1.0;
-    float total = 0.0;
-    float detail = 0.0;
+    float totalAmplitude = 0.0;
+    float detailAccumulator = 0.0;
 
-    vec3 p = pos;
+    vec3 currentPos = position;
 
     #ifndef LQ_CLOUD
-    const int detailSamples = 3;
+        const int detailSamples = 3;
     #else
-    const int detailSamples = 1;
+        const int detailSamples = 1;
     #endif
 
-
     for (int i = 0; i < detailSamples; ++i) {
-        vec3 windOffset = windDir * GetWind() * 0.1 * float(i);
-        float n = Noise3D(p * (4.5 + float(i) * 1.5) / cumulusCloudSizeMult + offset * 1.5 + windOffset);
-        detail += n * amplitude;
-        total += amplitude;
+        vec3 windOffset = GlobalWindDirection * CalculateWindSpeed() * 0.1 * float(i);
+        float noiseValue = Noise3D(currentPos * (4.5 + float(i) * 1.5) / CloudSizeMultiplier + offset * 1.5 + windOffset);
+        detailAccumulator += noiseValue * amplitude;
+        totalAmplitude += amplitude;
         amplitude *= persistence;
-        p *= 3.0;
+        currentPos *= 3.0;
     }
 
-    return detail / total;
+    return detailAccumulator / totalAmplitude;
 }
 
-float GetCumulusCloud(vec3 tracePos, int steps, int cloudAltitude, float lTracePosXZ, float cloudPlayerPosY,
-                      float noisePersistence, float mult, float size) {
-    vec3 tracePosM = shearMatrix * tracePos * (0.00018 * size);
+float GetCumulusCloud(vec3 position, int stepCount, int baseAltitude, float distXZ, float curvedY, float persistence, float densityMult, float sizeMod) {
+    vec3 tracePosM = GlobalWindShearMatrix * position * (0.00018 * sizeMod);
 
-    float shearAmount = 0.25;
-    //tracePosM.x += tracePosM.y * windDir.x * shearAmount;
-    //tracePosM.z += tracePosM.y * windDir.z * shearAmount;
-
-    vec3 offset = Offset(GetWind() * size);
+    vec3 offset = CalculateWindOffset(CalculateWindSpeed() * sizeMod);
     offset *= 1.0;
 
-    float base = Noise3D(tracePosM * 0.75 / cumulusCloudSizeMult + offset + windDir * GetWind() * 0.05) * 12.0;
-    base += Noise3D(tracePosM * 1.0 / cumulusCloudSizeMult + offset + windDir * GetWind() * 0.05) * 6.0;
-    base /= 12.0 / CUMULUS_CLOUD_COVERAGE;
-    base += rainFactor * 0.7;
+    float baseNoise = Noise3D(tracePosM * 0.75 / CloudSizeMultiplier + offset + GlobalWindDirection * CalculateWindSpeed() * 0.05) * 12.0;
+    baseNoise += Noise3D(tracePosM * 1.0 / CloudSizeMultiplier + offset + GlobalWindDirection * CalculateWindSpeed() * 0.05) * 6.0;
+    baseNoise /= 12.0 / CUMULUS_CLOUD_COVERAGE;
+    baseNoise += rainFactor * 0.75;
 
-    float detail = GetCumulonimbusDetail(tracePosM, offset, noisePersistence);
+    float detailNoise = CalculateCloudDetail(tracePosM, offset, persistence);
 
-    float combined = mix(base, base * detail, 0.55);
-    combined = max(combined - 0.2, 0.0);
-    combined = pow(combined, 1.35) * mult;
+    float combinedDensity = mix(baseNoise, baseNoise * detailNoise, 0.465);
+    combinedDensity = max(combinedDensity - 0.2, 0.0);
+    combinedDensity = pow(combinedDensity, 1.35) * densityMult;
 
     dayWeatherCycle();
-    float coverageMap = getCloudMap(tracePosM * 5.0 + offset * 2.0) * dailyCoverage;
+    float coverageMap = SampleCloudMap(tracePosM * 5.0 + offset * 2.0) * dailyCoverage;
     coverageMap = smoothstep(0.1, 0.5, coverageMap);
 
-    float fadeTop = smoothstep(0.0, cumulusLayerStretch, cloudAltitude + cumulusLayerStretch - tracePos.y);
-    float fadeBottom = smoothstep(cumulusLayerStretch * 0.9, cumulusLayerStretch, tracePos.y - (cloudAltitude - cumulusLayerStretch));
+    float fadeTop = smoothstep(0.0, cumulusLayerStretch, (float(baseAltitude) + cumulusLayerStretch) - curvedY);
+    float fadeBottom = smoothstep(cumulusLayerStretch * 0.65, cumulusLayerStretch, curvedY - (float(baseAltitude) - cumulusLayerStretch));
+    
     float verticalFade = fadeTop * fadeBottom;
 
-    return combined * verticalFade * coverageMap;
+    return combinedDensity * verticalFade;
 }

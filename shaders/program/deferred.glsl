@@ -35,6 +35,7 @@ float GetLinearDepth2(float depth) {
 void main() {
     float z0 = texelFetch(depthtex0, texelCoord, 0).r;
     vec3 gi = vec3(0.0);
+    vec3 ao = vec3(0.0);
     float variance = 0.0;
     
     #if GLOBAL_ILLUMINATION == 2
@@ -50,7 +51,6 @@ void main() {
         float skyLightFactor = texture6.b;
         bool entityOrHand = z0 < 0.56;
         float dither = texture2D(noisetex, texCoord * vec2(viewWidth, viewHeight) / 128.0).b;
-
         #ifdef TAA
             dither = fract(dither + goldenRatio * mod(float(frameCounter), 360.0));
         #endif
@@ -64,7 +64,6 @@ void main() {
         #else
             float noiseMult = 0.1;
         #endif
-
         vec2 roughCoord = gl_FragCoord.xy / 128.0;
         vec3 roughNoise = vec3(
             texture2D(noisetex, roughCoord).r,
@@ -74,7 +73,7 @@ void main() {
         roughNoise = fract(roughNoise + vec3(dither, dither * goldenRatio, dither * pow2(goldenRatio)));
         roughNoise = noiseMult * (roughNoise - vec3(0.5));
         normalG += roughNoise;
-        gi = min(GetGI(normalG, viewPos.xyz, nViewPos, depthtex0, dither, skyLightFactor, 1.0, VdotU, VdotS, entityOrHand).rgb, vec3(4.0));
+        gi = min(GetGI(ao, normalG, viewPos.xyz, nViewPos, depthtex0, dither, skyLightFactor, 1.0, VdotU, VdotS, entityOrHand).rgb, vec3(4.0));
         gi = max(gi, vec3(0.0));
 
         vec4 prevGI = texture2D(colortex9, texCoord);
@@ -87,12 +86,14 @@ void main() {
         variance = clamp(variance, 0.0, 4.0);
     }
     #endif
+    
 
     /* RENDERTARGETS: 9,11 */
-    gl_FragData[0] = vec4(gi, variance);  // colortex9: filtered GI + variance
-    gl_FragData[1] = vec4(gi, variance);  // colortex11: same, for temporal filter to read
+    gl_FragData[0] = vec4(gi, 1.0);
+    gl_FragData[1] = vec4(ao, 1.0); // ao in a seperate texture so later in deferred we can make it occlude the main color, actually darkening it rather than just the sky contribution and gi
 }
 #endif
+
 //////////Vertex Shader//////////Vertex Shader//////////Vertex Shader//////////
 #ifdef VERTEX_SHADER
 noperspective out vec2 texCoord;

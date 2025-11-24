@@ -386,7 +386,7 @@ void main() {
     color = Tonemap_Lottes(color);
 
     float luminance = dot(color, vec3(0.2126, 0.7152, 0.0722));
-    //color = mix(vec3(luminance), color, 1.01);
+    color = mix(vec3(luminance), color, 0.95);
 
     #if defined GREEN_SCREEN_LIME || SELECT_OUTLINE == 4
         int materialMaskInt = int(texelFetch(colortex6, texelCoord, 0).g * 255.1);

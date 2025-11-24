@@ -1,81 +1,70 @@
-const float invLog2 = 1.0 / log(2.0);
+const float InverseLog2 = 1.0 / log(2.0);
 
 #include "/lib/atmospherics/weather/weatherParams.glsl"
 
-float Mie(float x, float g) {
-    float t = 1.0 + g*g - 2.0*g*x;
-    return (1.0 - g*g) / ((6.0*3.14159265) * t * (t*0.5 + 0.5)) * 0.85;
+float CalculateMiePhase(float cosTheta, float anisotropy) {
+    float term = 1.0 + anisotropy * anisotropy - 2.0 * anisotropy * cosTheta;
+    return (1.0 - anisotropy * anisotropy) / ((6.0 * 3.14159265) * term * (term * 0.5 + 0.5)) * 0.85;
 }
 
-float PhaseHG(float cosTheta, float g) {
-    float mie1 = Mie(cosTheta, 0.5*g) + Mie(cosTheta, 0.55*g);
-    float mie2 = Mie(cosTheta, -0.25*g);
-    return mix(mie1 * 0.1, mie2 * 2.0, 0.35);
+float PhaseHG(float cosTheta, float anisotropy) {
+    float phaseForward = CalculateMiePhase(cosTheta, 0.5 * anisotropy) + CalculateMiePhase(cosTheta, 0.55 * anisotropy);
+    float phaseBackward = CalculateMiePhase(cosTheta, -0.25 * anisotropy);
+    return mix(phaseForward * 0.1, phaseBackward * 2.0, 0.35);
 }
 
-float getCloudMap(vec3 p) {
-    vec2 uv = 0.5 + 0.5 * (p.xz/(1.8 * 100.0));
-    return texture2D(noisetex, uv).x;
+float SampleCloudMap(vec3 position) {
+    vec2 texCoord = 0.5 + 0.5 * (position.xz / (1.8 * 100.0));
+    return texture2D(noisetex, texCoord).x;
 }
 
-vec3 Offset(float wind) { 
-    return vec3(wind * 0.7, wind * 0.5, wind * 0.2); 
+vec3 CalculateWindOffset(float windSpeed) { 
+    return vec3(windSpeed * 0.7, windSpeed * 0.5, windSpeed * 0.2); 
 }
 
-float GetWind() {
-    float wind = 0.0004;
+float CalculateWindSpeed() {
+    float windSpeed = 0.0004;
     #if CLOUD_SPEED_MULT == 100
         #define CLOUD_SPEED_MULT_M CLOUD_SPEED_MULT * 0.01
-        wind *= syncedTime;
+        windSpeed *= syncedTime;
     #else
         #define CLOUD_SPEED_MULT_M CLOUD_SPEED_MULT * 0.01
-        wind *= frameTimeCounter * CLOUD_SPEED_MULT_M;
+        windSpeed *= frameTimeCounter * CLOUD_SPEED_MULT_M;
     #endif
-    return wind;
+    return windSpeed;
 }
 
-float angle = GetWind() * 0.05;
-vec3 windDir = normalize(vec3(cos(angle), 0.0, sin(angle)));
-mat3 shearMatrix = mat3(
-    1.0 + windDir.x * 0.2, windDir.x * 0.1, 0.0,
-    windDir.y * 0.1, 1.0, 0.0,
-    windDir.z * 0.2, windDir.z * 0.1, 1.0
+float GlobalWindAngle = CalculateWindSpeed() * 0.05;
+vec3 GlobalWindDirection = normalize(vec3(cos(GlobalWindAngle), 0.0, sin(GlobalWindAngle)));
+mat3 GlobalWindShearMatrix = mat3(
+    1.0 + GlobalWindDirection.x * 0.2, GlobalWindDirection.x * 0.1, 0.0,
+    GlobalWindDirection.y * 0.1, 1.0, 0.0,
+    GlobalWindDirection.z * 0.2, GlobalWindDirection.z * 0.1, 1.0
 );
 
-float curvatureDrop(float dx) {
+float curvatureDrop(float distXZ) {
     #ifdef CURVED_CLOUDS
-        return CURVATURE_STRENGTH * (dx * dx) / max(2.0 * PLANET_RADIUS, 1.0);
+        return CURVATURE_STRENGTH * (distXZ * distXZ) / max(2.0 * PLANET_RADIUS, 1.0);
     #else
         return 0.0;
     #endif
 }
 
-float curvedY(vec3 pos, vec3 cam) {
-    float dx = length((pos - cam).xz);
-    return pos.y - curvatureDrop(dx);
+float CalculateCurvedY(vec3 position, vec3 cameraPos) {
+    float distXZ = length((position - cameraPos).xz);
+    return position.y - curvatureDrop(distXZ);
 }
 
-float Noise3D(vec3 p) {
-    p.z = fract(p.z) * 128.0;
-    float iz = floor(p.z);
-    float fz = fract(p.z);
+float Noise3D(vec3 position) {
+    position.z = fract(position.z) * 128.0;
+    float zInteger = floor(position.z);
+    float zFraction = fract(position.z);
     
-    fz = fz * fz * (3.0 - 2.0 * fz);
+    zFraction = zFraction * zFraction * (3.0 - 2.0 * zFraction);
     
-    vec2 a_off = vec2(23.0, 29.0) * (iz) / 128.0;
-    vec2 b_off = vec2(23.0, 29.0) * (iz + 1.0) / 128.0;
-    float a = texture2D(noisetex, p.xy + a_off).r;
-    float b = texture2D(noisetex, p.xy + b_off).r;
-    return mix(a, b, fz);
-}
-
-float Noise3D2(vec3 p) {
-    p.z = fract(p.z) * 20.0;
-    float iz = floor(p.z);
-    float fz = fract(p.z);
-    vec2 a_off = vec2(23.0, 29.0) * (iz) / 20.0;
-    vec2 b_off = vec2(23.0, 29.0) * (iz + 1.0) / 20.0;
-    float a = texture2D(colortex3, p.xy + a_off).r;
-    float b = texture2D(colortex3, p.xy + b_off).b;
-    return mix(a, b, fz);
+    vec2 offsetA = vec2(23.0, 29.0) * (zInteger) / 128.0;
+    vec2 offsetB = vec2(23.0, 29.0) * (zInteger + 1.0) / 128.0;
+    float noiseA = texture2D(noisetex, position.xy + offsetA).r;
+    float noiseB = texture2D(noisetex, position.xy + offsetB).r;
+    return mix(noiseA, noiseB, zFraction);
 }

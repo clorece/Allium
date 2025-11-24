@@ -256,7 +256,11 @@ void main() {
         float albedoS = texelFetch(colortex10, texelCoord, 0).a;
 
         float foliage = texelFetch(colortex6, texelCoord, 0).a;
+        float missingEntity = texelFetch(colortex9, texelCoord, 0).a;
+        bool isMissingEntity = missingEntity > 0.9;
         bool isFoliage = foliage > 0.5;
+        
+        
         
         //color.rgb = foliage > 1.0 ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0);
         //if (isFoliage) color.rgb = vec3(0.0, 1.0, 0.0);
@@ -409,11 +413,13 @@ void main() {
             ao = DoAmbientOcclusion(z0, linearZ0, dither, playerPos);
             if (!entityOrHand) color.rgb *= ao;
         #else
-            #ifdef EXCLUDE_ENTITIES
-            if (!entityOrHand) {
-            #endif
+            //#ifdef EXCLUDE_ENTITIES
+            if (z0 > 0.6) {
+            //#endif
                 vec3 rawGI = texture2D(colortex9, texCoord).rgb;
+                vec3 rawAO = texture2D(colortex11, texCoord).rgb;
                 vec3 gi = vec3(0.0);
+                vec3 rtao = vec3(0.0);
                 #ifdef TEMPORAL_BILATERAL_FILTER
                     float totalWeight = 0.0;
                     
@@ -441,6 +447,7 @@ void main() {
 
                             vec4 sampleGIData = texture2D(colortex9, sampleCoord);
                             vec3 sampleGI = sampleGIData.rgb;
+                            vec3 sampleAO = texture2D(colortex11, sampleCoord).rgb;
                             float sampleVariance = sampleGIData.a;
 
                             float varianceWeight = sqrt(centerVariance * sampleVariance + 0.001);
@@ -449,80 +456,64 @@ void main() {
                             float weight = spatialWeight * depthWeight * normalWeight * varianceWeight;
                             
                             gi += sampleGI * weight;
+                            rtao += sampleAO * weight;
                             totalWeight += weight;
                         }
                     }
-                    
+                    rtao /= totalWeight;
                     gi /= totalWeight;
                 #else
+                    rtao = rawAO;
                     gi = rawGI;
                 #endif
 
-                /*
-    vec3 doIndirectLighting(vec3 lightColor, vec3 minimumLightColor, float lightmap) {
-        float lightmapCurve = (pow(lightmap, 2.0) * 2.0 + pow(lightmap, 2.5)) * 0.5;
-        
-        vec3 indirectLight = lightColor * lightmapCurve * 0.7;  // ambient_brightness placeholder
-        indirectLight += minimumLightColor * 0.01;  // MIN_LIGHT_AMOUNT placeholder
-        return indirectLight;
-    }*/
-
-                /*
-                vec3 colorCurve = (pow(ambientColor, vec3(16.0)) * 2.0 + pow(ambientColor, vec3(2.5))) * 0.5;
-
-                vec3 indirectLight = gi * colorCurve * 0.7;
-                indirectLight += 0.01 * 0.01; */
-
                 #ifdef RT_VIEW
-                    vec3 colorAdd = gi;
+                    vec3 colorAdd = gi - rtao;
                 #else
+                    color -= rtao;
                     vec3 colorAdd = (gi * 0.5 + color * 0.5) * 1.0;
                 #endif
                 
                 #ifdef TEMPORAL_FILTER
                 float blendFactor = 1.0;
                 float writeFactor = 1.0;
+                
                 vec3 cameraOffset = cameraPosition - previousCameraPosition;
                 vec2 prvCoord = SHalfReprojection(playerPos, cameraOffset);
+
                 vec2 prvRefCoord = Reprojection(vec3(texCoord, z0), cameraOffset);
-                vec2 prvRefCoord2 = Reprojection(vec3(texCoord, max(refPos.z, z0)), cameraOffset);
-                vec4 oldRef1 = vec4(textureCatmullRom(colortex7, prvRefCoord, vec2(viewWidth, viewHeight)), texture2D(colortex7, prvRefCoord).a);
-                vec4 oldRef2 = vec4(textureCatmullRom(colortex7, prvRefCoord2, vec2(viewWidth, viewHeight)), texture2D(colortex7, prvRefCoord2).a);
-                
-                vec3 dif1 = colorAdd - oldRef1.rgb;
-                vec3 dif2 = colorAdd - oldRef2.rgb;
-                float dotDif1 = dot(dif1, dif1);
-                float dotDif2 = dot(dif2, dif2);
-                float oldRefMixer = clamp01((dotDif1 - dotDif2) * 500.0);
+                        vec2 prvRefCoord2 = Reprojection(vec3(texCoord, max(refPos.z, z0)), cameraOffset);
+                        vec4 oldRef1 = texture2D(colortex7, prvRefCoord);
+                        vec4 oldRef2 = texture2D(colortex7, prvRefCoord2);
+                        vec3 dif1 = colorAdd - oldRef1.rgb;
+                        vec3 dif2 = colorAdd - oldRef2.rgb;
+                        float dotDif1 = dot(dif1, dif1);
+                        float dotDif2 = dot(dif2, dif2);
+
+                        float oldRefMixer = clamp01((dotDif1 - dotDif2) * 500.0);
+                        //vec4 oldRef = mix(oldRef1, oldRef2, oldRefMixer);
+
+
                 vec4 oldRef = mix(oldRef1, oldRef2, oldRefMixer);
                 vec4 newRef = vec4(colorAdd, colorMultInv);
                 vec2 oppositePreCoord = texCoord - 2.0 * (prvCoord - texCoord);
                 
-                // Reduce blending at screen edges
+                // Reduce blending at speed
                 blendFactor *= float(prvCoord.x > 0.0 && prvCoord.x < 1.0 && prvCoord.y > 0.0 && prvCoord.y < 1.0);
-                
-                // Camera velocity reduction
-                vec2 screenVelocity = (texCoord - prvCoord) * vec2(viewWidth, viewHeight);
-                float pixelVelocity = length(screenVelocity);
+                float velocity = length(cameraOffset) * max(16.0 - lViewPos / gbufferProjection[1][1], 3.0);
+                blendFactor *= mix(1.0, exp(-velocity) * 0.5 + 0.5, smoothnessD);
 
-                // Use pixel velocity instead
-                blendFactor *= mix(1.0, exp(-pixelVelocity * 0.1) * 0.5 + 0.5, GHOST_REDUCTION);
-                
-                vec3 colorDiff = abs(colorAdd - oldRef.rgb);
-                float colorChange = dot(colorDiff, vec3(0.299, 0.587, 0.114)); // Luminance weighted
-                
-                // Reduce blending on significant color changes (moving objects/GI)
-                float antiGhostFactor = exp(-colorChange * 0.0);
-                blendFactor *= antiGhostFactor;
-                
                 // Reduce blending if depth changed
                 float linearZDif = abs(GetLinearDepth(texture2D(colortex1, oppositePreCoord).r) - linearZ0) * far;
-                blendFactor *= max0(1.0 - linearZDif * BLEND_WEIGHT);
+                blendFactor *= max0(2.0 - linearZDif) * 0.5;
+                //color = mix(vec3(1,1,0), color, max0(2.0 - linearZDif) * 0.5);
 
+                // Reduce blending if normal changed
                 vec3 texture5P = texture2D(colortex5, oppositePreCoord, 0).rgb;
                 vec3 texture5Dif = abs(texture5 - texture5P);
                 if (texture5Dif != clamp(texture5Dif, vec3(-0.004), vec3(0.004))) {
                     blendFactor = 0.0;
+                        //color.rgb = vec3(1,0,1);
                 }
                 
                 blendFactor = max0(blendFactor);
@@ -540,9 +531,9 @@ void main() {
                         color.rgb = colorAdd;
                     #endif
                 #endif
-            #ifdef EXCLUDE_ENTITIES
+            //#ifdef EXCLUDE_ENTITIES
             }
-            #endif
+            //#endif
         #endif
 
         #ifdef WORLD_OUTLINE
