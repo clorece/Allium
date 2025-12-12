@@ -237,7 +237,7 @@ vec4 GetVolumetricClouds(int cloudAltitude,
         
 
         vec3 skyColor = GetSky(viewDotUp, viewDotSun, dither, true, false);
-        vec3 directSun = (lightColor * 128.4) * (scatter.x);
+        vec3 directSun = (lightColor * 164) * (scatter.x);
         vec3 ambSky = (skyColor * 2.0) * scatter.y;
         vec3 cloudCol = directSun + ambSky + multiScatter;
         cloudCol = pow(cloudCol, vec3(2.2)) * 0.02;
@@ -257,7 +257,7 @@ vec4 GetVolumetricClouds(int cloudAltitude,
 
         float skyMult1 = 1.0 - 0.2 * max(sunVisibility2, nightFactor);
         float skyMult2 = 1.0 - 0.33333;
-        vec3 finalColor = mix(skyColor, cloudCol * skyMult1, cloudFogFactor * skyMult2 * 0.65);
+        vec3 finalColor = mix(skyColor, cloudCol * skyMult1, cloudFogFactor * skyMult2 * 0.25);
 
         finalColor *= pow2(1.0 - maxBlindnessDarkness);
 

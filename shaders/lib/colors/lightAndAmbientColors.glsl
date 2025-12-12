@@ -13,7 +13,7 @@
 
         // noonAmbientColor
         //vec3 noonClearAmbientColor = pow(skyColor, vec3(0.65)) * 0.85;
-        vec3 noonClearAmbientColor = vec3(0.58, 0.63, 0.88);
+        vec3 noonClearAmbientColor = vec3(0.63, 0.68, 0.88);
 
 
 
@@ -29,7 +29,7 @@
 
 
         // sunset ambient
-        vec3 sunsetClearAmbientColor   = vec3(0.58, 0.63, 0.88);
+        vec3 sunsetClearAmbientColor   = vec3(0.63, 0.68, 0.88);
 
 
         #if !defined COMPOSITE && !defined DEFERRED1 //ground color
@@ -39,7 +39,7 @@
         #else
             vec3 nightClearLightColor = vec3(0.12, 0.14, 0.17); //light shaft color
         #endif
-        vec3 nightClearAmbientColor   = vec3(0.52, 0.63, 0.825) * 0.25 * (1.55 + vsBrightness * 0.77);
+        vec3 nightClearAmbientColor   = vec3(0.52, 0.63, 0.825) * 0.3 * (1.55 + vsBrightness * 0.77);
 
         #ifdef SPECIAL_BIOME_WEATHER
             vec3 drlcSnowM = inSnowy * vec3(-0.06, 0.0, 0.04);
