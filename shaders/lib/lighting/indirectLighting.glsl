@@ -296,7 +296,7 @@ vec2 texelSize = 1.0 / vec2(viewWidth, viewHeight);
                     float lod = log2(hitDist * 0.5) * 0.5;
                     lod = max(lod, 0.0);
                     
-                    incomingRadiance = pow(texture2DLod(colortex0, giScreenPos.xy, lod).rgb, vec3(2.2)) * 0.05 * GI_I;
+                    incomingRadiance = pow(texture2DLod(colortex0, giScreenPos.xy, lod).rgb, vec3(1.75)) * 0.1 * GI_I;
                     float hitFoliage = texture2D(colortex10, giScreenPos.xy).a;
 
                     if (hitFoliage > 0.9) {
@@ -313,7 +313,7 @@ vec2 texelSize = 1.0 / vec2(viewWidth, viewHeight);
                     
                     radiance += incomingRadiance;
                     
-                    occlusion += CURVE_ADJUSTED * AO_I * 0.35 - (nightFactor * 0.25) * skyWeight;
+                    occlusion += CURVE_ADJUSTED * AO_I * 0.35 * skyWeight;
                     
                     edgeFactor.x = pow2(edgeFactor.x);
                     edgeFactor = 1.0 - edgeFactor;
@@ -326,7 +326,7 @@ vec2 texelSize = 1.0 / vec2(viewWidth, viewHeight);
         
         occlusion /= float(maxIterations);
         
-        gi.rgb = max((radiance) / float(maxIterations), 0.0);
+        gi.rgb = max((radiance - occlusion) / float(maxIterations), 0.0);
         
         #if defined DEFERRED1 && defined TEMPORAL_FILTER
             if (gi.a < 0.001) giScreenPos.z = 1.0;
