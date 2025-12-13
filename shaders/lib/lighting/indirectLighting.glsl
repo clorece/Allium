@@ -309,11 +309,11 @@ vec2 texelSize = 1.0 / vec2(viewWidth, viewHeight);
                     float giScale = 1.0 - ndotl;
                     giScale = max(giScale, 1.0);
                     
-                    incomingRadiance *= giScale;
+                    //incomingRadiance *= giScale;
                     
                     radiance += incomingRadiance;
                     
-                    occlusion += CURVE_ADJUSTED * AO_I * 0.35 * skyWeight;
+                    occlusion += CURVE_ADJUSTED * AO_I * 0.4 * skyLightFactor;
                     
                     edgeFactor.x = pow2(edgeFactor.x);
                     edgeFactor = 1.0 - edgeFactor;

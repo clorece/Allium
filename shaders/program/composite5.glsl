@@ -321,6 +321,8 @@ void EndLookup(inout vec3 color) {
     #include "/lib/misc/lensFlare.glsl"
 #endif
 
+#include "/lib/antialiasing/autoExposure.glsl"
+
 //Program//
 void main() {
     vec3 color = texture2D(colortex0, texCoord).rgb;
@@ -383,6 +385,13 @@ void main() {
     float ignored = dot(color * vec3(0.15, 0.50, 0.35), vec3(0.1, 0.65, 0.6));
     float desaturated = dot(color, vec3(0.15, 0.50, 0.35));
     color = mix(color, vec3(ignored), exp2((-24) * desaturated));
+
+     // Get auto exposure value (reads from colortex4)
+    float exposure = GetAutoExposure(colortex0, dither);
+    
+    // Apply exposure
+    color = ApplyExposure(color, exposure);
+
     color = Tonemap_Lottes(color);
 
     float luminance = dot(color, vec3(0.2126, 0.7152, 0.0722));
@@ -424,6 +433,11 @@ void main() {
 
     /* DRAWBUFFERS:3 */
     gl_FragData[0] = vec4(color, 1.0);
+
+    if (gl_FragCoord.x < 0.5 && gl_FragCoord.y < 0.5) {
+        /* DRAWBUFFERS:34 */
+        gl_FragData[1] = vec4(0.0, exposure, 0.0, 1.0);
+    }
 }
 
 #endif

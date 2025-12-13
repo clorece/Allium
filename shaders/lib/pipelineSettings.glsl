@@ -27,13 +27,12 @@ const bool colortex11Clear = false;
 
 const int noiseTextureResolution = 128;
 
+const bool colortex0MipmapEnabled = true;
 const bool shadowHardwareFiltering = true;
+
 const float shadowDistanceRenderMul = 1.0;
 const float entityShadowDistanceMul = 0.125; // Iris feature
-
 const float drynessHalflife = 300.0;
 const float wetnessHalflife = 300.0;
-
 const float ambientOcclusionLevel = 1.0;
-
 const float eyeBrightnessHalflife = 1.0f;
