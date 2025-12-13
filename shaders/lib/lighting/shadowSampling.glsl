@@ -9,18 +9,15 @@ vec3 GetShadowPos(vec3 playerPos) {
 
 vec3 SampleShadow(vec3 shadowPos, float colorMult, float colorPow) {
     float shadow0 = shadow2D(shadowtex0, vec3(shadowPos.st, shadowPos.z)).x;
-
     vec3 shadowcol = vec3(0.0);
     if (shadow0 < 1.0) {
         float shadow1 = shadow2D(shadowtex1, vec3(shadowPos.st, shadowPos.z)).x;
         if (shadow1 > 0.9999) {
             shadowcol = texture2D(shadowcolor0, shadowPos.st).rgb * shadow1;
-
             shadowcol *= colorMult;
             shadowcol = pow(shadowcol, vec3(colorPow));
         }
     }
-
     return shadowcol * (1.0 - shadow0) + shadow0;
 }
 
@@ -38,12 +35,34 @@ vec2 offsetDist(float x, int s) {
     return vec2(cos(n), sin(n)) * 1.4 * x / s;
 }
 
+// --- HELPER: Z-Stepping Distance Calculator ---
+// This is called from mainLighting.glsl to decide how "soft" the shadow should be.
+float GetShadowDistance(vec3 shadowPos, float dither) {
+    float maxDist = 0.06; 
+    int steps = 12;
+    float stepSize = maxDist / float(steps);
+
+    // Dither start position to smooth out detection
+    float currentZ = shadowPos.z - (stepSize * dither);
+
+    for(int i = 0; i < steps; i++) {
+        // Strict hardware compliant check
+        if(shadow2D(shadowtex0, vec3(shadowPos.st, currentZ)).x > 0.5) {
+            // Found light! Return normalized distance (0.0 = close, 1.0 = far)
+            return clamp((float(i) + dither) / float(steps), 0.0, 1.0);
+        }
+        currentZ -= stepSize;
+    }
+    return 1.0;
+}
+
+// --- Standard TAA Filter (High Quality) ---
 vec3 SampleTAAFilteredShadow(vec3 shadowPos, float lViewPos, float offset, bool leaves, float colorMult, float colorPow) {
     vec3 shadow = vec3(0.0);
     float gradientNoise = InterleavedGradientNoiseForShadows();
 
     #if SHADOW_QUALITY == 0
-        int shadowSamples = 0; // We don't use SampleTAAFilteredShadow on Shadow Quality 0
+        int shadowSamples = 0;
     #elif SHADOW_QUALITY == 1
         int shadowSamples = 1;
     #elif SHADOW_QUALITY == 2 || SHADOW_QUALITY == 3
@@ -77,18 +96,14 @@ vec3 SampleTAAFilteredShadow(vec3 shadowPos, float lViewPos, float offset, bool 
 }
 
 vec2 shadowOffsets[4] = vec2[4](
-    vec2( 1.0, 0.0),
-    vec2( 0.0, 1.0),
-    vec2(-1.0, 0.0),
-    vec2( 0.0,-1.0));
+    vec2( 1.0, 0.0), vec2( 0.0, 1.0), vec2(-1.0, 0.0), vec2( 0.0,-1.0)
+);
 
 vec3 SampleBasicFilteredShadow(vec3 shadowPos, float offset) {
     float shadow = 0.0;
-
     for (int i = 0; i < 4; i++) {
         shadow += shadow2D(shadowtex0, vec3(offset * shadowOffsets[i] + shadowPos.st, shadowPos.z)).x;
     }
-
     return vec3(shadow * 0.25);
 }
 
@@ -96,6 +111,8 @@ float GetDepth(float depth) {
     return 2.0 * near * far / (far + near - (2.0 * depth - 1.0) * (far - near));
 }
 
+// --- Standard GetShadow (Passive) ---
+// Just takes the offset given by mainLighting.glsl and applies the filter.
 vec3 GetShadow(vec3 shadowPos, float lViewPos, float lightmapY, float offset, bool leaves) {
     #if SHADOW_QUALITY > 0
         #if ENTITY_SHADOWS_DEFINE == -1 && defined GBUFFERS_BLOCK
@@ -109,7 +126,7 @@ vec3 GetShadow(vec3 shadowPos, float lViewPos, float lightmapY, float offset, bo
         #endif
     #endif
 
-    float colorMult = 1.2 + 3.8 * lightmapY; // Natural strength is 5.0
+    float colorMult = 1.2 + 3.8 * lightmapY;
     float colorPow = 1.1 - 0.6 * pow2(pow2(pow2(lightmapY)));
 
     #if SHADOW_QUALITY >= 1

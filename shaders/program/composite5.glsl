@@ -11,7 +11,7 @@
 #define Lut_Set                     1           //[1] // technically there should be a 2 for raspberry but ill keep it off for now :3
 
 
-#define Overworld_Lut                5          //[0 1 2 3 4 5 6 7 8 9]
+#define Overworld_Lut                2          //[0 1 2 3 4 5 6 7 8 9]
 #define Nether_Lut                2          //[0 1 2 3 4 5 6 7 8 9]
 #define End_Lut                 1          //[0 1 2 3 4 5 6 7 8 9]
 

@@ -2,7 +2,7 @@
     --------------------------------------------PLEASE READ--------------------------------------------
     This ray tracing code was originally developed by Chocapic13.
     The specific implementation used here is derived from the Bliss Shaders by Xonk,
-    and has been heavily modified from Bliss's version of Chocapic13’s original ray tracing code.
+    and has been heavily modified from Bliss's version of Chocapic13's original ray tracing code.
     --------------------------------------------PLEASE READ--------------------------------------------
     LICENSE, AS STATED BY Chocapic13: SHARING A MODIFIED VERSION OF MY SHADERS:
         You are not allowed to claim any of the code included in "Chocapic13' shaders" as your own
@@ -49,6 +49,9 @@
 */
 
 vec2 texelSize = 1.0 / vec2(viewWidth, viewHeight);
+
+#define GI_MAX_BRIGHTNESS 2.5
+#define GI_TONEMAP_SHOULDER 1.2
 
 #if GLOBAL_ILLUMINATION == 1
     vec2 OffsetDist(float x, int s) {
@@ -102,15 +105,14 @@ vec2 texelSize = 1.0 / vec2(viewWidth, viewHeight);
 
 #elif GLOBAL_ILLUMINATION == 2
 
-    // GI_MODE 0: Performance Raymarching (Fixed/Expanding Step)
-    // GI_MODE 1: Accuracy Raymarching (Screen-Space DDA)
+    // GI_MODE 0: Performance (Fixed/Expanding Step)
+    // GI_MODE 1: Accuracy (Screen-Space DDA)
     #define GI_MODE 0 // [0 1]
 
     float rand(float dither, int i) {
         return fract(dither + float(i) * 0.61803398875);
     }
 
-    // Unified RayDirection (Standard Cosine-Weighted Hemisphere Sampling)
     vec3 RayDirection(vec3 normal, float dither, int i) {
         vec2 Xi = vec2(rand(dither, i), rand(dither, i + 1));
         
@@ -118,11 +120,9 @@ vec2 texelSize = 1.0 / vec2(viewWidth, viewHeight);
         float r = sqrt(Xi.x);
         vec3 hemi = vec3(r * cos(theta), r * sin(theta), sqrt(1.0 - Xi.x));
         
-        // Build TBN Frame
         vec3 T = normalize(cross(abs(normal.z) < 0.999 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0), normal));
         vec3 B = cross(normal, T);
         
-        // Transform hemisphere sample to world/view space
         return (T * hemi.x) + (B * hemi.y) + (normal * hemi.z);
     }
 
@@ -150,28 +150,22 @@ vec2 texelSize = 1.0 / vec2(viewWidth, viewHeight);
             vec3 rayDir = RayDirection(normalMR, dither, i);
             float NdotL = max(dot(normalMR, rayDir), 0.0);
 
-            // --- Sky Light Contribution (Same in both modes) ---
-            float skyWeight = max(rayDir.y, pow(skyLightFactor, 2.0)) * 1.0 + 0.05;
-
+            float skyWeight = max(normalize(rayDir.z), pow2(skyLightFactor)) * 1.0 + 0.05;
             #ifdef OVERWORLD
-                vec3 sampledSky = pow((ambientColor * 0.5 + GetSky(VdotU, VdotS, dither, false, false) * 0.5), vec3(1.0 / 2.2)) * SKY_I;
+                vec3 sampledSky = (ambientColor * 0.5 + dayMiddleSkyColor * 0.5) * SKY_I * 0.5;
                 vec3 skyContribution = sampledSky * skyWeight;
             #else
                 vec3 skyContribution = ambientColor * 0.1 * skyWeight;
             #endif
-            radiance += skyContribution; // Sky light is accumulated regardless of hit
 
             bool hit = false;
             float hitDist = 0.0;
             vec3 hitPos = vec3(0.0);
 
-            #if GI_MODE == 0
-                // ==================== GI_MODE 0: Performance Raymarching (Fixed/Expanding Step) ====================
-                
+            #if GI_MODE == 0   
                 float stepSize = 0.05;
                 vec3 rayPos = start;
                 
-                // Track depth bounds in screen space
                 vec4 initialClip = gbufferProjection * vec4(rayPos, 1.0);
                 vec3 initialScreen = initialClip.xyz / initialClip.w * 0.5 + 0.5;
                 float minZ = initialScreen.z;
@@ -191,9 +185,7 @@ vec2 texelSize = 1.0 / vec2(viewWidth, viewHeight);
                     float currZ = GetLinearDepth(rayScreen.z);
                     float nextZ = GetLinearDepth(sampledDepth);
                     
-                    // Check if ray intersects geometry using bounds (Refinement removed)
                     if (nextZ < currZ && (sampledDepth <= max(minZ, maxZ) && sampledDepth >= min(minZ, maxZ))) {
-                        // Estimate hitPos as midpoint of last step for consistency/simplicity
                         hitPos = rayPos - rayDir * stepSize * 0.5; 
                         vec4 hitClip = gbufferProjection * vec4(hitPos, 1.0);
                         giScreenPos = hitClip.xyz / hitClip.w * 0.5 + 0.5;
@@ -202,18 +194,14 @@ vec2 texelSize = 1.0 / vec2(viewWidth, viewHeight);
                         break;
                     }
                     
-                    // Update depth bounds with bias
                     float biasamount = 0.00005;
                     minZ = maxZ - biasamount / currZ;
                     maxZ = rayScreen.z;
                     
-                    // Expanding step size from performance code
                     stepSize = min(stepSize, 0.1) * 2.0;
                 }
 
-            #elif GI_MODE == 1
-                // ==================== GI_MODE 1: Accuracy Raymarching (Screen-Space DDA) ====================
-                
+            #elif GI_MODE == 1              
                 vec3 worldpos = mat3(gbufferModelViewInverse) * start;
                 float distMetric = 1.0 + 2.0 * length(worldpos) / far;
                 float stepSizeMetric = distMetric / 10.0;
@@ -250,7 +238,6 @@ vec2 texelSize = 1.0 / vec2(viewWidth, viewHeight);
                 float CURVE = 0.0;
 
                 for (int j = 0; j < iterations; j++) {
-                    // check bounds
                     if (spos.x < 0.0 || spos.y < 0.0 || spos.z < 0.0 || 
                         spos.x > 1.0 || spos.y > 1.0 || spos.z > 1.0) break;
                     
@@ -259,12 +246,10 @@ vec2 texelSize = 1.0 / vec2(viewWidth, viewHeight);
                     float currZ = GetLinearDepth(spos.z);
                     float nextZ = GetLinearDepth(sp);
                     
-                    // check if ray intersects geometry using bounds
                     if (nextZ < currZ && (sp <= max(minZ, maxZ) && sp >= min(minZ, maxZ))) {
                         hitPos = spos;
                         giScreenPos = hitPos;
                         
-                        // Reconstruct view-space hit position
                         vec3 hitViewPos = vec3(hitPos.xy, texture2D(depthtex, hitPos.xy).r);
                         hitViewPos = hitViewPos * 2.0 - 1.0;
                         vec4 hitView4 = gbufferProjectionInverse * vec4(hitViewPos, 1.0);
@@ -276,7 +261,6 @@ vec2 texelSize = 1.0 / vec2(viewWidth, viewHeight);
                         break;
                     }
                     
-                    // update depth bounds
                     minZ = maxZ - biasamount / currZ;
                     maxZ += stepv.z;
                     
@@ -289,16 +273,12 @@ vec2 texelSize = 1.0 / vec2(viewWidth, viewHeight);
                 }
             #endif
             
-            // --- Common Accumulation Logic (from 'accuracy' code) ---
             if (hit && giScreenPos.z < 0.99997) {
-                // CURVE calculation is only done in GI_MODE 1, so we need a placeholder/estimate for GI_MODE 0
                 float CURVE_ADJUSTED = 1.0; 
                 #if GI_MODE == 1
-                    // CURVE is calculated in the GI_MODE 1 loop
                     CURVE_ADJUSTED = 1.0 - pow(1.0 - pow(1.0 - CURVE, 2.0), 5.0);
                     CURVE_ADJUSTED = mix(CURVE_ADJUSTED, 1.0, clamp(start.z / far, 0.0, 1.0));
                 #elif GI_MODE == 0
-                    // Heuristic for GI_MODE 0 (distance-based occlusion)
                     float aoRadius = 2.0;
                     CURVE_ADJUSTED = 1.0 - clamp(hitDist / aoRadius, 0.0, 1.0); 
                     CURVE_ADJUSTED = pow(CURVE_ADJUSTED, 2.0); 
@@ -323,43 +303,44 @@ vec2 texelSize = 1.0 / vec2(viewWidth, viewHeight);
                         incomingRadiance *= 0.1;
                     }
 
-                    // --- NEW LOGIC: Scale down incomingRadiance on the illuminated side ---
-                    // If NdotL = 1 (fully lit side), giScale = 0 (no incomingRadiance).
-                    // If NdotL = 0 (perpendicular side), giScale = 1 (full incomingRadiance).
                     vec3 texture5 = texelFetch(colortex5, texelCoord, 0).rgb;
                     vec3 n2 = mat3(gbufferModelView) * texture5;
                     float ndotl = normalize(dot(n2, lightVec));
                     float giScale = 1.0 - ndotl;
-                    giScale = max(giScale, 1.0); // Clamps it at 1.0, meaning shadowed sides get full GI.
+                    giScale = max(giScale, 1.0);
                     
                     incomingRadiance *= giScale;
-                    // --- END NEW LOGIC ---
                     
                     radiance += incomingRadiance;
                     
-                    occlusion += CURVE_ADJUSTED * 0.25 * AO_I - (nightFactor * 0.25) * skyContribution;
-
-                    //#if GI_MODE == 0
-                    //    occlusion *= 1.25;
-                    //#endif
+                    occlusion += CURVE_ADJUSTED * AO_I * 0.35 - (nightFactor * 0.25) * skyWeight;
                     
                     edgeFactor.x = pow2(edgeFactor.x);
                     edgeFactor = 1.0 - edgeFactor;
                     gi.a += border * edgeFactor.x * edgeFactor.y;
                 }
+            } else {
+                radiance += skyContribution;
             }
         }
         
-        // --- Final Output (from 'accuracy' code) ---
         occlusion /= float(maxIterations);
         
-        gi.rgb = max((radiance - (occlusion * 0.2)) / float(maxIterations), 0.0);
+        gi.rgb = max((radiance) / float(maxIterations), 0.0);
         
         #if defined DEFERRED1 && defined TEMPORAL_FILTER
             if (gi.a < 0.001) giScreenPos.z = 1.0;
         #endif
 
         gi.rgb *= 3.14159265;
+        
+        float giBrightness = length(gi.rgb);
+        if (giBrightness > GI_TONEMAP_SHOULDER) {
+            float compressedBrightness = GI_TONEMAP_SHOULDER + (giBrightness - GI_TONEMAP_SHOULDER) / 
+                                         (1.0 + (giBrightness - GI_TONEMAP_SHOULDER) / (GI_MAX_BRIGHTNESS - GI_TONEMAP_SHOULDER));
+            gi.rgb *= compressedBrightness / giBrightness;
+        }
+        
         gi.rgb += max((dither - 0.5), 0.0);
         gi.rgb = max(gi.rgb, vec3(0.0));
 
