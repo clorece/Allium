@@ -471,8 +471,8 @@ void main() {
                 #ifdef RT_VIEW
                     vec3 colorAdd = gi - rtao;
                 #else
-                    color -= rtao;
-                    vec3 colorAdd = (gi * 0.5 + color * 0.5) * 1.0;
+                    color += gi - rtao;
+                    vec3 colorAdd = color * 0.5;
                 #endif
                 
                 #ifdef TEMPORAL_FILTER
