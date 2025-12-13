@@ -296,7 +296,7 @@ vec2 texelSize = 1.0 / vec2(viewWidth, viewHeight);
                     float lod = log2(hitDist * 0.5) * 0.5;
                     lod = max(lod, 0.0);
                     
-                    incomingRadiance = pow(texture2DLod(colortex0, giScreenPos.xy, lod).rgb, vec3(1.75)) * 0.1 * GI_I;
+                    incomingRadiance = pow(texture2DLod(colortex0, giScreenPos.xy, lod).rgb, vec3(1.0)) * 0.15 * GI_I;
                     float hitFoliage = texture2D(colortex10, giScreenPos.xy).a;
 
                     if (hitFoliage > 0.9) {
