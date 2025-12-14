@@ -416,19 +416,17 @@ void main() {
             ao = DoAmbientOcclusion(z0, linearZ0, dither, playerPos);
             if (!entityOrHand) color.rgb *= ao;
         #else
-            vec3 rawGI = texture2D(colortex9, texCoord).rgb;
-            vec3 rawAO = texture2D(colortex11, texCoord).rgb;
-            vec3 gi = vec3(0.0);
-            vec3 rtao = vec3(0.0);
-            gi = rawGI;
-            rtao = rawAO;
+            if (z0 > 0.56) { // prevent ssrt from rendering on hand since it ghosts a lot
+                vec3 gi = texture2D(colortex9, texCoord).rgb;
+                vec3 rtao = texture2D(colortex11, texCoord).rgb;
 
-            #ifdef RT_VIEW
-                colorAdd = gi - rtao;
-            #else
-                color += gi - rtao;
-                colorAdd = color * 0.5;
-            #endif
+                #ifdef RT_VIEW
+                    colorAdd = gi - rtao;
+                #else
+                    color += gi - rtao;
+                    colorAdd = color * 0.5;
+                #endif
+            }
         #endif
                 
         #ifdef TEMPORAL_FILTER

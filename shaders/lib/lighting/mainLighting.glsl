@@ -161,9 +161,9 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
     float subsurfaceHighlight = 0.0;
     float ambientMult = 1.0;
     #ifndef CLOUD_SHADOWS
-    vec3 lightColorM = lightColor * 4.0 * SUNLIGHT_AMOUNT;
+    vec3 lightColorM = lightColor * 5.0 * SUNLIGHT_AMOUNT;
     #else
-    vec3 lightColorM = lightColor * 5.5 * SUNLIGHT_AMOUNT;
+    vec3 lightColorM = lightColor * 6.5 * SUNLIGHT_AMOUNT;
     #endif
 
     #if GLOBAL_ILLUMINATION == 2
