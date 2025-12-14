@@ -2,6 +2,6 @@
 
 #define VERTEX_SHADER
 #define END
-#define DEFERRED1
+#define DEFERRED01
 
 #include "/program/deferred1.glsl"

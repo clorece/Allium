@@ -1,7 +1,7 @@
 #define AUTO_EXPOSURE_SPEED 0.5      
-#define AUTO_EXPOSURE_MIN 0.1        
+#define AUTO_EXPOSURE_MIN 0.5      
 #define AUTO_EXPOSURE_MAX 4.0        
-#define AUTO_EXPOSURE_TARGET 0.5    // default is 0.85
+#define AUTO_EXPOSURE_TARGET 0.25    // default is 0.25
 #define AUTO_EXPOSURE_BIAS 0.0       // [-1.0, 1.0]
 #define AUTO_EXPOSURE_THRESHOLD 0.1 
 

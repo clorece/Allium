@@ -63,8 +63,8 @@
         vec3 upColor     = mix(nightUpSkyColor * (1.5 - 0.5*nightFactorSqrt2 + nightFactorM*VdotSM3*1.5),
                             dayUpSkyColor, sunFactor);
         vec3 middleColor = mix(nightMiddleSkyColor * (3.0 - 2.0*nightFactorSqrt2),
-                            dayMiddleSkyColor * 0.8 * (1.0 + VdotSM2*0.3), sunFactor);
-        vec3 downColor   = mix(nightDownSkyColor, dayDownSkyColor * 0.75, (sunFactor + sunVisibility)*0.5);
+                            dayMiddleSkyColor * (1.0 + VdotSM2*0.3), sunFactor);
+        vec3 downColor   = mix(nightDownSkyColor, dayDownSkyColor * lightColor, (sunFactor + sunVisibility)*0.5);
 
         float VdotUM1 = pow2(1.0 - VdotUmax0);
             VdotUM1 = pow(VdotUM1, 1.0 - VdotSM2*0.4);
@@ -78,13 +78,14 @@
         finalSky = mix(finalSky, downColor*(1.0 + VdotSM1*0.3), VdotUM2*invRainFactor);
 
         // ground scatter blend
-        float VdotUM3 = min(max0(-VdotU + 0.05)/0.25, 1.0);
+        float VdotUM3 = min(max0(-VdotU + 0.05)/0.2, 1.0);
             VdotUM3 = smoothstep1(VdotUM3);
         vec3 scatteredGroundMixer = vec3(VdotUM3 * VdotUM3, sqrt1(VdotUM3), sqrt3(VdotUM3));
             scatteredGroundMixer = mix(vec3(VdotUM3), scatteredGroundMixer, 0.75 - 0.5*rainFactor);
-        finalSky = mix(finalSky, pow(downColor * 2.0, vec3(2.2)) + nightFactor * 0.1, scatteredGroundMixer) * 1.5;
+        finalSky = mix(finalSky, downColor + (noonFactor * 0.5) + (nightFactor * 0.1), scatteredGroundMixer) * 1.5;
         //finalSky = mix(finalSky, rainAmbientColor * 0.5 - nightFactor * 0.1, rainFactor);
         finalSky += invNoonFactor2 * 0.1;
+        finalSky -= nightFactor * 0.1;
 
         if (doGround) finalSky *= smoothstep1(pow2(1.0 + min(VdotU, 0.0)));
 
@@ -92,8 +93,6 @@
 
         
         if (doGlare) {
-            // --- SUN GLARE ---
-            // We use max(VdotS, 0.0) to ensure this only happens when looking AT the sun
             float sunDot = max(VdotS, 0.0);
             float sunScatter = 4.0 * (2.0 - clamp01(sunDot * 1000.0));
             float sunDotPow = pow(sunDot, sunScatter);
@@ -101,37 +100,24 @@
             float visfactor = 0.075;
             float sunGlare = visfactor / (1.0 - (1.0 - visfactor) * sunDotPow) - visfactor;
             
-            // Apply modifiers
             sunGlare *= 0.5 + pow2(invNoonFactor2) * 1.2;
             sunGlare *= 1.0 - rainFactor * 0.5;
             
-            // Add Sun Glare to Sky (Uses lightColor so it matches the sunset/sunrise)
             finalSky += sunGlare * shadowTime * lightColor * 0.5;
 
-
-            // --- MOON GLARE ---
-            // We use max(-VdotS, 0.0) assuming the moon is opposite the sun
             float moonDot = max(-VdotS, 0.0);
             
-            // You can tweak 'moonScatter' to make the moon glare wider or tighter
             float moonScatter = 4.0 * (2.0 - clamp01(moonDot * 500.0)); 
             float moonDotPow = pow(moonDot, moonScatter);
             
             float moonGlare = visfactor / (1.0 - (1.0 - visfactor) * moonDotPow) - visfactor;
-            
-            // Clean up moon glare (reduce intensity during rain, etc)
+
             moonGlare *= 1.0 - rainFactor * 0.8;
 
-            // DEFINE YOUR MOON COLOR HERE
-            // A nice cold, pale blue-white to contrast the orange sunset
             vec3 moonColor = vec3(0.15, 0.2, 0.35); 
             
-            // Add Moon Glare to Sky (Uses nightFactor to fade out during the day)
             finalSky += moonGlare * moonColor * 1.0 * nightFactor;
 
-
-            // --- WATER REFLECTION HIGHLIGHTS ---
-            // Kept this logic but cleaned it up to work with the new split
             if (isEyeInWater == 1) {
                 vec3 glareColor = mix(vec3(0.38, 0.4, 0.6) * 0.7, vec3(0.5), sunVisibility);
                 finalSky += (sunGlare + moonGlare) * sunVisibility * vec3(7.0);
@@ -143,6 +129,6 @@
         #endif
         finalSky += max((dither - 0.5), 0.0)/128.0;
         finalSky = max(finalSky, 0.0);
-        return pow(finalSky * 1.6, vec3(1.0 / 1.3));
+        return pow(finalSky * 1.4, vec3(1.0 / 1.3));
     }
 #endif //INCLUDE_SKY

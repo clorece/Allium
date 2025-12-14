@@ -124,7 +124,7 @@ vec3 GetStars(vec2 starCoord, float VdotU, float VdotS) {
         float hue = fract(sin(dot(planetCoord, vec2(17.23, 48.73))) * 43758.5453);
         vec3 planetColor = hsv2rgb(vec3(hue, 0.6, 1.0));
 
-        vec3 planetStars = 2048.0 * planetMask * planetColor * fade;
+        vec3 planetStars = 8196.0 * planetMask * planetColor * fade;
 
         float flicker = 0.9 + 0.1 * sin(syncedTime * 2.5 + dot(planetCoord, vec2(23.0, 19.0)) * 10.0);
         planetStars *= flicker;

@@ -104,11 +104,6 @@ vec2 texelSize = 1.0 / vec2(viewWidth, viewHeight);
     }
 
 #elif GLOBAL_ILLUMINATION == 2
-
-    // GI_MODE 0: Performance (Fixed/Expanding Step)
-    // GI_MODE 1: Accuracy (Screen-Space DDA)
-    #define GI_MODE 0 // [0 1]
-
     float rand(float dither, int i) {
         return fract(dither + float(i) * 0.61803398875);
     }
@@ -162,127 +157,48 @@ vec2 texelSize = 1.0 / vec2(viewWidth, viewHeight);
             float hitDist = 0.0;
             vec3 hitPos = vec3(0.0);
 
-            #if GI_MODE == 0   
-                float stepSize = 0.05;
-                vec3 rayPos = start;
-                
-                vec4 initialClip = gbufferProjection * vec4(rayPos, 1.0);
-                vec3 initialScreen = initialClip.xyz / initialClip.w * 0.5 + 0.5;
-                float minZ = initialScreen.z;
-                float maxZ = initialScreen.z;
+            float stepSize = 0.05;
+            vec3 rayPos = start;
+            
+            vec4 initialClip = gbufferProjection * vec4(rayPos, 1.0);
+            vec3 initialScreen = initialClip.xyz / initialClip.w * 0.5 + 0.5;
+            float minZ = initialScreen.z;
+            float maxZ = initialScreen.z;
 
-                for (int j = 0; j < int(RT_STEPS); j++) {
-                    rayPos += rayDir * stepSize;
-                    
-                    vec4 rayClip = gbufferProjection * vec4(rayPos, 1.0);
-                    vec3 rayScreen = rayClip.xyz / rayClip.w * 0.5 + 0.5;
-                    
-                    if (rayScreen.x < 0.0 || rayScreen.x > 1.0 || 
-                        rayScreen.y < 0.0 || rayScreen.y > 1.0) break;
-                    
-                    float sampledDepth = texture2D(depthtex, rayScreen.xy).r;
-                    
-                    float currZ = GetLinearDepth(rayScreen.z);
-                    float nextZ = GetLinearDepth(sampledDepth);
-                    
-                    if (nextZ < currZ && (sampledDepth <= max(minZ, maxZ) && sampledDepth >= min(minZ, maxZ))) {
-                        hitPos = rayPos - rayDir * stepSize * 0.5; 
-                        vec4 hitClip = gbufferProjection * vec4(hitPos, 1.0);
-                        giScreenPos = hitClip.xyz / hitClip.w * 0.5 + 0.5;
-                        hitDist = length(hitPos - start);
-                        hit = true;
-                        break;
-                    }
-                    
-                    float biasamount = 0.00005;
-                    minZ = maxZ - biasamount / currZ;
-                    maxZ = rayScreen.z;
-                    
-                    stepSize = min(stepSize, 0.1) * 2.0;
+            for (int j = 0; j < int(RT_STEPS); j++) {
+                rayPos += rayDir * stepSize;
+                
+                vec4 rayClip = gbufferProjection * vec4(rayPos, 1.0);
+                vec3 rayScreen = rayClip.xyz / rayClip.w * 0.5 + 0.5;
+                
+                if (rayScreen.x < 0.0 || rayScreen.x > 1.0 || 
+                    rayScreen.y < 0.0 || rayScreen.y > 1.0) break;
+                
+                float sampledDepth = texture2D(depthtex, rayScreen.xy).r;
+                
+                float currZ = GetLinearDepth(rayScreen.z);
+                float nextZ = GetLinearDepth(sampledDepth);
+                
+                if (nextZ < currZ && (sampledDepth <= max(minZ, maxZ) && sampledDepth >= min(minZ, maxZ))) {
+                    hitPos = rayPos - rayDir * stepSize * 0.5; 
+                    vec4 hitClip = gbufferProjection * vec4(hitPos, 1.0);
+                    giScreenPos = hitClip.xyz / hitClip.w * 0.5 + 0.5;
+                    hitDist = length(hitPos - start);
+                    hit = true;
+                    break;
                 }
-
-            #elif GI_MODE == 1              
-                vec3 worldpos = mat3(gbufferModelViewInverse) * start;
-                float distMetric = 1.0 + 2.0 * length(worldpos) / far;
-                float stepSizeMetric = distMetric / 10.0;
-
-                vec4 clipPos4 = gbufferProjection * vec4(start, 1.0);
-                vec3 clipPosition = clipPos4.xyz / clipPos4.w * 0.5 + 0.5;
-
-                float rayLength = ((start.z + rayDir.z * sqrt(3.0) * far) > -sqrt(3.0) * near) ?
-                                (-sqrt(3.0) * near - start.z) / rayDir.z : sqrt(3.0) * far;
-
-                vec3 endPos = start + rayDir * rayLength;
-                vec4 endClip4 = gbufferProjection * vec4(endPos, 1.0);
-                vec3 end = endClip4.xyz / endClip4.w * 0.5 + 0.5;
-
-                vec3 direction = end - clipPosition;
-                
-                float len = max(abs(direction.x) / texelSize.x, abs(direction.y) / texelSize.y) * stepSizeMetric;
-
-                vec3 maxLengths = (step(0.0, direction) - clipPosition) / direction;
-                float mult = min(min(maxLengths.x, maxLengths.y), maxLengths.z) * 2000.0;
-                
-                vec3 stepv = direction / len;
-                
-                int iterations = min(int(min(len, mult * len) - 2.0), RT_STEPS);
-                
-                vec3 spos = clipPosition;
-                spos += stepv * dither;
-                spos += stepv * 0.3;
                 
                 float biasamount = 0.00005;
-                float minZ = spos.z - biasamount / GetLinearDepth(spos.z);
-                float maxZ = spos.z;
+                minZ = maxZ - biasamount / currZ;
+                maxZ = rayScreen.z;
                 
-                float CURVE = 0.0;
-
-                for (int j = 0; j < iterations; j++) {
-                    if (spos.x < 0.0 || spos.y < 0.0 || spos.z < 0.0 || 
-                        spos.x > 1.0 || spos.y > 1.0 || spos.z > 1.0) break;
-                    
-                    float sp = texture2D(depthtex, spos.xy).r;
-                    
-                    float currZ = GetLinearDepth(spos.z);
-                    float nextZ = GetLinearDepth(sp);
-                    
-                    if (nextZ < currZ && (sp <= max(minZ, maxZ) && sp >= min(minZ, maxZ))) {
-                        hitPos = spos;
-                        giScreenPos = hitPos;
-                        
-                        vec3 hitViewPos = vec3(hitPos.xy, texture2D(depthtex, hitPos.xy).r);
-                        hitViewPos = hitViewPos * 2.0 - 1.0;
-                        vec4 hitView4 = gbufferProjectionInverse * vec4(hitViewPos, 1.0);
-                        hitViewPos = hitView4.xyz / hitView4.w;
-                        
-                        hitDist = length(hitViewPos - start);
-                        hit = true;
-                        
-                        break;
-                    }
-                    
-                    minZ = maxZ - biasamount / currZ;
-                    maxZ += stepv.z;
-                    
-                    #ifdef HALF_RAY_STEPS
-                        spos += stepv;
-                    #else
-                        spos += stepv;
-                    #endif
-                    CURVE += 1.0 / float(iterations);
-                }
-            #endif
+                stepSize = min(stepSize, 0.1) * 2.0;
+            }
             
             if (hit && giScreenPos.z < 0.99997) {
-                float CURVE_ADJUSTED = 1.0; 
-                #if GI_MODE == 1
-                    CURVE_ADJUSTED = 1.0 - pow(1.0 - pow(1.0 - CURVE, 2.0), 5.0);
-                    CURVE_ADJUSTED = mix(CURVE_ADJUSTED, 1.0, clamp(start.z / far, 0.0, 1.0));
-                #elif GI_MODE == 0
-                    float aoRadius = 2.0;
-                    CURVE_ADJUSTED = 1.0 - clamp(hitDist / aoRadius, 0.0, 1.0); 
-                    CURVE_ADJUSTED = pow(CURVE_ADJUSTED, 2.0); 
-                #endif
+                float aoRadius = 2.0;
+                float curve = 1.0 - clamp(hitDist / aoRadius, 0.0, 1.0); 
+                curve = pow(curve, 2.0); 
 
                 vec2 absPos = abs(giScreenPos.xy - 0.5);
                 vec2 cdist = absPos / screenEdge;
@@ -296,31 +212,23 @@ vec2 texelSize = 1.0 / vec2(viewWidth, viewHeight);
                     float lod = log2(hitDist * 0.5) * 0.5;
                     lod = max(lod, 0.0);
                     
-                    incomingRadiance = pow(texture2DLod(colortex0, giScreenPos.xy, lod).rgb, vec3(1.0)) * 0.15 * GI_I;
+                    incomingRadiance = pow(texture2DLod(colortex0, giScreenPos.xy, lod).rgb, vec3(1.0)) * 0.25 * GI_I;
                     float hitFoliage = texture2D(colortex10, giScreenPos.xy).a;
 
                     if (hitFoliage > 0.9) {
                         incomingRadiance *= 0.1;
                     }
-
-                    vec3 texture5 = texelFetch(colortex5, texelCoord, 0).rgb;
-                    vec3 n2 = mat3(gbufferModelView) * texture5;
-                    float ndotl = normalize(dot(n2, lightVec));
-                    float giScale = 1.0 - ndotl;
-                    giScale = max(giScale, 1.0);
-                    
-                    //incomingRadiance *= giScale;
                     
                     radiance += incomingRadiance;
                     
-                    occlusion += CURVE_ADJUSTED * AO_I * 0.4 * skyLightFactor;
+                    occlusion += curve * AO_I * 0.5 * max(skyLightFactor, 0.2);
                     
                     edgeFactor.x = pow2(edgeFactor.x);
                     edgeFactor = 1.0 - edgeFactor;
                     gi.a += border * edgeFactor.x * edgeFactor.y;
                 }
             } else {
-                radiance += skyContribution;
+                radiance += skyContribution - (nightFactor);
             }
         }
         
