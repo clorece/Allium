@@ -290,10 +290,10 @@ vec2 texelSize = 1.0 / vec2(viewWidth, viewHeight);
                     }
                     
                 } else {
-                    float skyWeight = max(normalize(rayDir.z), pow2(skyLightFactor)) * 1.0 + 0.05;
+                    //float skyWeight = max(normalize(rayDir.z), pow(skyLightFactor, 16.0)) * 1.0 + 0.05;
                     #ifdef OVERWORLD
-                        vec3 sampledSky = (ambientColor * 0.5 + dayMiddleSkyColor * 0.5) * SKY_I;
-                        vec3 skyContribution = sampledSky * skyWeight;
+                        vec3 sampledSky = (ambientColor * 0.5 + dayMiddleSkyColor * 0.5) * SKY_I * skyLightFactor;
+                        vec3 skyContribution = sampledSky * normalize(rayDir.z);
                     #else
                         vec3 skyContribution = ambientColor * 0.1 * skyWeight;
                     #endif
