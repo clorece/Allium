@@ -424,7 +424,7 @@ void main() {
             rtao = rawAO;
 
             #ifdef RT_VIEW
-                vec3 colorAdd = gi - rtao;
+                colorAdd = gi - rtao;
             #else
                 color += gi - rtao;
                 colorAdd = color * 0.5;
@@ -482,13 +482,8 @@ void main() {
             color.rgb += refToWrite.rgb * 1.0;
             color = max(color, vec3(0.0));
             refToWrite *= writeFactor;
-
         #else
-            #ifdef RT_VIEW
-                color.rgb = colorAdd;
-            #else
-                color.rgb = colorAdd;
-            #endif
+            color.rgb = colorAdd;
         #endif
             //#ifdef EXCLUDE_ENTITIES
             //}
