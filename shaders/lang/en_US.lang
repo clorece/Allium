@@ -1110,10 +1110,10 @@ screen.INDIRECT_LIGHTING=Indirect Lighting
         option.AO_I=Ambient Occlusion Intensity
         option.SKY_I=Skylight Contribution
         option.SKY_I.comment=Affects how much skylight is contributing to global illumination, sort of adds a sheen to surfaces from skylight, giving it a more natural feel.
-        option.PT_SAMPLES=Pathtrace Samples
-            option.PT_SAMPLES.comment=Change to increase Pathtracing Quality, higher = less noise
+        option.PT_MAX_BOUNCES=Bounces
+            option.PT_MAX_BOUNCES.comment=Change to increase how many times light can bounce in a scene
         option.PT_STEPS=Pathtrace Steps
-            option.PT_STEPS.comment=Change to increase the distance a ray can travel (gi range)
+            option.PT_STEPS.comment=Change to increase the distance a light can travel
         option.EXCLUDE_ENTITIES=Exclude Entities in RT
             option.EXCLUDE_ENTITIES.comment=When enabled, prevent Pathtracing to render on entities or hand. Disabling this option will cause a lot of ghosting on entities when they move.
         screen.DENOISER=Denoiser
