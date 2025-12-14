@@ -157,7 +157,7 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
     #endif
 
     float lightmapY2 = pow2(lightmap.y);
-    float lightmapYM = pow(lightmap.y, 3.0);
+    float lightmapYM = pow(lightmap.y, 1.5);
     float subsurfaceHighlight = 0.0;
     float ambientMult = 1.0;
     #ifndef CLOUD_SHADOWS

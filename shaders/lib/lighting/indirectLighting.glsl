@@ -1,8 +1,11 @@
 /*
     --------------------------------------------PLEASE READ--------------------------------------------
-    This ray tracing code was originally developed by Chocapic13.
-    The specific implementation used here is derived from the Bliss Shaders by Xonk,
+    The pathtracing implementation used here is derived from the Bliss Shaders by Xonk,
     and has been heavily modified from Bliss's version of Chocapic13's original ray tracing code.
+
+    This ray tracing code was originally developed by Chocapic13.
+    
+    Path tracing conversion and modifications by [Your Name Here]
     --------------------------------------------PLEASE READ--------------------------------------------
     LICENSE, AS STATED BY Chocapic13: SHARING A MODIFIED VERSION OF MY SHADERS:
         You are not allowed to claim any of the code included in "Chocapic13' shaders" as your own
@@ -50,8 +53,7 @@
 
 vec2 texelSize = 1.0 / vec2(viewWidth, viewHeight);
 
-#define GI_MAX_BRIGHTNESS 2.5
-#define GI_TONEMAP_SHOULDER 1.2
+#define PT_USE_RUSSIAN_ROULETTE
 
 #if GLOBAL_ILLUMINATION == 1
     vec2 OffsetDist(float x, int s) {
@@ -107,6 +109,10 @@ vec2 texelSize = 1.0 / vec2(viewWidth, viewHeight);
     float rand(float dither, int i) {
         return fract(dither + float(i) * 0.61803398875);
     }
+    
+    float randWithSeed(float dither, int seed) {
+        return fract(dither * 12.9898 + float(seed) * 78.233);
+    }
 
     vec3 RayDirection(vec3 normal, float dither, int i) {
         vec2 Xi = vec2(rand(dither, i), rand(dither, i + 1));
@@ -123,135 +129,210 @@ vec2 texelSize = 1.0 / vec2(viewWidth, viewHeight);
 
     vec3 toClipSpace3(vec3 viewSpacePosition) {
         vec4 clipSpace = gbufferProjection * vec4(viewSpacePosition, 1.0);
-
         return clipSpace.xyz / clipSpace.w * 0.5 + 0.5;
     }
 
+    struct RayHit {
+        bool hit;
+        vec3 screenPos;
+        vec3 worldPos;
+        float hitDist;
+        float border;
+    };
+
+    RayHit MarchRay(vec3 start, vec3 rayDir, sampler2D depthtex, vec2 screenEdge) {
+        RayHit result;
+        result.hit = false;
+        result.hitDist = 0.0;
+        result.border = 0.0;
+        
+        float stepSize = 0.05;
+        vec3 rayPos = start;
+        
+        vec4 initialClip = gbufferProjection * vec4(rayPos, 1.0);
+        vec3 initialScreen = initialClip.xyz / initialClip.w * 0.5 + 0.5;
+        float minZ = initialScreen.z;
+        float maxZ = initialScreen.z;
+
+        for (int j = 0; j < int(PT_STEPS); j++) {
+            rayPos += rayDir * stepSize;
+            
+            vec4 rayClip = gbufferProjection * vec4(rayPos, 1.0);
+            vec3 rayScreen = rayClip.xyz / rayClip.w * 0.5 + 0.5;
+            
+            if (rayScreen.x < 0.0 || rayScreen.x > 1.0 || 
+                rayScreen.y < 0.0 || rayScreen.y > 1.0) break;
+            
+            float sampledDepth = texture2D(depthtex, rayScreen.xy).r;
+            
+            float currZ = GetLinearDepth(rayScreen.z);
+            float nextZ = GetLinearDepth(sampledDepth);
+            
+            if (nextZ < currZ && (sampledDepth <= max(minZ, maxZ) && sampledDepth >= min(minZ, maxZ))) {
+                vec3 hitPos = rayPos - rayDir * stepSize * 0.5;
+                vec4 hitClip = gbufferProjection * vec4(hitPos, 1.0);
+                result.screenPos = hitClip.xyz / hitClip.w * 0.5 + 0.5;
+                result.worldPos = hitPos;
+                result.hitDist = length(hitPos - start);
+                
+                vec2 absPos = abs(result.screenPos.xy - 0.5);
+                vec2 cdist = absPos / screenEdge;
+                result.border = clamp(1.0 - pow(max(cdist.x, cdist.y), 50.0), 0.0, 1.0);
+                
+                result.hit = true;
+                break;
+            }
+            
+            float biasamount = 0.00005;
+            minZ = maxZ - biasamount / currZ;
+            maxZ = rayScreen.z;
+            
+            stepSize = min(stepSize, 0.1) * 2.5;
+        }
+        
+        return result;
+    }
+
+    #include "/lib/lighting/ggx.glsl"
+
+    vec3 EvaluateBRDF(vec3 albedo, vec3 normal, vec3 wi, vec3 wo, float smoothness) {
+        float NdotL = max(dot(normal, wi), 0.0);
+
+        vec3 diffuse = albedo / 3.14159265;
+        float ggxSpec = GGX(normal, -wo, wi, NdotL, smoothness);
+        
+        return diffuse + albedo * ggxSpec;
+    }
+
+    vec3 EvaluateBRDF(vec3 albedo, vec3 normal, vec3 wi, vec3 wo) {
+        return albedo / 3.14159265;
+    }
+
+    float CosinePDF(float NdotL) {
+        return NdotL / 3.14159265;
+    }
+
     vec3 giScreenPos = vec3(0.0);
+    
     vec4 GetGI(inout vec3 occlusion, vec3 normalM, vec3 viewPos, vec3 nViewPos, sampler2D depthtex, float dither, float skyLightFactor, float smoothness, float VdotU, float VdotS, bool entityOrHand) {
         vec2 screenEdge = vec2(0.6, 0.55);
         vec3 normalMR = normalM;
 
         vec4 gi = vec4(0.0);
-        vec3 radiance = vec3(0.0);
+        vec3 totalRadiance = vec3(0.0);
         
-        vec3 start = viewPos + normalMR * 0.01;
-
-        vec3 startWorldPos = mat3(gbufferModelViewInverse) * start;
-        float distanceScale = clamp(1.0 - start.z / far, 0.1, 1.0);
-        int maxIterations = int(RT_SAMPLES * distanceScale);
+        vec3 startPos = viewPos + normalMR * 0.01;
+        vec3 startWorldPos = mat3(gbufferModelViewInverse) * startPos;
         
-        for (int i = 0; i < maxIterations; i++) {
-            vec3 rayDir = RayDirection(normalMR, dither, i);
-            float NdotL = max(dot(normalMR, rayDir), 0.0);
-
-            float skyWeight = max(normalize(rayDir.z), pow2(skyLightFactor)) * 1.0 + 0.05;
-            #ifdef OVERWORLD
-                vec3 sampledSky = (ambientColor * 0.5 + dayMiddleSkyColor * 0.5) * SKY_I * 0.5;
-                vec3 skyContribution = sampledSky * skyWeight;
-            #else
-                vec3 skyContribution = ambientColor * 0.1 * skyWeight;
-            #endif
-
-            bool hit = false;
-            float hitDist = 0.0;
-            vec3 hitPos = vec3(0.0);
-
-            float stepSize = 0.05;
-            vec3 rayPos = start;
+        float distanceScale = clamp(1.0 - startPos.z / far, 0.1, 1.0);
+        int numPaths = int(PT_MAX_BOUNCES * distanceScale);
+        
+        for (int i = 0; i < numPaths; i++) {
+            vec3 pathRadiance = vec3(0.0);
+            vec3 pathThroughput = vec3(1.0);
             
-            vec4 initialClip = gbufferProjection * vec4(rayPos, 1.0);
-            vec3 initialScreen = initialClip.xyz / initialClip.w * 0.5 + 0.5;
-            float minZ = initialScreen.z;
-            float maxZ = initialScreen.z;
-
-            for (int j = 0; j < int(RT_STEPS); j++) {
-                rayPos += rayDir * stepSize;
-                
-                vec4 rayClip = gbufferProjection * vec4(rayPos, 1.0);
-                vec3 rayScreen = rayClip.xyz / rayClip.w * 0.5 + 0.5;
-                
-                if (rayScreen.x < 0.0 || rayScreen.x > 1.0 || 
-                    rayScreen.y < 0.0 || rayScreen.y > 1.0) break;
-                
-                float sampledDepth = texture2D(depthtex, rayScreen.xy).r;
-                
-                float currZ = GetLinearDepth(rayScreen.z);
-                float nextZ = GetLinearDepth(sampledDepth);
-                
-                if (nextZ < currZ && (sampledDepth <= max(minZ, maxZ) && sampledDepth >= min(minZ, maxZ))) {
-                    hitPos = rayPos - rayDir * stepSize * 0.5; 
-                    vec4 hitClip = gbufferProjection * vec4(hitPos, 1.0);
-                    giScreenPos = hitClip.xyz / hitClip.w * 0.5 + 0.5;
-                    hitDist = length(hitPos - start);
-                    hit = true;
-                    break;
-                }
-                
-                float biasamount = 0.00005;
-                minZ = maxZ - biasamount / currZ;
-                maxZ = rayScreen.z;
-                
-                stepSize = min(stepSize, 0.1) * 2.0;
-            }
+            vec3 currentPos = startPos;
+            vec3 currentNormal = normalMR;
+            int bounce = 0;
             
-            if (hit && giScreenPos.z < 0.99997) {
-                float aoRadius = 2.0;
-                float curve = 1.0 - clamp(hitDist / aoRadius, 0.0, 1.0); 
-                curve = pow(curve, 2.0); 
-
-                vec2 absPos = abs(giScreenPos.xy - 0.5);
-                vec2 cdist = absPos / screenEdge;
-                float border = clamp(1.0 - pow(max(cdist.x, cdist.y), 50.0), 0.0, 1.0);
+            for (bounce = 0; bounce < PT_MAX_BOUNCES; bounce++) {
+                int seed = i * PT_MAX_BOUNCES + bounce;
+                vec3 rayDir = RayDirection(currentNormal, dither, seed);
+                float NdotL = max(dot(currentNormal, rayDir), 0.0);
                 
-                if (border > 0.001) {
-                    vec2 edgeFactor = pow2(pow2(pow2(cdist)));
-                    giScreenPos.y += (dither - 0.5) * (0.05 * (edgeFactor.x + edgeFactor.y));
-
-                    vec3 incomingRadiance = vec3(0.0);
-                    float lod = log2(hitDist * 0.5) * 0.5;
+                RayHit hit = MarchRay(currentPos, rayDir, depthtex, screenEdge);
+                
+                if (hit.hit && hit.screenPos.z < 0.99997 && hit.border > 0.001) {
+                    vec2 edgeFactor = pow2(pow2(pow2(abs(hit.screenPos.xy - 0.5) / screenEdge)));
+                    vec2 jitteredUV = hit.screenPos.xy;
+                    jitteredUV.y += (dither - 0.5) * (0.05 * (edgeFactor.x + edgeFactor.y));
+                    
+                    float lod = log2(hit.hitDist * 0.5) * 0.5;
                     lod = max(lod, 0.0);
                     
-                    incomingRadiance = pow(texture2DLod(colortex0, giScreenPos.xy, lod).rgb, vec3(1.0)) * 0.25 * GI_I;
-                    float hitFoliage = texture2D(colortex10, giScreenPos.xy).a;
-
+                    vec3 hitColor = texture2DLod(colortex0, jitteredUV, lod).rgb;
+                    float hitFoliage = texture2D(colortex10, jitteredUV).a;
+                    
                     if (hitFoliage > 0.9) {
-                        incomingRadiance *= 0.1;
+                        hitColor *= 0.1;
                     }
                     
-                    radiance += incomingRadiance;
+                    vec3 hitNormalEncoded = texture2DLod(colortex5, jitteredUV, 0.0).rgb;
+                    vec3 hitNormal = normalize(hitNormalEncoded * 2.0 - 1.0);
+                    vec3 hitAlbedo = hitColor;
+                    float hitSmoothness = texture2DLod(colortex6, jitteredUV, 0.0).r;
+
+                    vec3 brdf = EvaluateBRDF(hitAlbedo, currentNormal, rayDir, -normalize(currentPos));
+                    float pdf = CosinePDF(NdotL);
                     
-                    occlusion += curve * AO_I * 0.5 * max(skyLightFactor, 0.2);
+                    pathThroughput *= brdf * NdotL / max(pdf, 0.0001);
                     
-                    edgeFactor.x = pow2(edgeFactor.x);
-                    edgeFactor = 1.0 - edgeFactor;
-                    gi.a += border * edgeFactor.x * edgeFactor.y;
+                    float brightness = dot(hitColor, vec3(0.299, 0.587, 0.114));
+                    if (brightness > 1.5) {
+                        pathRadiance += pathThroughput * hitColor * 0.5;
+                    }
+
+                    #ifdef PT_USE_RUSSIAN_ROULETTE
+                    if (bounce > 0) {
+                        float continueProbability = min(max(pathThroughput.x, max(pathThroughput.y, pathThroughput.z)), 0.95);
+                        if (randWithSeed(dither, seed + 1000) > continueProbability) {
+                            break;
+                        }
+                        pathThroughput /= continueProbability;
+                    }
+                    #endif
+                    
+                    currentPos = hit.worldPos + rayDir * 0.01;
+                    currentNormal = hitNormal;
+                    
+                    if (bounce == PT_MAX_BOUNCES - 1) {
+                        pathRadiance += pathThroughput * hitColor * 0.25 * GI_I;
+                    }
+                    
+                } else {
+                    float skyWeight = max(normalize(rayDir.z), pow2(skyLightFactor)) * 1.0 + 0.05;
+                    #ifdef OVERWORLD
+                        vec3 sampledSky = (ambientColor * 0.5 + dayMiddleSkyColor * 0.5) * SKY_I;
+                        vec3 skyContribution = sampledSky * skyWeight;
+                    #else
+                        vec3 skyContribution = ambientColor * 0.1 * skyWeight;
+                    #endif
+                    
+                    pathRadiance += pathThroughput * skyContribution;
+                    break;
                 }
-            } else {
-                radiance += skyContribution - (nightFactor);
+            }
+            
+            totalRadiance += pathRadiance;
+            
+            RayHit firstHit = MarchRay(startPos, RayDirection(normalMR, dither, i), depthtex, screenEdge);
+            if (firstHit.hit) {
+                float aoRadius = 2.0;
+                float curve = 1.0 - clamp(firstHit.hitDist / aoRadius, 0.0, 1.0);
+                curve = pow(curve, 2.0);
+                occlusion += curve * AO_I * 0.5 * max(skyLightFactor, 0.2);
             }
         }
         
-        occlusion /= float(maxIterations);
-        
-        gi.rgb = max((radiance - occlusion) / float(maxIterations), 0.0);
+        totalRadiance /= float(numPaths);
+        occlusion /= float(numPaths);
         
         #if defined DEFERRED1 && defined TEMPORAL_FILTER
-            if (gi.a < 0.001) giScreenPos.z = 1.0;
+            giScreenPos = vec3(texCoord, 1.0);
         #endif
-
-        gi.rgb *= 3.14159265;
         
+        gi.rgb = max(totalRadiance - occlusion, 0.0);
+        gi.a = 1.0;
+
         float giBrightness = length(gi.rgb);
-        if (giBrightness > GI_TONEMAP_SHOULDER) {
-            float compressedBrightness = GI_TONEMAP_SHOULDER + (giBrightness - GI_TONEMAP_SHOULDER) / 
-                                         (1.0 + (giBrightness - GI_TONEMAP_SHOULDER) / (GI_MAX_BRIGHTNESS - GI_TONEMAP_SHOULDER));
+        if (giBrightness > 1.2) {
+            float compressedBrightness = 1.2 + (giBrightness - 1.2) / 
+                                         (1.0 + (giBrightness - 1.2) / (2.5 - 1.2));
             gi.rgb *= compressedBrightness / giBrightness;
         }
         
-        gi.rgb += max((dither - 0.5), 0.0);
         gi.rgb = max(gi.rgb, vec3(0.0));
-
+        
         return gi;
     }
 #endif

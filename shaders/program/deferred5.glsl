@@ -420,7 +420,7 @@ void main() {
                 vec3 gi = texture2D(colortex9, texCoord).rgb;
                 vec3 rtao = texture2D(colortex11, texCoord).rgb;
 
-                #ifdef RT_VIEW
+                #ifdef PT_VIEW
                     colorAdd = gi - rtao;
                 #else
                     color += gi - rtao;

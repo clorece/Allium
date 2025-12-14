@@ -1105,17 +1105,17 @@ screen.INDIRECT_LIGHTING=Indirect Lighting
     option.GLOBAL_ILLUMINATION.comment=Sets Indirect Lighting Mode
         value.GLOBAL_ILLUMINATION.0=Off
         value.GLOBAL_ILLUMINATION.1=Screen Spaced Ambient Occlusion
-        value.GLOBAL_ILLUMINATION.2=Screen Spaced Raytracing
+        value.GLOBAL_ILLUMINATION.2=Screen Spaced Pathtracing
         option.GI_I=Global Illumination Intensity
         option.AO_I=Ambient Occlusion Intensity
         option.SKY_I=Skylight Contribution
         option.SKY_I.comment=Affects how much skylight is contributing to global illumination, sort of adds a sheen to surfaces from skylight, giving it a more natural feel.
-        option.RT_SAMPLES=Raytrace Samples
-            option.RT_SAMPLES.comment=Change to increase Raytrace Quality, higher = less noise
-        option.RT_STEPS=Raytrace Steps
-            option.RT_STEPS.comment=Change to increase the distance a ray can travel (gi range)
+        option.PT_SAMPLES=Pathtrace Samples
+            option.PT_SAMPLES.comment=Change to increase Pathtracing Quality, higher = less noise
+        option.PT_STEPS=Pathtrace Steps
+            option.PT_STEPS.comment=Change to increase the distance a ray can travel (gi range)
         option.EXCLUDE_ENTITIES=Exclude Entities in RT
-            option.EXCLUDE_ENTITIES.comment=When enabled, prevent Raytracing to render on entities or hand. Disabling this option will cause a lot of ghosting on entities when they move.
+            option.EXCLUDE_ENTITIES.comment=When enabled, prevent Pathtracing to render on entities or hand. Disabling this option will cause a lot of ghosting on entities when they move.
         screen.DENOISER=Denoiser
             option.TEMPORAL_BILATERAL_FILTER=Temporal Bilateral Filter
                 option.TEMPORAL_BILATERAL_FILTER.comment=Denoiser Toggle

@@ -52,7 +52,12 @@ float GGX(vec3 normalM, vec3 viewPos, vec3 lightVec, float NdotLmax0, float smoo
     float f0 = 0.05;
     float F = exp2((-5.55473 * dotLH - 6.98316) * dotLH) * (1.0 - f0) + f0;
 
-    float NdotLmax0M = sqrt3(NdotLmax0 * max0(dot(normal, lightVec)));
+    #if defined DEFERRED
+        float NdotLmax0M = sqrt3(NdotLmax0 * max0(dot(normalM, lightVec)));
+    #else
+        float NdotLmax0M = sqrt3(NdotLmax0 * max0(dot(normal, lightVec)));
+    #endif
+    
     float specular = max0(NdotLmax0M * D * F / pow2(dotLH));
     specular = specular / (0.125 * specular + 1.0);
 

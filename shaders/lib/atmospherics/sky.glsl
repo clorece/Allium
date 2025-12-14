@@ -82,10 +82,10 @@
             VdotUM3 = smoothstep1(VdotUM3);
         vec3 scatteredGroundMixer = vec3(VdotUM3 * VdotUM3, sqrt1(VdotUM3), sqrt3(VdotUM3));
             scatteredGroundMixer = mix(vec3(VdotUM3), scatteredGroundMixer, 0.75 - 0.5*rainFactor);
-        finalSky = mix(finalSky, downColor + (noonFactor * 0.5) + (nightFactor * 0.1), scatteredGroundMixer) * 1.5;
+        finalSky = mix(finalSky, downColor + (noonFactor * 0.5), scatteredGroundMixer) * 1.5;
         //finalSky = mix(finalSky, rainAmbientColor * 0.5 - nightFactor * 0.1, rainFactor);
         finalSky += invNoonFactor2 * 0.1;
-        finalSky -= nightFactor * 0.1;
+        finalSky -= nightFactor * 0.2;
 
         if (doGround) finalSky *= smoothstep1(pow2(1.0 + min(VdotU, 0.0)));
 
@@ -116,7 +116,7 @@
 
             vec3 moonColor = vec3(0.15, 0.2, 0.35); 
             
-            finalSky += moonGlare * moonColor * 1.0 * nightFactor;
+            finalSky += moonGlare * moonColor * 0.1 * nightFactor;
 
             if (isEyeInWater == 1) {
                 vec3 glareColor = mix(vec3(0.38, 0.4, 0.6) * 0.7, vec3(0.5), sunVisibility);
@@ -127,7 +127,7 @@
         #ifdef CAVE_FOG
             finalSky = mix(finalSky, caveFogColor, GetCaveFactor()*VdotUmax0M);
         #endif
-        finalSky += max((dither - 0.5), 0.0)/128.0;
+        finalSky += max((dither - 0.5), 0.0)/32.0;
         finalSky = max(finalSky, 0.0);
         return pow(finalSky * 1.4, vec3(1.0 / 1.3));
     }
