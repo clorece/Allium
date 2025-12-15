@@ -6,7 +6,7 @@
 #define AUTO_EXPOSURE_THRESHOLD 0.1 
 
 // Metering modes
-#define METERING_MODE 0              // [0 1 2] 0=Average, 1=Center-Weighted, 2=Spot
+#define METERING_MODE 1              // [0 1 2] 0=Average, 1=Center-Weighted, 2=Spot
 /*
 float GetSceneLuminance(sampler2D colorTex) {
     #if METERING_MODE == 0
@@ -78,7 +78,7 @@ float GetSceneLuminanceHistogram(sampler2D colorTex, float dither) {
         for (int x = 0; x < samples; x++) {
             for (int y = 0; y < samples; y++) {
                 vec2 offset = (vec2(float(x), float(y)) + 0.5) / float(samples);
-                offset += (dither - 0.5) / float(samples * 2); // Small jitter
+                offset += (dither - 0.5) / float(samples); // Small jitter
                 
                 vec3 sampleColor = textureLod(colorTex, offset, 2.0).rgb;
                 float sampleLum = dot(sampleColor, vec3(0.2126, 0.7152, 0.0722));
@@ -98,7 +98,7 @@ float GetSceneLuminanceHistogram(sampler2D colorTex, float dither) {
         for (int x = 0; x < samples; x++) {
             for (int y = 0; y < samples; y++) {
                 vec2 offset = (vec2(float(x), float(y)) + 0.5) / float(samples);
-                offset += (dither - 0.5) / float(samples * 2);
+                offset += (dither - 0.5) / float(samples);
                 
                 vec3 sampleColor = textureLod(colorTex, offset, 2.0).rgb;
                 float sampleLum = dot(sampleColor, vec3(0.2126, 0.7152, 0.0722));
