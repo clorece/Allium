@@ -4,8 +4,6 @@
     and has been heavily modified from Bliss's version of Chocapic13's original ray tracing code.
 
     This ray tracing code was originally developed by Chocapic13.
-    
-    Path tracing conversion and modifications by [Your Name Here]
     --------------------------------------------PLEASE READ--------------------------------------------
     LICENSE, AS STATED BY Chocapic13: SHARING A MODIFIED VERSION OF MY SHADERS:
         You are not allowed to claim any of the code included in "Chocapic13' shaders" as your own
@@ -310,7 +308,7 @@ vec2 texelSize = 1.0 / vec2(viewWidth, viewHeight);
                 float aoRadius = 2.0;
                 float curve = 1.0 - clamp(firstHit.hitDist / aoRadius, 0.0, 1.0);
                 curve = pow(curve, 2.0);
-                occlusion += curve * AO_I * 0.5 * max(skyLightFactor, 0.2);
+                occlusion += curve * AO_I * 0.5 * max(skyLightFactor, 0.5);
             }
         }
         
