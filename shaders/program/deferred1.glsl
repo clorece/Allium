@@ -32,14 +32,10 @@ void main() {
     
     vec3 giFiltered = vec3(0.0);
     vec3 aoFiltered = vec3(0.0);
-    float varianceOut = 0.0;
     
     #if GLOBAL_ILLUMINATION == 2
-    if (z0 < 1.0 && z0 > 0.56) {
-        vec4 rawGIData = texture2D(colortex9, texCoord);
-        vec3 rawGI = rawGIData.rgb;
+        vec3 rawGI = texture2D(colortex9, texCoord).rgb;
         vec3 rawAO = texture2D(colortex11, texCoord).rgb;
-        float centerVariance = rawGIData.a;
         
         float centerDepth = GetLinearDepth(z0);
         vec3 texture5 = texelFetch(colortex5, texelCoord, 0).rgb;
@@ -59,22 +55,17 @@ void main() {
 
                 float sampleDepth = GetLinearDepth(texture2D(depthtex0, sampleCoord).r);
                 float depthDiff = abs(centerDepth - sampleDepth) * far;
-                float depthWeight = exp(-depthDiff * depthDiff * 4.0);
+                float depthWeight = exp(-depthDiff * depthDiff * 1.0); // Reduced from 4.0 to 1.0 for softer filtering
 
                 vec3 sampleTexture5 = texture2D(colortex5, sampleCoord).rgb;
                 vec3 sampleNormal = mat3(gbufferModelView) * sampleTexture5;
                 float normalDot = max(dot(centerNormal, sampleNormal), 0.0);
-                float normalWeight = pow(normalDot, 32.0);
+                float normalWeight = pow(normalDot, 8.0); // Reduced from 32.0 to 8.0 for softer filtering
                 
-                vec4 sampleGIData = texture2D(colortex9, sampleCoord);
-                vec3 sampleGI = sampleGIData.rgb;
+                vec3 sampleGI = texture2D(colortex9, sampleCoord).rgb;
                 vec3 sampleAO = texture2D(colortex11, sampleCoord).rgb;
-                float sampleVariance = sampleGIData.a;
                 
-                float avgVariance = (centerVariance + sampleVariance) * 0.5;
-                float varianceWeight = exp(-avgVariance * 8.0);
-                
-                float weight = spatialWeight * depthWeight * normalWeight * varianceWeight;
+                float weight = spatialWeight * depthWeight * normalWeight;
                 
                 giFiltered += sampleGI * weight;
                 aoFiltered += sampleAO * weight;
@@ -84,17 +75,10 @@ void main() {
         
         giFiltered /= totalWeight;
         aoFiltered /= totalWeight;
-        varianceOut = centerVariance;
-        
-    } else {
-        giFiltered = texture2D(colortex9, texCoord).rgb;
-        aoFiltered = texture2D(colortex11, texCoord).rgb;
-        varianceOut = texture2D(colortex9, texCoord).a;
-    }
     #endif
     
-    /* RENDERTARGETS: 7,11 */
-    gl_FragData[0] = vec4(giFiltered, varianceOut);
+    /* RENDERTARGETS: 8,11 */
+    gl_FragData[0] = vec4(giFiltered, 1.0);
     gl_FragData[1] = vec4(aoFiltered, 1.0);
 }
 

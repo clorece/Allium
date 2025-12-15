@@ -70,7 +70,7 @@ vec3 AcesTonemap(vec3 color) {
     // === Adjustable parameters ===
 
     float exposure = 0.35;   // >1.0 = brighter, <1.0 = darker
-    float saturation = 1.01; // >1.0 = more vibrant, <1.0 = more gray
+    float saturation = 1.0; // >1.0 = more vibrant, <1.0 = more gray
     float gamma = 2.2;      // sRGB standard gamma
     float contrast = 0.998;   // >1.0 = higher contrast, <1.0 = flatter
 
@@ -395,7 +395,7 @@ void main() {
     color = Tonemap_Lottes(color);
 
     float luminance = dot(color, vec3(0.2126, 0.7152, 0.0722));
-    color = mix(vec3(luminance), color, 0.95);
+    color = mix(vec3(luminance), color, 0.9);
 
     #if defined GREEN_SCREEN_LIME || SELECT_OUTLINE == 4
         int materialMaskInt = int(texelFetch(colortex6, texelCoord, 0).g * 255.1);

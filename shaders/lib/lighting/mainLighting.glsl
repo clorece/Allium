@@ -342,7 +342,7 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
                                 float VdotL = dot(nViewPos, lightVec);
                                 float lightFactor = pow(max(VdotL, 0.0), 10.0) * float(isEyeInWater == 0);
                                 if (subsurfaceMode == 1) {
-                                    offset = 0.0050235 * lightmapYM + 0.0009765;
+                                    offset = 0.00050235 * lightmapYM + 0.0009765;
                                     shadowPos.z -= max(NdotL * 0.0001, 0.0) * lightmapYM;
                                     subsurfaceHighlight = lightFactor * 0.8;
                                     #ifndef SHADOW_FILTERING
@@ -350,7 +350,7 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
                                     #endif
                                 } else if (subsurfaceMode == 2) {
                                     leaves = true;
-                                    offset = 0.005235 * lightmapYM + 0.0009765;
+                                    offset = 0.001235 * lightmapYM + 0.0009765;
                                     shadowPos.z -= 0.000175 * lightmapYM;
                                     subsurfaceHighlight = lightFactor * 0.6;
                                     #ifndef SHADOW_FILTERING
