@@ -74,6 +74,7 @@ vec3 RayDirection(vec3 normal, float dither, int i) {
     return (T * hemi.x) + (B * hemi.y) + (normal * hemi.z);
 }
 
+
 vec3 toClipSpace3(vec3 viewSpacePosition) {
     vec4 clipSpace = gbufferProjection * vec4(viewSpacePosition, 1.0);
     return clipSpace.xyz / clipSpace.w * 0.5 + 0.5;
@@ -197,7 +198,7 @@ vec4 GetGI(inout vec3 occlusion, vec3 normalM, vec3 viewPos, vec3 nViewPos, samp
                 float lod = log2(hit.hitDist * 0.5) * 0.5;
                 lod = max(lod, 0.0);
                 
-                vec3 hitColor = texture2DLod(colortex0, jitteredUV, lod).rgb;
+                vec3 hitColor = texture2DLod(colortex0, jitteredUV, lod).rgb * 0.85 * GI_I;
                 float hitFoliage = texture2D(colortex10, jitteredUV).a;
                 
                 vec3 hitNormalEncoded = texture2DLod(colortex5, jitteredUV, 0.0).rgb;
@@ -233,18 +234,14 @@ vec4 GetGI(inout vec3 occlusion, vec3 normalM, vec3 viewPos, vec3 nViewPos, samp
                 currentNormal = hitNormal;
                 
                 if (bounce == PT_MAX_BOUNCES - 1) {
-                    pathRadiance += pathThroughput * hitColor * 0.25 * GI_I;
+                    pathRadiance += pathThroughput * hitColor * 0.25;
                 }
                 
             } else {
                 //float skyWeight = max(normalize(rayDir.z), pow(skyLightFactor, 16.0)) * 1.0 + 0.05;
-                #ifdef OVERWORLD
-                    vec3 sampledSky = (ambientColor * 0.5 + dayMiddleSkyColor * 0.5) * SKY_I * skyLightFactor;
-                    vec3 skyContribution = sampledSky * normalize(rayDir.z);
-                #else
-                    vec3 skyContribution = ambientColor * 0.1 * skyWeight;
-                #endif
-                skyContribution -= nightFactor * 0.1;
+                vec3 sampledSky = ambientColor * SKY_I * min(2.0 * skyLightFactor, 1.0);
+                vec3 skyContribution = sampledSky * normalize(rayDir.z);
+                    skyContribution -= nightFactor * 0.1;
                 
                 pathRadiance += pathThroughput * skyContribution;
                 break;

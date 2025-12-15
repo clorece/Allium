@@ -132,6 +132,8 @@ void main() {
         refToWrite *= writeFactor;
 
         refToWrite = max(refToWrite, 0.0);
+        gi = max(gi, 0.0);
+        ao = max(ao, 0.0);
         
         /* RENDERTARGETS: 9,11,7 */
         gl_FragData[0] = vec4(gi, 1.0);

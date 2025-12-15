@@ -76,6 +76,9 @@ void main() {
         giFiltered /= totalWeight;
         aoFiltered /= totalWeight;
     #endif
+
+    giFiltered = max(giFiltered, 0.0);
+    aoFiltered = max(aoFiltered, 0.0);
     
     /* RENDERTARGETS: 8,11 */
     gl_FragData[0] = vec4(giFiltered, 1.0);
