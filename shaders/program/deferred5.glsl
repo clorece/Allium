@@ -158,31 +158,41 @@ vec3 ambientColor = vec3(0.5, 0.21, 0.01);
 
 #include "/lib/lighting/indirectLighting.glsl"
 
+
+float blendMinimum = 0.5;
+float blendVariable = 0.2;
+float blendConstant = 0.7;
+
+float regularEdge = 20.0;
+float extraEdgeMult = 3.0;
+
+
+
 vec3 textureCatmullRom(sampler2D colortex, vec2 texcoord, vec2 view) {
-        vec2 position = texcoord * view;
-        vec2 centerPosition = floor(position - 0.5) + 0.5;
-        vec2 f = position - centerPosition;
-        vec2 f2 = f * f;
-        vec2 f3 = f * f2;
+    vec2 position = texcoord * view;
+    vec2 centerPosition = floor(position - 0.5) + 0.5;
+    vec2 f = position - centerPosition;
+    vec2 f2 = f * f;
+    vec2 f3 = f * f2;
 
-        float c = 0.7;
-        vec2 w0 =        -c  * f3 +  2.0 * c         * f2 - c * f;
-        vec2 w1 =  (2.0 - c) * f3 - (3.0 - c)        * f2         + 1.0;
-        vec2 w2 = -(2.0 - c) * f3 + (3.0 -  2.0 * c) * f2 + c * f;
-        vec2 w3 =         c  * f3 -                c * f2;
+    float c = 0.7;
+    vec2 w0 =        -c  * f3 +  2.0 * c         * f2 - c * f;
+    vec2 w1 =  (2.0 - c) * f3 - (3.0 - c)        * f2         + 1.0;
+    vec2 w2 = -(2.0 - c) * f3 + (3.0 -  2.0 * c) * f2 + c * f;
+    vec2 w3 =         c  * f3 -                c * f2;
 
-        vec2 w12 = w1 + w2;
-        vec2 tc12 = (centerPosition + w2 / w12) / view;
+    vec2 w12 = w1 + w2;
+    vec2 tc12 = (centerPosition + w2 / w12) / view;
 
-        vec2 tc0 = (centerPosition - 1.0) / view;
-        vec2 tc3 = (centerPosition + 2.0) / view;
-        vec4 color = vec4(texture2DLod(colortex, vec2(tc12.x, tc0.y ), 0).rgb, 1.0) * (w12.x * w0.y ) +
-                    vec4(texture2DLod(colortex, vec2(tc0.x,  tc12.y), 0).rgb, 1.0) * (w0.x  * w12.y) +
-                    vec4(texture2DLod(colortex, vec2(tc12.x, tc12.y), 0).rgb, 1.0) * (w12.x * w12.y) +
-                    vec4(texture2DLod(colortex, vec2(tc3.x,  tc12.y), 0).rgb, 1.0) * (w3.x  * w12.y) +
-                    vec4(texture2DLod(colortex, vec2(tc12.x, tc3.y ), 0).rgb, 1.0) * (w12.x * w3.y );
-        return color.rgb / color.a;
-    }
+    vec2 tc0 = (centerPosition - 1.0) / view;
+    vec2 tc3 = (centerPosition + 2.0) / view;
+    vec4 color = vec4(texture2DLod(colortex, vec2(tc12.x, tc0.y ), 0).rgb, 1.0) * (w12.x * w0.y ) +
+                vec4(texture2DLod(colortex, vec2(tc0.x,  tc12.y), 0).rgb, 1.0) * (w0.x  * w12.y) +
+                vec4(texture2DLod(colortex, vec2(tc12.x, tc12.y), 0).rgb, 1.0) * (w12.x * w12.y) +
+                vec4(texture2DLod(colortex, vec2(tc3.x,  tc12.y), 0).rgb, 1.0) * (w3.x  * w12.y) +
+                vec4(texture2DLod(colortex, vec2(tc12.x, tc3.y ), 0).rgb, 1.0) * (w12.x * w3.y );
+    return color.rgb / color.a;
+}
 
 #if GLOBAL_ILLUMINATION == 1
     vec2 OffsetDist(float x, int s) {
@@ -234,6 +244,7 @@ vec3 textureCatmullRom(sampler2D colortex, vec2 texcoord, vec2 view) {
         return pow(ao, SSAO_IM);
     }
 #endif
+
 
 //Program//
 void main() {
@@ -307,8 +318,8 @@ void main() {
         float albedoS = texelFetch(colortex10, texelCoord, 0).a;
 
         float foliage = texelFetch(colortex6, texelCoord, 0).a;
-        float missingEntity = texelFetch(colortex9, texelCoord, 0).a;
-        bool isMissingEntity = missingEntity > 0.9;
+        float entityFlag = texelFetch(colortex10, texelCoord, 0).r;
+        bool isAnEntity = entityFlag > 0.4;
         bool isFoliage = foliage > 0.5;
         
         
@@ -391,7 +402,7 @@ void main() {
                                                 depthtex0, dither, skyLightFactor, fresnel,
                                                 smoothnessD, vec3(0.0), vec3(0.0), vec3(0.0), 0.0);
 
-                vec3 colorAddReflection = reflection.rgb * reflectColor;
+                vec3 colorAdd = reflection.rgb * reflectColor;
                 //float colorMultInv = (0.75 - intenseFresnel * 0.5) * max(reflection.a, skyLightFactor);
                 //float colorMultInv = max(reflection.a, skyLightFactor);
                 //float colorMultInv = 1.0;
@@ -450,15 +461,13 @@ void main() {
                 #else
                 */
                     color *= 1.0 - colorMultInv * fresnelM;
-                    color += colorAddReflection * fresnelM; // just add color add and fresnel to color since later we will adding it back into the temporal filter
+                    color += colorAdd * fresnelM;
                 //#endif
 
                 color = max(colorP, color); // Prevents reflections from making a surface darker
                 
             }
         #endif
-
-        vec3 colorAdd = color;
 
         #if GLOBAL_ILLUMINATION == 0
             ao = 1.0;
@@ -467,76 +476,94 @@ void main() {
             ao = DoAmbientOcclusion(z0, linearZ0, dither, playerPos);
             if (!entityOrHand) color.rgb *= ao;
         #else
-            //if (z0 > 0.56) { // prevent ssrt from rendering on hand since it ghosts a lot
-                vec3 gi = texture2D(colortex9, texCoord).rgb;
-                vec3 rtao = texture2D(colortex11, texCoord).rgb;
-
-                #ifdef PT_VIEW
-                    colorAdd = gi - rtao;
-                #else
-                    color += gi - rtao;
-                    colorAdd = color * 0.5;
-                #endif
-            //}
-        #endif
-                
-        #ifdef TEMPORAL_FILTER
-            float blendFactor = 1.0;
-            float writeFactor = 1.0;
-            
-            vec3 cameraOffset = cameraPosition - previousCameraPosition;
-            vec2 prvCoord = SHalfReprojection(playerPos, cameraOffset);
-
-            vec2 prvRefCoord = Reprojection(vec3(texCoord, z0), cameraOffset);
-                    vec2 prvRefCoord2 = Reprojection(vec3(texCoord, max(refPos.z, z0)), cameraOffset);
-                    vec4 oldRef1 = texture2D(colortex7, prvRefCoord);
-                    vec4 oldRef2 = texture2D(colortex7, prvRefCoord2);
-                    vec3 dif1 = colorAdd - oldRef1.rgb;
-                    vec3 dif2 = colorAdd - oldRef2.rgb;
-                    float dotDif1 = dot(dif1, dif1);
-                    float dotDif2 = dot(dif2, dif2);
-
-                    float oldRefMixer = clamp01((dotDif1 - dotDif2) * 500.0);
-                    //vec4 oldRef = mix(oldRef1, oldRef2, oldRefMixer);
-
-
-            vec4 oldRef = mix(oldRef1, oldRef2, oldRefMixer);
-            vec4 newRef = vec4(colorAdd, colorMultInv);
-            vec2 oppositePreCoord = texCoord - 2.0 * (prvCoord - texCoord);
-            
-            // Reduce blending at speed
-            blendFactor *= float(prvCoord.x > 0.0 && prvCoord.x < 1.0 && prvCoord.y > 0.0 && prvCoord.y < 1.0);
-            float velocity = length(cameraOffset) * max(16.0 - lViewPos / gbufferProjection[1][1], 3.0);
-            blendFactor *= mix(1.0, exp(-velocity) * 0.5 + 0.5, smoothnessD);
-
-            // Reduce blending if depth changed
-            float linearZDif = abs(GetLinearDepth(texture2D(colortex1, oppositePreCoord).r) - linearZ0) * far;
-            blendFactor *= max0(2.0 - linearZDif) * 0.5;
-            //color = mix(vec3(1,1,0), color, max0(2.0 - linearZDif) * 0.5);
-
-            // Reduce blending if normal changed
-            vec3 texture5P = texture2D(colortex5, oppositePreCoord, 0).rgb;
-            vec3 texture5Dif = abs(texture5 - texture5P);
-            if (texture5Dif != clamp(texture5Dif, vec3(-0.004), vec3(0.004))) {
-                blendFactor = 0.0;
-                    //color.rgb = vec3(1,0,1);
-            }
-            
-            
-            blendFactor = max0(blendFactor);
-            newRef = max(newRef, vec4(0.0));
-            refToWrite = mix(newRef, oldRef, blendFactor * 0.95);
-            refToWrite = mix(max(refToWrite, newRef), refToWrite, pow2(pow2(pow2(refToWrite.a))));
-            color.rgb *= 1.0 - refToWrite.a * 1.0;
-            color.rgb += refToWrite.rgb * 1.0;
-            color = max(color, vec3(0.0));
-            refToWrite *= writeFactor;
-        #else
-            color.rgb = colorAdd;
-        #endif
             //#ifdef EXCLUDE_ENTITIES
-            //}
             //#endif
+            vec3 gi = texture2D(colortex9, texCoord).rgb;
+            vec3 rtao = texture2D(colortex11, texCoord).rgb;
+
+            
+            #ifdef PT_VIEW
+                vec3 colorAdd = gi - rtao;
+            #else
+                color += gi - rtao;
+                vec3 colorAdd = color * 0.5;
+            #endif
+            if (z0 > 0.56) {
+                #ifdef TEMPORAL_FILTER
+                float blendFactor = 1.0;
+                float writeFactor = 1.0;
+                
+                vec3 cameraOffset = cameraPosition - previousCameraPosition;
+                vec2 prvCoord = SHalfReprojection(playerPos, cameraOffset);
+
+                vec2 prvRefCoord = Reprojection(vec3(texCoord, z0), cameraOffset);
+                        vec2 prvRefCoord2 = Reprojection(vec3(texCoord, max(refPos.z, z0)), cameraOffset);
+                        //vec4 oldRef1 = texture2D(colortex7, prvRefCoord);
+                        //vec4 oldRef2 = texture2D(colortex7, prvRefCoord2);
+                        vec4 oldRef1 = vec4(textureCatmullRom(colortex7, prvRefCoord, vec2(viewWidth, viewHeight)), 1.0);
+                        vec4 oldRef2 = vec4(textureCatmullRom(colortex7, prvRefCoord2, vec2(viewWidth, viewHeight)), 1.0);
+                        vec3 dif1 = colorAdd - oldRef1.rgb;
+                        vec3 dif2 = colorAdd - oldRef2.rgb;
+                        float dotDif1 = dot(dif1, dif1);
+                        float dotDif2 = dot(dif2, dif2);
+
+                        float oldRefMixer = clamp01((dotDif1 - dotDif2) * 500.0);
+                        //vec4 oldRef = mix(oldRef1, oldRef2, oldRefMixer);
+
+
+                float edge = 4.0;
+                vec4 oldRef = mix(oldRef1, oldRef2, oldRefMixer);
+
+                //NeighbourhoodClamping(colorAdd, oldRef.rgb, z0, texture2D(depthtex0, texCoord).r, edge);
+
+
+                vec3 colorDiff = colorAdd - oldRef.rgb;
+
+                float diffMagnitude = dot(colorDiff, colorDiff); 
+                
+                float colorSensitivity = 90.0; 
+
+                float colorChangeWeight = exp(-diffMagnitude * colorSensitivity);
+
+                vec4 newRef = vec4(colorAdd, colorMultInv);
+                vec2 oppositePreCoord = texCoord - 2.0 * (prvCoord - texCoord);
+                
+
+                // Reduce blending if depth changed
+                float linearZDif = abs(GetLinearDepth(texture2D(colortex1, oppositePreCoord).r) - linearZ0) * far;
+                    blendFactor *= max0(1.0 - linearZDif * BLEND_WEIGHT);
+                //color = mix(vec3(1,1,0), color, max0(2.0 - linearZDif) * 0.5);
+
+                //blendFactor *= float(prvCoord.x > 0.0 && prvCoord.x < 1.0 && prvCoord.y > 0.0 && prvCoord.y < 1.0);
+                float velocity = length(cameraOffset) * max(16.0 - lViewPos / gbufferProjection[1][1], 3.0);
+                blendFactor *= mix(1.0, exp(-velocity) * 0.5 + 0.5, smoothnessD);
+
+                blendFactor *= colorChangeWeight;
+
+                // Reduce blending if normal changed
+                vec3 texture5P = texture2D(colortex5, oppositePreCoord, 0).rgb;
+                vec3 texture5Dif = abs(texture5 - texture5P);
+                if (texture5Dif != clamp(texture5Dif, vec3(-0.004), vec3(0.004))) {
+                    blendFactor = 0.0;
+                        //color.rgb = vec3(1,0,1);
+                }
+                
+                blendFactor = max0(blendFactor);
+                newRef = max(newRef, vec4(0.0));
+                refToWrite = mix(newRef, oldRef, blendFactor * 0.95);
+                refToWrite = mix(max(refToWrite, newRef), refToWrite, pow2(pow2(pow2(refToWrite.a))));
+                color.rgb *= 1.0 - refToWrite.a * 1.0;
+                color.rgb += refToWrite.rgb * 1.0;
+                color = max(color, vec3(0.0));
+                refToWrite *= writeFactor;
+
+                #else
+                        color.rgb = colorAdd;
+                #endif
+            //#ifdef EXCLUDE_ENTITIES
+            }
+            //#endif
+        #endif
 
         #ifdef WORLD_OUTLINE
             #ifndef WORLD_OUTLINE_ON_ENTITIES

@@ -51,7 +51,13 @@
 
 vec2 texelSize = 1.0 / vec2(viewWidth, viewHeight);
 
+//#define PT_USE_DIRECT_LIGHT_SAMPLING
 #define PT_USE_RUSSIAN_ROULETTE
+
+const float PHI = 1.618033988749895;
+const float PHI_INV = 0.618033988749895;
+const float PHI2_INV = 0.38196601125010515;
+
 
 float rand(float dither, int i) {
     return fract(dither + float(i) * 0.61803398875);
@@ -61,17 +67,90 @@ float randWithSeed(float dither, int seed) {
     return fract(dither * 12.9898 + float(seed) * 78.233);
 }
 
-vec3 RayDirection(vec3 normal, float dither, int i) {
-    vec2 Xi = vec2(rand(dither, i), rand(dither, i + 1));
-    
+vec2 R2Sequence(int n, int seed) {
+    float u = fract(float(n) * PHI_INV + fract(float(seed) * PHI_INV));
+    float v = fract(float(n) * PHI2_INV + fract(float(seed) * PHI2_INV));
+    return vec2(u, v);
+}
+
+vec2 CranleyPattersonRotation(vec2 sample, float dither) {
+    vec2 shift = vec2(
+        fract(dither * 12.9898),
+        fract(dither * 78.233)
+    );
+    return fract(sample + shift);
+}
+
+vec3 SampleHemisphereCosine(vec2 Xi) {
     float theta = 6.28318530718 * Xi.y;
     float r = sqrt(Xi.x);
-    vec3 hemi = vec3(r * cos(theta), r * sin(theta), sqrt(1.0 - Xi.x));
     
-    vec3 T = normalize(cross(abs(normal.z) < 0.999 ? vec3(0.0, 0.0, 1.0) : vec3(1.0, 0.0, 0.0), normal));
-    vec3 B = cross(normal, T);
+    vec3 hemi = vec3(
+        r * cos(theta),
+        r * sin(theta),
+        sqrt(1.0 - Xi.x)
+    );
     
-    return (T * hemi.x) + (B * hemi.y) + (normal * hemi.z);
+    return hemi;
+}
+
+void BuildOrthonormalBasis(vec3 normal, out vec3 tangent, out vec3 bitangent) {
+    if (normal.z < -0.9999999) {
+        tangent = vec3(0.0, -1.0, 0.0);
+        bitangent = vec3(-1.0, 0.0, 0.0);
+        return;
+    }
+    
+    float a = 1.0 / (1.0 + normal.z);
+    float b = -normal.x * normal.y * a;
+    
+    tangent = vec3(1.0 - normal.x * normal.x * a, b, -normal.x);
+    bitangent = vec3(b, 1.0 - normal.y * normal.y * a, -normal.y);
+}
+
+
+vec3 RayDirection(vec3 normal, float dither, int i) {
+    vec2 Xi = R2Sequence(i, int(dither * 7919.0));
+        Xi = CranleyPattersonRotation(Xi, dither);
+    
+    vec3 hemiDir = SampleHemisphereCosine(Xi);
+    
+    vec3 T, B;
+    BuildOrthonormalBasis(normal, T, B);
+
+    return normalize(T * hemiDir.x + B * hemiDir.y + normal * hemiDir.z);
+}
+
+
+vec3 GetShadowPosition(vec3 tracePos, vec3 cameraPos) {
+    vec3 worldPos = PlayerToShadow(tracePos - cameraPos);
+    float distB = sqrt(worldPos.x * worldPos.x + worldPos.y * worldPos.y);
+    float distortFactor = 1.0 - shadowMapBias + distB * shadowMapBias;
+    vec3 shadowPosition = vec3(vec2(worldPos.xy / distortFactor), worldPos.z * 0.2);
+    return shadowPosition * 0.5 + 0.5;
+}
+
+bool GetShadow(vec3 tracePos, vec3 cameraPos) {
+    vec3 shadowPosition0 = GetShadowPosition(tracePos, cameraPos);
+    if (length(shadowPosition0.xy * 2.0 - 1.0) < 1.0) {
+        float shadowDepth = shadow2D(shadowtex0, shadowPosition0).z;
+        if (shadowDepth == 0.0) return true;
+    }
+    return false;
+}
+
+float GetShadowWeight(vec3 worldPos, vec3 cameraPos, vec3 normal) {
+    vec3 shadowPosition = GetShadowPosition(worldPos, cameraPos);
+
+    if (length(shadowPosition.xy * 2.0 - 1.0) >= 1.0) {
+        return 1.0;
+    }
+
+    float shadowDepth = shadow2D(shadowtex0, shadowPosition).z;
+
+    if (shadowDepth == 0.0) return 0.0;
+    
+    return 1.0;
 }
 
 
@@ -162,7 +241,8 @@ float CosinePDF(float NdotL) {
 
 vec3 giScreenPos = vec3(0.0);
 
-vec4 GetGI(inout vec3 occlusion, vec3 normalM, vec3 viewPos, vec3 nViewPos, sampler2D depthtex, float dither, float skyLightFactor, float smoothness, float VdotU, float VdotS, bool entityOrHand) {
+vec4 GetGI(inout vec3 occlusion, vec3 normalM, vec3 viewPos, vec3 nViewPos, sampler2D depthtex, 
+           float dither, float skyLightFactor, float smoothness, float VdotU, float VdotS, bool entityOrHand) {
     vec2 screenEdge = vec2(0.6, 0.55);
     vec3 normalMR = normalM;
 
@@ -198,7 +278,7 @@ vec4 GetGI(inout vec3 occlusion, vec3 normalM, vec3 viewPos, vec3 nViewPos, samp
                 float lod = log2(hit.hitDist * 0.5) * 0.5;
                 lod = max(lod, 0.0);
                 
-                vec3 hitColor = texture2DLod(colortex0, jitteredUV, lod).rgb * 0.85 * GI_I;
+                vec3 hitColor = texture2DLod(colortex0, jitteredUV, lod).rgb * GI_I;
                 float hitFoliage = texture2D(colortex10, jitteredUV).a;
                 
                 vec3 hitNormalEncoded = texture2DLod(colortex5, jitteredUV, 0.0).rgb;
@@ -206,18 +286,34 @@ vec4 GetGI(inout vec3 occlusion, vec3 normalM, vec3 viewPos, vec3 nViewPos, samp
                 vec3 hitAlbedo = hitColor;
                 float hitSmoothness = texture2DLod(colortex6, jitteredUV, 0.0).r;
 
-                if (hitFoliage > 0.9) {
-                    hitColor *= 0.5;
-                }
-
                 vec3 brdf = EvaluateBRDF(hitAlbedo, currentNormal, rayDir, -normalize(currentPos));
                 float pdf = CosinePDF(NdotL);
                 
                 pathThroughput *= brdf * NdotL / max(pdf, 0.0001);
                 
+                #ifdef PT_USE_DIRECT_LIGHT_SAMPLING
+                    vec3 hitWorldPos = mat3(gbufferModelViewInverse) * hit.worldPos + cameraPosition;
+                    vec3 hitWorldNormal = mat3(gbufferModelViewInverse) * hitNormal;
+
+                    float shadowWeight = GetShadowWeight(hitWorldPos, normalize(cameraPosition), hitWorldNormal);
+                    
+                    if (shadowWeight > 0.0) {
+                        #ifdef OVERWORLD
+                            vec3 directLightColor = normalizelightColor * shadowWeight;
+                        #else
+                            vec3 directLightColor = vec3(0.0);
+                        #endif
+                        
+                        vec3 sunDir = normalize(sunPosition);
+                        vec3 worldHitNormal = mat3(gbufferModelViewInverse) * hitNormal;
+                        float sunAlignment = max(dot(worldHitNormal, sunDir), 0.0);
+
+                        pathRadiance += pathThroughput * hitAlbedo * directLightColor * sunAlignment;
+                    }
+                #endif
                 float brightness = dot(hitColor, vec3(0.299, 0.587, 0.114));
-                if (brightness > 1.0) {
-                    pathRadiance += pathThroughput * hitColor * 0.5;
+                if (brightness > 3.0) {
+                    pathRadiance += pathThroughput * hitColor * 0.5 * GI_I;
                 }
 
                 #ifdef PT_USE_RUSSIAN_ROULETTE
@@ -234,14 +330,15 @@ vec4 GetGI(inout vec3 occlusion, vec3 normalM, vec3 viewPos, vec3 nViewPos, samp
                 currentNormal = hitNormal;
                 
                 if (bounce == PT_MAX_BOUNCES - 1) {
-                    pathRadiance += pathThroughput * hitColor * 0.25;
+                    pathRadiance += pathThroughput * hitColor * 0.25 * GI_I;
                 }
                 
             } else {
-                //float skyWeight = max(normalize(rayDir.z), pow(skyLightFactor, 16.0)) * 1.0 + 0.05;
-                vec3 sampledSky = ambientColor * SKY_I * min(2.0 * skyLightFactor, 1.0);
-                vec3 skyContribution = sampledSky * normalize(rayDir.z);
-                    skyContribution -= nightFactor * 0.1;
+                // Sky contribution
+                vec3 sampledSky = ambientColor * SKY_I * min(2.0 * skyLightFactor, 1.0) - (nightFactor * 0.25);
+                vec3 worldRayDir = mat3(gbufferModelViewInverse) * rayDir;
+                vec3 skyContribution = sampledSky * max(worldRayDir.y, 0.0);
+                skyContribution -= nightFactor * 0.1;
                 
                 pathRadiance += pathThroughput * skyContribution;
                 break;
@@ -250,12 +347,13 @@ vec4 GetGI(inout vec3 occlusion, vec3 normalM, vec3 viewPos, vec3 nViewPos, samp
         
         totalRadiance += pathRadiance;
         
+        // AO calculation
         RayHit firstHit = MarchRay(startPos, RayDirection(normalMR, dither, i), depthtex, screenEdge);
         if (firstHit.hit) {
             float aoRadius = 2.0;
             float curve = 1.0 - clamp(firstHit.hitDist / aoRadius, 0.0, 1.0);
             curve = pow(curve, 2.0);
-            occlusion += curve * AO_I * 0.25 * max(skyLightFactor, 0.5);
+            occlusion += curve * AO_I * 0.5 * max(skyLightFactor, 0.5);
         }
     }
     
@@ -267,15 +365,6 @@ vec4 GetGI(inout vec3 occlusion, vec3 normalM, vec3 viewPos, vec3 nViewPos, samp
     #endif
     
     gi.rgb = max(totalRadiance - occlusion, 0.0);
-    gi.a = 1.0;
-
-    float giBrightness = length(gi.rgb);
-    if (giBrightness > 1.2) {
-        float compressedBrightness = 1.2 + (giBrightness - 1.2) / 
-                                        (1.0 + (giBrightness - 1.2) / (2.5 - 1.2));
-        gi.rgb *= compressedBrightness / giBrightness;
-    }
-    
     gi.rgb = max(gi.rgb, vec3(0.0));
     
     return gi;

@@ -111,28 +111,26 @@ void main() {
         alphaCheck = max(fwidth(color.a), alphaCheck);
     #endif
     float isMissingEntity = 1.0;
+    float isEntity = 0.5;
 
+    vec3 screenPos = vec3(gl_FragCoord.xy / vec2(viewWidth, viewHeight), gl_FragCoord.z);
+    vec3 viewPos = ScreenToView(screenPos);
+    vec3 nViewPos = normalize(viewPos);
+    vec3 playerPos = ViewToPlayer(viewPos);
+    float lViewPos = length(viewPos);
+
+    bool noSmoothLighting = atlasSize.x < 600.0; // To fix fire looking too dim
+    bool noGeneratedNormals = false, noDirectionalShading = false, noVanillaAO = false;
+    float smoothnessG = 0.0, highlightMult = 0.0, emission = 0.0, noiseFactor = 0.75;
+    vec2 lmCoordM = lmCoord;
+    vec3 shadowMult = vec3(1.0);
+
+    vec3 maRecolor = vec3(0.0);
+    #include "/lib/materials/materialHandling/irisMaterials.glsl"
+    
+    
     if (alphaCheck > 0.001) {
-        vec3 screenPos = vec3(gl_FragCoord.xy / vec2(viewWidth, viewHeight), gl_FragCoord.z);
-        vec3 viewPos = ScreenToView(screenPos);
-        vec3 nViewPos = normalize(viewPos);
-        vec3 playerPos = ViewToPlayer(viewPos);
-        float lViewPos = length(viewPos);
-
-        bool noSmoothLighting = atlasSize.x < 600.0; // To fix fire looking too dim
-        bool noGeneratedNormals = false, noDirectionalShading = false, noVanillaAO = false;
-        float smoothnessG = 0.0, highlightMult = 0.0, emission = 0.0, noiseFactor = 0.75;
-        vec2 lmCoordM = lmCoord;
-        vec3 shadowMult = vec3(1.0);
-
-        #include "/lib/materials/materialHandling/entityMaterials.glsl"
         #ifdef IPBR
-
-            #ifdef IS_IRIS
-                vec3 maRecolor = vec3(0.0);
-                #include "/lib/materials/materialHandling/irisMaterials.glsl"
-            #endif
-
             if (materialMask != OSIEBCA * 254.0) materialMask += OSIEBCA * 100.0; // Entity Reflection Handling
 
             #ifdef GENERATED_NORMALS
@@ -187,13 +185,13 @@ void main() {
         ColorCodeProgram(color, -1);
     #endif
 
-    /* DRAWBUFFERS:069 */
+    /* RENDERTARGETS:0,6,10 */
     gl_FragData[0] = color;
     gl_FragData[1] = vec4(smoothnessD, materialMask, skyLightFactor, foliage);
-    gl_FragData[2] = vec4(isMissingEntity, vec3(0.0));
+    gl_FragData[2] = vec4(isEntity, vec3(0.0));
 
     #if BLOCK_REFLECT_QUALITY >= 2 && RP_MODE >= 1
-        /* DRAWBUFFERS:0695 */
+        /* RENDERTARGETS:0,6,10,5 */
         gl_FragData[3] = vec4(mat3(gbufferModelViewInverse) * normalM, 1.0);
     #endif
 }

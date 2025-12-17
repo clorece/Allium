@@ -1,5 +1,5 @@
-vec3 blocklightCol = vec3(2.05, 0.73, 0.37) * 0.5 * vec3(XLIGHT_R, XLIGHT_G, XLIGHT_B);
-
+vec3 blocklightCol = vec3(1.7, 0.9, 0.4) * 0.075 * vec3(XLIGHT_R, XLIGHT_G, XLIGHT_B);
+	
 void AddSpecialLightDetail(inout vec3 light, vec3 albedo, float emission) {
 	vec3 lightM = max(light, vec3(0.0));
 	lightM /= (0.2 + 0.8 * GetLuminance(lightM));

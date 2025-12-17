@@ -11,7 +11,7 @@
 #define Lut_Set                     1           //[1] // technically there should be a 2 for raspberry but ill keep it off for now :3
 
 
-#define Overworld_Lut                2          //[0 1 2 3 4 5 6 7 8 9]
+#define Overworld_Lut                5          //[0 1 2 3 4 5 6 7 8 9]
 #define Nether_Lut                2          //[0 1 2 3 4 5 6 7 8 9]
 #define End_Lut                 1          //[0 1 2 3 4 5 6 7 8 9]
 
@@ -384,13 +384,17 @@ void main() {
     //DoBSLTonemap(color);
     float ignored = dot(color * vec3(0.15, 0.50, 0.35), vec3(0.1, 0.65, 0.6));
     float desaturated = dot(color, vec3(0.15, 0.50, 0.35));
-    color = mix(color, vec3(ignored), exp2((-24) * desaturated));
+    color = mix(color, vec3(ignored), exp2((-32) * desaturated));
 
      // Get auto exposure value (reads from colortex4)
-    float exposure = GetAutoExposure(colortex0, dither);
+    float exposure = GetAutoExposure(colortex0, dither) - (nightFactor * 1.0);
     
     // Apply exposure
+    #ifdef OVERWORLD
     color = ApplyExposure(color, exposure);
+    #elif defined NETHER
+        color *= 1.5;
+    #endif
 
     color = Tonemap_Lottes(color);
 

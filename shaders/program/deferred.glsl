@@ -82,18 +82,19 @@ void main() {
     vec3 normalG = normalM;
 
     #ifdef TAA
-        float noiseMult = 0.5;
+        float noiseMult = 1.0;
     #else
         float noiseMult = 0.1;
     #endif
     vec2 roughCoord = gl_FragCoord.xy / 128.0;
-    vec3 roughNoise = vec3(
+    /*vec3 roughNoise = vec3(
         texture2D(noisetex, roughCoord).r,
         texture2D(noisetex, roughCoord + 0.09375).r,
         texture2D(noisetex, roughCoord + 0.1875).r
-    );
-    roughNoise = fract(roughNoise + vec3(dither, dither * goldenRatio, dither * pow2(goldenRatio)));
-    roughNoise = noiseMult * (roughNoise - vec3(0.5));
+    );*/
+    float roughNoise = texture2D(noisetex, roughCoord).r;
+    roughNoise = fract(roughNoise + goldenRatio * mod(float(frameCounter), 360.0));
+    roughNoise = noiseMult * (roughNoise - 0.5);
     normalG += roughNoise;
 
     gi = min(GetGI(ao, normalG, viewPos.xyz, nViewPos, depthtex0, dither, skyLightFactor, 1.0, VdotU, VdotS, entityOrHand).rgb, vec3(4.0));
@@ -101,7 +102,7 @@ void main() {
 
     vec3 colorAdd = gi - ao;
     
-    #ifdef TEMPORAL_FILTER
+    /*#ifdef TEMPORAL_FILTER
         float linearZ0 = GetLinearDepth(z0);
         float blendFactor = 1.0;
         float writeFactor = 1.0;
@@ -134,16 +135,16 @@ void main() {
         refToWrite = max(refToWrite, 0.0);
         gi = max(gi, 0.0);
         ao = max(ao, 0.0);
-        
+    */    
         /* RENDERTARGETS: 9,11,7 */
-        gl_FragData[0] = vec4(gi, 1.0);
-        gl_FragData[1] = vec4(ao, 1.0);
-        gl_FragData[2] = refToWrite; // Write to colortex7 for next frame temporal accumulation
-    #else
+    //    gl_FragData[0] = vec4(gi, 1.0);
+    //    gl_FragData[1] = vec4(ao, 1.0);
+    //    gl_FragData[2] = refToWrite; // Write to colortex7 for next frame temporal accumulation
+    //#else
         /* RENDERTARGETS: 9,11 */
         gl_FragData[0] = vec4(gi, 1.0);
         gl_FragData[1] = vec4(ao, 1.0);
-    #endif
+    //#endif
 }
 #endif
 //////////Vertex Shader//////////Vertex Shader//////////Vertex Shader//////////

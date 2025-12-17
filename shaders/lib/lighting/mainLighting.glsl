@@ -169,8 +169,8 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
     #if GLOBAL_ILLUMINATION == 2
     lightColorM *= 2.0;
 
-    if (subsurfaceMode == 1 || subsurfaceMode == 2) {
-        lightColorM *= 0.75;
+    if (subsurfaceMode == 1) {
+        lightColorM *= 0.65 + (nightFactor);
     }
 
     ambientColor *= 1.5;
@@ -475,7 +475,7 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
 
         
         #if GLOBAL_ILLUMINATION == 2
-            specialLighting *= 1.5;
+            specialLighting *= 0.5;
         #endif
 
         // Serve with distance fade

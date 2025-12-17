@@ -41,7 +41,7 @@ void main() {
         vec3 texture5 = texelFetch(colortex5, texelCoord, 0).rgb;
         vec3 centerNormal = mat3(gbufferModelView) * texture5;
 
-        const int stepSize = 2;
+        const int stepSize = 3;
         float totalWeight = 0.0;
 
         const float kernel[3] = float[3](1.0, 2.0, 1.0);

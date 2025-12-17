@@ -1,5 +1,5 @@
 if (entityId < 50064) {
-    isMissingEntity = 1.0;
+    isEntity = 1.0;
     if (entityId < 50032) {
         if (entityId < 50016) {
             if (entityId < 50008) {
@@ -110,6 +110,7 @@ if (entityId < 50064) {
         }
     }
 } else {
+    isEntity = 1.0;
     if (entityId < 50096) {
         if (entityId < 50080) {
             if (entityId < 50072) {

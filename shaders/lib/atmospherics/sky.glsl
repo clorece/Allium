@@ -85,7 +85,7 @@
         finalSky = mix(finalSky, downColor + (noonFactor * 0.5), scatteredGroundMixer) * 1.5;
         //finalSky = mix(finalSky, rainAmbientColor * 0.5 - nightFactor * 0.1, rainFactor);
         finalSky += invNoonFactor2 * 0.1;
-        finalSky -= nightFactor * 0.2;
+        finalSky -= nightFactor * 0.1;
 
         if (doGround) finalSky *= smoothstep1(pow2(1.0 + min(VdotU, 0.0)));
 
