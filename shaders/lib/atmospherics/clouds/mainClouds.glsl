@@ -1,14 +1,14 @@
 #define CUMULUS
 
 #define CUMULUS_CLOUD_MULT 0.4
-#define CUMULUS_CLOUD_SIZE_MULT 3.25 // [1.0 1.25 1.5 1.75 2.0 2.25 2.5 2.75 3.0 3.25 3.5 3.75 4.0 4.25 4.5 4.75 5.0]
+#define CUMULUS_CLOUD_SIZE_MULT 4.0 // [1.0 1.25 1.5 1.75 2.0 2.25 2.5 2.75 3.0 3.25 3.5 3.75 4.0 4.25 4.5 4.75 5.0]
 #define CUMULUS_CLOUD_SIZE_MULT_M (200.0 * 0.01)
 #define CUMULUS_CLOUD_GRANULARITY 0.4
 #define CUMULUS_CLOUD_ALT 210 // [0 10 20 30 40 50 60 70 80 90 100 110 120 130 140 150 160 170 180 190 200 210 220 230 240 250 260 270 280 290 300 310 320 330 340 350 360 370 380 390 400]
-#define CUMULUS_CLOUD_HEIGHT 128.0 // [32.0 48.0 64.0 96.0 128.0 164.0 192.0 256.0 384.0]
+#define CUMULUS_CLOUD_HEIGHT 164.0 // [32.0 48.0 64.0 96.0 128.0 164.0 192.0 256.0 384.0]
 #define CUMULUS_CLOUD_COVERAGE 1.4 // [1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0]
 
-#define CUMULUS_QUALITY 0.75 // [0.1 0.15 0.2 0.25 0.3 0.35 0.4 0.45 0.5 0.55 0.6 0.65 0.7 0.75 0.8 0.85 0.9 0.95 1.0]
+#define CUMULUS_QUALITY 0.5 // [0.1 0.15 0.2 0.25 0.3 0.35 0.4 0.45 0.5 0.55 0.6 0.65 0.7 0.75 0.8 0.85 0.9 0.95 1.0]
 #define CUMULUS_STEP_QUALITY (CUMULUS_QUALITY * 4.0)
 
 #define CLOUD_LIGHTING_QUALITY 7 // [7 14 30]
@@ -66,7 +66,7 @@ float cumulusLayerHeight = cumulusLayerStretch * 2.0;
     }
 #endif
 
-#if defined DEFERRED1 || defined DH_WATER || defined GBUFFERS_WATER || defined DEFERRED
+#if defined DEFERRED1 || defined DEFERRED5 || defined DH_WATER || defined GBUFFERS_WATER || defined DEFERRED
 #include "/lib/atmospherics/clouds/cloudLighting.glsl"
 
 vec4 GetVolumetricClouds(int cloudAltitude, 
@@ -102,26 +102,42 @@ vec4 GetVolumetricClouds(int cloudAltitude,
         
         float planeDistanceDif = maxPlaneDistance - minPlaneDistance;
 
-        float baseStep = 16.0 / sqrt(300.0);
-        int sampleCount = int(planeDistanceDif / baseStep + dither + 2);
-
-        #ifndef LQ_CLOUD
-            int cloudSteps = CLOUD_LIGHTING_QUALITY;
-        #else
-            int cloudSteps = 2;
+        // 1. Fixed Sample Count
+        // We decide the count purely based on your quality setting. 
+        // No geometry math here. Just "Higher Quality = More Loops".
+        int sampleCount = int(64.0 * CUMULUS_QUALITY); 
+        
+        // Safety clamps
+        #ifdef LQ_CLOUD
+            sampleCount = 16;
         #endif
-
+        
+        // If you need the AMD crash fix, this method is actually safer
+        // because we will stretch the steps to fit the limit.
         #ifdef FIX_AMD_REFLECTION_CRASH
             sampleCount = min(sampleCount, 30);
         #endif
 
-        vec3 rayStep = normalizedPlayerPos * (int(CUMULUS_CLOUD_HEIGHT) / CUMULUS_STEP_QUALITY);
+        // Ensure we have at least a few steps to prevent divide-by-zero
+        sampleCount = max(sampleCount, 5);
+
+        // 2. Adaptive Step Size
+        // We stretch the ray step to ensure we cover the ENTIRE distance 
+        // in exactly 'sampleCount' steps.
+        float stepLen = planeDistanceDif / float(sampleCount);
+        vec3 rayStep = normalizedPlayerPos * stepLen;
+
+        #ifndef LQ_CLOUD
+             int cloudSteps = CLOUD_LIGHTING_QUALITY;
+        #else
+             int cloudSteps = 2;
+        #endif
         
         #ifdef LQ_CLOUD || DISTANT_HORIZONS
             rayStep = normalizedPlayerPos * (int(CUMULUS_CLOUD_HEIGHT) / 1.0);
         #endif
 
-        float stepLen = length(rayStep);
+        //float stepLen = length(rayStep);
         vec3 tracePos = cameraPos + minPlaneDistance * normalizedPlayerPos + rayStep * dither;
 
         vec3 sunDir = normalize(mat3(gbufferModelViewInverse) * lightVec);
@@ -250,21 +266,21 @@ vec4 GetVolumetricClouds(int cloudAltitude,
         float cloudFogFactor = 0.0;
         
         if (firstHitPos > 0.0) {
-            float fadeDistance = distanceThreshold * 1.2;
+            float fadeDistance = distanceThreshold * 1.0;
             float distF = clamp((fadeDistance - lastLxz) / fadeDistance, 0.0, 1.0);
             cloudFogFactor = pow(distF, 1.25) ;
         }
 
         float skyMult1 = 1.0 - 0.2 * max(sunVisibility2, nightFactor);
         float skyMult2 = 1.0 - 0.33333;
-        vec3 finalColor = mix(skyColor, cloudCol * skyMult1, cloudFogFactor * skyMult2 * 0.2);
+        vec3 finalColor = mix(skyColor, cloudCol * skyMult1, cloudFogFactor * skyMult2 * 0.3);
 
         finalColor *= pow2(1.0 - maxBlindnessDarkness);
 
         volumetricClouds.rgb = finalColor;
-        volumetricClouds.a = 1.0 - transmittance;
+        volumetricClouds.a = 1.01 - transmittance;
 
-        if (volumetricClouds.a < 0.9) return vec4(0.0);
+        //if (volumetricClouds.a < 0.1) return vec4(0.0);
 
         return volumetricClouds;
     #endif
@@ -282,13 +298,13 @@ vec4 GetClouds(inout float cloudLinearDepth, float skyFade, vec3 cameraPos, vec3
     float thresholdMix = pow2(clamp01(VdotU * 5.0));
     float thresholdF = mix(far, float(CLOUD_RENDER_DISTANCE), thresholdMix * 0.5 + 0.5);
     #ifdef DISTANT_HORIZONS
-        thresholdF = max(thresholdF, renderDistance * 0.75);
+        thresholdF = max(thresholdF, renderDistance);
     #endif
 
     #if CLOUD_QUALITY == 3
         #ifdef CUMULUS
         clouds = GetVolumetricClouds(cumulusLayerAlt, thresholdF, cloudLinearDepth, skyFade, skyMult0,
-                                            cameraPos, normalizedPlayerPos, linearViewPosModified, VdotS, VdotU, dither,
+                                            cameraPos, normalizedPlayerPos, lViewPos, VdotS, VdotU, dither,
                                             CUMULUS_CLOUD_GRANULARITY, CUMULUS_CLOUD_MULT, CUMULUS_CLOUD_SIZE_MULT_M, 2);
         #endif
     #endif

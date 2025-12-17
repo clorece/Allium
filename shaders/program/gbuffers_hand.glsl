@@ -93,6 +93,10 @@ float shadowTime = shadowTimeVar2 * shadowTimeVar2;
 
 //Program//
 void main() {
+    #if RENDER_SCALE >= 2
+        if (!ShouldRenderPixel(gl_FragCoord.xy)) discard;
+    #endif
+
     vec4 color = texture2D(tex, texCoord);
 
     float smoothnessD = 0.0, skyLightFactor = 0.0, materialMask = OSIEBCA * 254.0; // No SSAO, No TAA

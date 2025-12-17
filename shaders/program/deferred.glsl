@@ -54,8 +54,28 @@ float GetLinearDepth2(float depth) {
 
 #include "/lib/lighting/indirectLighting.glsl"
 
+bool IsActivePixel(vec2 coord) {
+    #if PT_RENDER_RESOLUTION == 0
+        return true;
+    #else
+        ivec2 p = ivec2(coord);
+        
+        if (PT_RENDER_RESOLUTION == 1) return !((p.x & 1) != 0 && (p.y & 1) != 0);
+        if (PT_RENDER_RESOLUTION == 2) return ((p.x + p.y) & 1) == 0;
+        if (PT_RENDER_RESOLUTION == 3) return ((p.x & 1) == 0 && (p.y & 1) == 0);
+        
+        return true;
+    #endif
+}
+
 //Program//
 void main() {
+    if (!IsActivePixel(gl_FragCoord.xy)) {
+        gl_FragData[0] = vec4(0.0);
+        gl_FragData[1] = vec4(0.0);
+        return;
+    }
+
     float z0 = texelFetch(depthtex0, texelCoord, 0).r;
     vec3 gi = vec3(0.0);
     vec3 ao = vec3(0.0);

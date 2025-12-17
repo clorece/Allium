@@ -177,6 +177,10 @@ void DoOceanBlockTweaks(inout float smoothnessD) {
 
 //Program//
 void main() {
+    #if RENDER_SCALE >= 2
+        if (!ShouldRenderPixel(gl_FragCoord.xy)) discard;
+    #endif
+
     #if ANISOTROPIC_FILTER == 0
         vec4 color = texture2D(tex, texCoord);
     #else

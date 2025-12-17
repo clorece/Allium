@@ -11,8 +11,11 @@ const int colortex8Format = RGBA8;          //smoothnessD & materialMask & skyLi
 const int colortex9Format = RGBA16F;        //global illumination
 const int colortex10Format = RGBA8; 
 const int colortex11Format = RGBA16F;       //rtao
+const int colortex12Format = RGBA16F;       //cloud render (raw -> filtered)
+const int colortex13Format = R32F;          //cloud depth pass 1
+const int colortex14Format = RGBA16F;       //horizontally blurred clouds
+const int colortex15Format = R32F;          //cloud depth pass 2
 */
-
 const bool colortex0Clear = true;
 const bool colortex1Clear = false;
 const bool colortex2Clear = false;
@@ -20,18 +23,19 @@ const bool colortex3Clear = true;
 const bool colortex4Clear = false;
 const bool colortex5Clear = false;
 const bool colortex6Clear = true;
-const bool colortex8Clear = false;
 const bool colortex7Clear = false;
+const bool colortex8Clear = false;
 const bool colortex9Clear = false;
 const bool colortex10Clear = false;
 const bool colortex11Clear = false;
+const bool colortex12Clear = true;
+const bool colortex13Clear = true;
+const bool colortex14Clear = true;
+const bool colortex15Clear = true;
 //
-
 const int noiseTextureResolution = 128;
-
 const bool colortex0MipmapEnabled = true;
 const bool shadowHardwareFiltering = true;
-
 const float shadowDistanceRenderMul = 1.0;
 const float entityShadowDistanceMul = 0.125; // Iris feature
 const float drynessHalflife = 300.0;

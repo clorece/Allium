@@ -2,6 +2,6 @@
 
 #define VERTEX_SHADER
 #define OVERWORLD
-#define DEFERRED5
+#define DEFERRED1
 
-#include "/program/deferred5.glsl"
+#include "/program/deferred8.glsl"

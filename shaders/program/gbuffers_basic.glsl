@@ -54,6 +54,10 @@ vec2 view = vec2(viewWidth, viewHeight);
 
 //Program//
 void main() {
+    #if RENDER_SCALE >= 2
+        if (!ShouldRenderPixel(gl_FragCoord.xy)) discard;
+    #endif
+
     vec4 color = glColor;
 
     vec3 screenPos = vec3(gl_FragCoord.xy / vec2(viewWidth, viewHeight), gl_FragCoord.z);
@@ -179,6 +183,7 @@ void main() {
     eastVec = normalize(gbufferModelView[0].xyz);
     northVec = normalize(gbufferModelView[2].xyz);
     sunVec = GetSunVector();
+
 }
 
 #endif

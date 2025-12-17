@@ -42,6 +42,10 @@ float shadowTime = shadowTimeVar2 * shadowTimeVar2;
 
 //Program//
 void main() {
+    #if RENDER_SCALE >= 2
+        if (!ShouldRenderPixel(gl_FragCoord.xy)) discard;
+    #endif
+
     vec4 color = texture2D(tex, texCoord);
     vec3 colorP = color.rgb;
     color *= glColor;
@@ -135,6 +139,7 @@ void main() {
     texCoord = (gl_TextureMatrix[0] * gl_MultiTexCoord0).xy;
 
     glColor = gl_Color;
+
 }
 
 #endif

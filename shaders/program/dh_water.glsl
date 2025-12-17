@@ -104,6 +104,10 @@ mat4 gbufferProjectionInverse = dhProjectionInverse;
 
 //Program//
 void main() {
+    #if RENDER_SCALE >= 2
+        if (!ShouldRenderPixel(gl_FragCoord.xy)) discard;
+    #endif
+
     vec4 colorP = vec4(vec3(0.85), glColor.a);
     vec4 color = glColor;
 
@@ -244,6 +248,7 @@ void main() {
     viewVector = tbnMatrix * (gl_ModelViewMatrix * gl_Vertex).xyz;
 
     glColor = gl_Color;
+
 }
 
 #endif

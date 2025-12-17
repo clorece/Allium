@@ -26,8 +26,25 @@ float GetLinearDepth2(float depth) {
 //Includes//
 #include "/lib/util/spaceConversion.glsl"
 
+bool IsActivePixel(vec2 fragCoord) {
+    #if PT_RENDER_RESOLUTION == 0
+        return true;
+    #elif PT_RENDER_RESOLUTION == 1
+        ivec2 p = ivec2(fragCoord);
+        return !((p.x & 1) != 0 && (p.y & 1) != 0);
+    #elif PT_RENDER_RESOLUTION == 2
+        ivec2 p = ivec2(fragCoord);
+        return ((p.x + p.y) & 1) == 0;
+    #elif PT_RENDER_RESOLUTION == 3
+        ivec2 p = ivec2(fragCoord);
+        return ((p.x & 1) == 0 && (p.y & 1) == 0);
+    #endif
+    return true;
+}
+
 //Program//
 void main() {
+    
     float z0 = texelFetch(depthtex0, texelCoord, 0).r;
     
     vec3 giFiltered = vec3(0.0);
@@ -48,6 +65,12 @@ void main() {
         
         for (int y = -1; y <= 1; y++) {
             for (int x = -1; x <= 1; x++) {
+
+                ivec2 samplePixel = ivec2(gl_FragCoord.xy) + ivec2(x, y) * stepSize;
+                
+                // --- NEW CHECK: Skip neighbor if it was one of the skipped pixels ---
+                if (!IsActivePixel(vec2(samplePixel))) continue;
+
                 vec2 offset = vec2(x, y) * float(stepSize) / vec2(viewWidth, viewHeight);
                 vec2 sampleCoord = texCoord + offset;
 
@@ -73,8 +96,15 @@ void main() {
             }
         }
         
-        giFiltered /= totalWeight;
-        aoFiltered /= totalWeight;
+        // Prevent division by zero if NO valid neighbors were found (rare/edge of screen)
+        if (totalWeight > 0.0001) {
+            giFiltered /= totalWeight;
+            aoFiltered /= totalWeight;
+        } else {
+            // If reconstruction fails, pass through raw data (or black)
+            giFiltered = texture2D(colortex9, texCoord).rgb;
+            aoFiltered = texture2D(colortex11, texCoord).rgb;
+        }
     #endif
 
     giFiltered = max(giFiltered, 0.0);

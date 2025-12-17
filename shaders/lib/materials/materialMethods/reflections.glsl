@@ -203,17 +203,23 @@ vec4 GetReflection(vec3 normalM, vec3 viewPos, vec3 nViewPos, vec3 playerPos, fl
                         skyReflection += GetStars(starCoord, RVdotU, RVdotS);
                     #endif
 
-                            vec3 worldNormalMR = normalize(mat3(gbufferModelViewInverse) * normalMR);
-                            vec3 RCameraPos = cameraPosition + 1.0 * worldNormalMR * dot(playerPos, worldNormalMR);
-                            vec3 RPlayerPos = normalize(mat3(gbufferModelViewInverse) * nViewPosR);
-                            float RlViewPos = 100000.0;
-
-                            //vec4 GetClouds(inout float cloudLinearDepth, float skyFade, vec3 cameraPos, vec3 playerPos, float lViewPos, float VdotS, float VdotU, float dither, vec3 auroraBorealis, vec3 nightNebula) {
-
-                            vec4 clouds = GetClouds(cloudLinearDepth, skyFade, RCameraPos, RPlayerPos,
-                                                    RlViewPos, RVdotS, RVdotU, dither, auroraBorealis, nightNebula);
-
-                            skyReflection = mix(skyReflection, clouds.rgb, clouds.a);
+                            #ifdef VL_CLOUDS_ACTIVE
+                                // Sample clouds from the filtered buffer (colortex12)
+                                // We need to calculate the reflection screen position
+                                vec3 worldNormalMR = normalize(mat3(gbufferModelViewInverse) * normalMR);
+                                vec4 clipPosCloud = gbufferProjection * vec4(nViewPosR, 1.0);
+                                vec2 cloudCoord = (clipPosCloud.xy / clipPosCloud.w) * 0.5 + 0.5;
+                                
+                                // Check if the reflection coordinate is valid
+                                if (cloudCoord.x >= 0.0 && cloudCoord.x <= 1.0 && 
+                                    cloudCoord.y >= 0.0 && cloudCoord.y <= 1.0) {
+                                    // Read from the pre-rendered cloud buffer
+                                    vec4 clouds = texture2D(colortex12, cloudCoord);
+                                    
+                                    // Composite clouds into sky reflection
+                                    skyReflection = mix(skyReflection, clouds.rgb, clouds.a);
+                                }
+                            #endif
 
                     skyReflection = mix(color * 0.5, skyReflection, skyLightFactor);
                 #else

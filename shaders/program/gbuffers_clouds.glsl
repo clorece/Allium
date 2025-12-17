@@ -52,6 +52,10 @@
 
 //Program//
 void main() {
+    #if RENDER_SCALE >= 2
+        if (!ShouldRenderPixel(gl_FragCoord.xy)) discard;
+    #endif
+
     #if CLOUD_STYLE_DEFINE != 50
         discard;
     #else
@@ -144,7 +148,10 @@ void main() {
         #ifdef TAA
             gl_Position.xy = TAAJitter(gl_Position.xy, gl_Position.w);
         #endif
+
+        
     #endif
+
 }
 
 #endif

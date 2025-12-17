@@ -25,6 +25,10 @@ flat in vec4 glColor;
 
 //Program//
 void main() {
+    #if RENDER_SCALE >= 2
+        if (!ShouldRenderPixel(gl_FragCoord.xy)) discard;
+    #endif
+
     vec4 color = texture2D(tex, texCoord);
     color *= glColor;
 
@@ -68,6 +72,7 @@ void main() {
             #include "/lib/misc/handSway.glsl"
         }
     #endif
+
 }
 
 #endif

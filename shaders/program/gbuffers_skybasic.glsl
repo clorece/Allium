@@ -62,6 +62,10 @@ vec3 lightVec = sunVec * ((timeAngle < 0.5325 || timeAngle > 0.9675) ? 1.0 : -1.
 
 //Program//
 void main() {
+    #if RENDER_SCALE >= 2
+        if (!ShouldRenderPixel(gl_FragCoord.xy)) discard;
+    #endif
+
     vec4 color = vec4(glColor.rgb, 1.0);
 
     #ifdef OVERWORLD || END
@@ -221,6 +225,7 @@ void main() {
         //Vanilla Star Dedection by Builderb0y
         vanillaStars = float(glColor.r == glColor.g && glColor.g == glColor.b && glColor.r > 0.0 && glColor.r < 0.51);
     #endif
+
 }
 
 #endif
