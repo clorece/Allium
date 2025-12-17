@@ -167,7 +167,7 @@ void main() {
         if (pow2(cloudLinearDepth + OSIEBCA * dither) * renderDistance < min(lViewPos, renderDistance)) discard;
     #endif
 
-    #if WATER_MAT_QUALITY >= 3
+    #if WATER_MAT_QUALITY >= 0
         float materialMask = 0.0;
     #endif
 
@@ -372,6 +372,9 @@ void main() {
 
     #ifdef TAA
         gl_Position.xy = TAAJitter(gl_Position.xy, gl_Position.w);
+    #endif
+    #if defined TAA && RENDER_SCALE < 1.0
+        gl_Position.xy = gl_Position.xy * RENDER_SCALE + RENDER_SCALE * gl_Position.w - gl_Position.w;
     #endif
 }
 

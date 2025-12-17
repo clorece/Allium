@@ -286,6 +286,9 @@ void main() {
         vTexCoordAM.xy  = min(texCoord, midCoord - texMinMidCoord);
     #endif
 
+    #if defined TAA && RENDER_SCALE < 1.0
+        gl_Position.xy = gl_Position.xy * RENDER_SCALE + RENDER_SCALE * gl_Position.w - gl_Position.w;
+    #endif
 }
 
 #endif

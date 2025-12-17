@@ -1,5 +1,5 @@
 //#define TAA_TWEAKS
-/*
+
 #if TAA_MODE == 1
     float blendMinimum = 0.8;
     float blendVariable = 0.2;
@@ -141,7 +141,7 @@ void DoTAA(inout vec3 color, inout vec3 temp, float z1) {
         } // Checking edge-pixels prevents flickering
         if (i == 4) return;
     }*/
-/*
+
     float z0 = texelFetch(depthtex0, texelCoord, 0).r;
 
     vec2 prvCoord = texCoord;
@@ -191,9 +191,9 @@ void DoTAA(inout vec3 color, inout vec3 temp, float z1) {
     temp = color;
 
     //if (edge > 0.05) color.rgb = vec3(1.0, 0.0, 1.0);
-}*/
+}
 
-
+/*
 //#define TAA_TWEAKS
 
 #if TAA_MODE == 1
@@ -425,4 +425,4 @@ void DoTAA(inout vec3 color, inout vec3 temp, float z1) {
     }
     
     temp = color;
-}
+}*/ 

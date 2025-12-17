@@ -96,6 +96,7 @@ const bool colortex0MipmapEnabled = true;
     #include "/lib/atmospherics/clouds/mainClouds.glsl"
 #endif
 
+vec3 refPos = vec3(0.0);
 #ifdef PBR_REFLECTIONS
     #include "/lib/materials/materialMethods/reflections.glsl"
 #endif
@@ -245,80 +246,8 @@ vec3 textureCatmullRom(sampler2D colortex, vec2 texcoord, vec2 view) {
     }
 #endif
 
-
-bool IsActivePixel(ivec2 pixelCoord) {
-    #if RENDER_SCALE == 3
-        return true;
-    #else
-        // Scale 1: 75% Resolution (Keep 3, Skip 1)
-        if (RENDER_SCALE == 2) return !((pixelCoord.x & 1) != 0 && (pixelCoord.y & 1) != 0);
-        
-        // Scale 2: Checkerboard (Standard)
-        if (RENDER_SCALE == 1) return ((pixelCoord.x + pixelCoord.y) & 1) == 0;
-        
-        // Scale 3: Quarter Resolution (Grid)
-        if (RENDER_SCALE == 0) return ((pixelCoord.x & 1) == 0 && (pixelCoord.y & 1) == 0);
-        
-        return true;
-    #endif
-}
-
 //Program//
 void main() {
-    if (!IsActivePixel(ivec2(gl_FragCoord.xy))) {
-        // Write previous frame data for TAA reconstruction
-        // This is critical - don't write black, write history!
-        #ifdef TEMPORAL_FILTER
-            vec3 historyColor = texture2D(colortex0, texCoord).rgb;
-            vec3 historyWaterRef = texture2D(colortex4, texCoord).rgb;
-            float historySkyFade = texture2D(colortex4, texCoord).a;
-            float historyCloudDepth = texture2D(colortex5, texCoord).r;
-            
-            /*DRAWBUFFERS:054*/
-            gl_FragData[0] = vec4(historyColor, 1.0);
-            gl_FragData[1] = vec4(historyWaterRef, historySkyFade);
-            gl_FragData[2] = vec4(historyCloudDepth, 0.0, 0.0, 1.0);
-            
-            #ifdef TEMPORAL_FILTER
-                vec4 historyRef = texture2D(colortex7, texCoord);
-                /*DRAWBUFFERS:0547*/
-                gl_FragData[3] = historyRef;
-            #endif
-        #else
-            // No TAA - just sample neighbors for a quick reconstruction
-            vec3 color = vec3(0.0);
-            int samples = 0;
-            
-            // Sample immediate neighbors
-            ivec2 offsets[4] = ivec2[4](
-                ivec2(1, 0), ivec2(-1, 0),
-                ivec2(0, 1), ivec2(0, -1)
-            );
-            
-            for (int i = 0; i < 4; i++) {
-                ivec2 sampleCoord = ivec2(gl_FragCoord.xy) + offsets[i];
-                if (IsActivePixel(sampleCoord)) {
-                    color += texelFetch(colortex0, sampleCoord, 0).rgb;
-                    samples++;
-                }
-            }
-            
-            if (samples > 0) {
-                color /= float(samples);
-            } else {
-                // Fallback to center if somehow no neighbors
-                color = texture2D(colortex0, texCoord).rgb;
-            }
-            
-            /*DRAWBUFFERS:054*/
-            gl_FragData[0] = vec4(color, 1.0);
-            gl_FragData[1] = vec4(0.0);
-            gl_FragData[2] = vec4(1.0, 0.0, 0.0, 1.0);
-        #endif
-        
-        return;
-    }
-
     vec3 color = texelFetch(colortex0, texelCoord, 0).rgb;
 
     float z0 = texelFetch(depthtex0, texelCoord, 0).r;
