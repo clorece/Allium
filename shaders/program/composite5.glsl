@@ -404,7 +404,7 @@ void main() {
     color = mix(color, vec3(ignored), exp2((-32) * desaturated));
 
      // Get auto exposure value (reads from colortex4)
-    float exposure = GetAutoExposure(colortex0, dither) - (nightFactor * 1.0);
+    float exposure = GetAutoExposure(colortex0, dither);
     
     // Apply exposure
     #ifdef OVERWORLD
