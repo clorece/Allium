@@ -31,8 +31,12 @@
     #define BLOCK_REFLECT_QUALITY 2 //[0 1 2]
     #define ANISOTROPIC_FILTER 4 //[0 4 8 16]
 
+    #define RENDER_SCALE 1 //[0 1 2 3]
+    #define VL_RENDER_RESOLUTION 3 //[0 1 2 3]
+    #define CLOUD_RENDER_RESOLUTION 1 //[1 2 3]
+    #define PT_RENDER_RESOLUTION 1 //[0 1 2 3] 
 
-    #define GLOBAL_ILLUMINATION 1 //[0 1 2]
+    #define GLOBAL_ILLUMINATION 2 //[0 1 2]
         #define AO_I 1.0 //[0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0]
         #define GI_I 1.0 //[0.5 0.6 0.7 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0]
         #define SKY_I 0.5 //[0.1 0.15 0.2 0.25 0.3 0.35 0.4 0.45 0.5 0.55 0.6 0.65 0.7 0.75 0.8 0.85 0.9 0.95 1.0]
@@ -41,7 +45,7 @@
         #define EXCLUDE_ENTITIES
         //#define PT_VIEW
 
-    #define TEMPORAL_BILATERAL_FILTER
+    #define TEMPORAL_FILTER
         #define BLUR_SAMPLES 2 //[1 2 3 4]
         #define BLUR_AMOUNT 1.0 //[0.5 0.6 0.7 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0 3.0]
         #define BLEND_WEIGHT 0.0001 //[0.0001 0.00015 0.0002 0.00025 0.0003 0.00035 0.0004 0.00045 0.0005 0.0006 0.0007 0.0008 0.0009 0.001 0.002 0.003 0.004 0.005 0.006 0.007 0.008 0.009 0.01]
@@ -474,7 +478,6 @@
         #define PBR_REFLECTIONS
     #endif
     //#if BLOCK_REFLECT_QUALITY >= 3 && RP_MODE >= 1
-    #define TEMPORAL_FILTER
     //#endif
 
     #if DETAIL_QUALITY == 0 // Potato
@@ -768,3 +771,18 @@
     */
 
 // 62 75 74 20 74 68 4F 73 65 20 77 68 6F 20 68 6F 70 65 20 69 6E 20 74 68 65 20 6C 69 6D 69 4E 61 6C 0A 77 69 6C 6C 20 72 65 6E 65 77 20 74 68 65 69 72 20 73 54 72 65 6E 67 74 48 2E 0A 74 68 65 79 20 77 69 6C 6C 20 73 6F 41 72 20 6F 6E 20 65 6C 79 54 72 61 73 20 6C 69 6B 65 20 70 68 61 6E 74 6F 6D 73 3B 0A 74 68 65 79 20 77 69 6C 6C 20 72 75 6E 20 61 6E 44 20 6E 6F 74 20 67 72 6F 77 20 77 65 41 72 79 2C 0A 74 68 65 59 20 77 69 6C 6C 20 77 61 6C 6B 20 61 6E 64 20 6E 6F 74 20 62 65 20 66 61 69 6E 74 2E
+
+// used for gbuffers
+bool ShouldRenderPixel(vec2 coord) {
+    #if RENDER_SCALE == 3
+        return true;
+    #else
+        ivec2 p = ivec2(coord);
+        
+        if (RENDER_SCALE == 2) return !((p.x & 1) != 0 && (p.y & 1) != 0);
+        if (RENDER_SCALE == 1) return ((p.x + p.y) & 1) == 0;
+        if (RENDER_SCALE == 0) return ((p.x & 1) == 0 && (p.y & 1) == 0);
+        
+        return true;
+    #endif
+}

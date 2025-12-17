@@ -26,7 +26,7 @@ float CalculateCloudDetail(vec3 position, vec3 offset, float persistence) {
 }
 
 float GetCumulusCloud(vec3 position, int stepCount, int baseAltitude, float distXZ, float curvedY, float persistence, float densityMult, float sizeMod) {
-    vec3 tracePosM = GlobalWindShearMatrix * position * (0.00018 * sizeMod);
+    vec3 tracePosM = position * (0.00018 * sizeMod);
 
     vec3 offset = CalculateWindOffset(CalculateWindSpeed() * sizeMod);
     offset *= 1.0;
@@ -39,7 +39,7 @@ float GetCumulusCloud(vec3 position, int stepCount, int baseAltitude, float dist
 
     float detailNoise = CalculateCloudDetail(tracePosM, offset, persistence);
 
-    float combinedDensity = mix(baseNoise, baseNoise * detailNoise, 0.465);
+    float combinedDensity = mix(baseNoise, baseNoise * detailNoise, 0.4);
     combinedDensity = max(combinedDensity - 0.2, 0.0);
     combinedDensity = pow(combinedDensity, 1.35) * densityMult;
 
@@ -48,7 +48,7 @@ float GetCumulusCloud(vec3 position, int stepCount, int baseAltitude, float dist
     coverageMap = smoothstep(0.1, 0.5, coverageMap);
 
     float fadeTop = smoothstep(0.0, cumulusLayerStretch, (float(baseAltitude) + cumulusLayerStretch) - curvedY);
-    float fadeBottom = smoothstep(cumulusLayerStretch * 0.65, cumulusLayerStretch, curvedY - (float(baseAltitude) - cumulusLayerStretch));
+    float fadeBottom = smoothstep(cumulusLayerStretch * 0.85, cumulusLayerStretch, curvedY - (float(baseAltitude) - cumulusLayerStretch));
     
     float verticalFade = fadeTop * fadeBottom;
 

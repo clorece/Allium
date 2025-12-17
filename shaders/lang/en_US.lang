@@ -338,7 +338,7 @@ option.CLOUD_SHADOWS=Cloud Shadows
 option.CLOUD_SHADOWS.comment=Enables shadows that are cast from the clouds. This option will also allow for lightshafts to cast rays from the clouds in the atmosphere. Extremely performance intensive!
 option.CUMULUS=Cumulus Clouds
 option.CUMULUS.comment=Toggles Volumetric Clouds
-option.CUMULUS_QUALITY=Cloud Quality
+option.CUMULUS_QUALITY=Cloud Step Quality
 option.CUMULUS_QUALITY.comment=Adjusts cloud step quality, lower for more performance but lower quality clouds, will cause a layer artifact on the noise!
 option.CLOUD_LIGHTING_QUALITY=Cloud Lighting Quality
 value.CLOUD_LIGHTING_QUALITY.7=§eMedium
@@ -350,6 +350,19 @@ option.CUMULUS_CLOUD_COVERAGE=Cloud Coverage
 option.CUMULUS_CLOUD_ALT=Cloud Altitude
 option.CUMULUS_CLOUD_HEIGHT=Cloud Height
 option.PLANAR_CLOUDS=Cirrus Clouds
+
+option.CLOUD_RENDER_RESOLUTION=Cloud Resolution
+    option.CLOUD_RENDER_RESOLUTION.comment=Will increase performance but will be blurrier and more visible instability.
+    value.CLOUD_RENDER_RESOLUTION.3=100%
+    value.CLOUD_RENDER_RESOLUTION.2=75%
+    value.CLOUD_RENDER_RESOLUTION.1=50%
+
+option.RENDER_SCALE=Render Scale
+    option.RENDER_SCALE.comment=Will increase performance but will be blurrier and more visible instability.
+    value.RENDER_SCALE.3=100%
+    value.RENDER_SCALE.2=75%
+    value.RENDER_SCALE.1=50%
+    value.RENDER_SCALE.0=25%
 
 option.CLOUD_CLOSED_AREA_CHECK=Prevent Clouds in Interiors
 option.CLOUD_CLOSED_AREA_CHECK.comment=Does additional checks to remove clouds in closed areas. §e[*]§r This setting only works with the "Reimagined" or "Unbound" Cloud Styles. §e[*]§r This setting will be disabled if "Real-Time Shadows" is OFF.
@@ -1110,6 +1123,12 @@ screen.INDIRECT_LIGHTING=Indirect Lighting
         option.AO_I=Ambient Occlusion Intensity
         option.SKY_I=Skylight Contribution
         option.SKY_I.comment=Affects how much skylight is contributing to global illumination, sort of adds a sheen to surfaces from skylight, giving it a more natural feel.
+        option.PT_RENDER_RESOLUTION=Indirect Lighting Resolution
+            option.PT_RENDER_RESOLUTION.comment=Change how many rays are calculated for a fraction of the pixels. Will increase performance but will increase noise and instability.
+            value.PT_RENDER_RESOLUTION.3=100%
+            value.PT_RENDER_RESOLUTION.2=75%
+            value.PT_RENDER_RESOLUTION.1=50%
+            value.PT_RENDER_RESOLUTION.0=25%
         option.PT_MAX_BOUNCES=Bounces
             option.PT_MAX_BOUNCES.comment=Change to increase how many times light can bounce in a scene
         option.PT_STEPS=Pathtrace Steps
@@ -1127,6 +1146,7 @@ screen.INDIRECT_LIGHTING=Indirect Lighting
                 option.BLEND_WEIGHT.comment=Controls the temporal accumulation strength. Lower values reduce noise but increase ghosting, higher values reduce ghosting but increase jitter.
             option.GHOST_REDUCTION=Ghosting Reduction
                 option.GHOST_REDUCTION.comment=Changes blend weight when the camera is moving, higher values the stronger the reduction, but more ray jitter when camera is moving.
+
 option.WHITE_WORLD=White World
     option.WHITE_WORLD.comment=Ambient Occlusion Debug View.
 

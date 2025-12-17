@@ -36,6 +36,7 @@ flat in vec4 glColor;
 
 //Program//
 void main() {
+
     #ifdef OVERWORLD || END
         vec2 tSize = textureSize(tex, 0);
         vec4 color = texture2D(tex, texCoord);

@@ -25,6 +25,7 @@ in vec4 glColor;
 
 //Program//
 void main() {
+
     vec4 color = texture2D(tex, texCoord) * glColor;
 
     #ifdef IPBR

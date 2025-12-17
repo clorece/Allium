@@ -177,6 +177,7 @@ void DoOceanBlockTweaks(inout float smoothnessD) {
 
 //Program//
 void main() {
+
     #if ANISOTROPIC_FILTER == 0
         vec4 color = texture2D(tex, texCoord);
     #else

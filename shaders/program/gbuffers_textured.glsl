@@ -66,6 +66,7 @@ float shadowTime = shadowTimeVar2 * shadowTimeVar2;
 
 //Program//
 void main() {
+    
     vec4 color = texture2D(tex, texCoord);
     vec4 colorP = color;
     color *= glColor;

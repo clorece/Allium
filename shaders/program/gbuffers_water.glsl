@@ -136,6 +136,7 @@ float GetLinearDepth(float depth) {
 
 //Program//
 void main() {
+
     vec4 colorP = texture2D(tex, texCoord);
     vec4 color = colorP * vec4(glColor.rgb, 1.0);
 

@@ -34,6 +34,7 @@ float sunVisibility2 = sunVisibility * sunVisibility;
 
 //Program//
 void main() {
+
     vec4 color = texture2D(tex, texCoord);
     color *= glColor;
 
@@ -90,6 +91,7 @@ void main() {
 
     upVec = normalize(gbufferModelView[1].xyz);
     sunVec = GetSunVector();
+
 }
 
 #endif

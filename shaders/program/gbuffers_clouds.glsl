@@ -52,6 +52,7 @@
 
 //Program//
 void main() {
+
     #if CLOUD_STYLE_DEFINE != 50
         discard;
     #else
@@ -144,7 +145,10 @@ void main() {
         #ifdef TAA
             gl_Position.xy = TAAJitter(gl_Position.xy, gl_Position.w);
         #endif
+
+        
     #endif
+
 }
 
 #endif
