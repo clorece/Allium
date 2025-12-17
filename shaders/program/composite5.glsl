@@ -325,7 +325,7 @@ void EndLookup(inout vec3 color) {
 
 //Program//
 void main() {
-    #if RENDER_SCALE < 1.0
+    #if defined TAA && RENDER_SCALE < 1.0
         // The viewport is CENTERED on screen
         // Full screen UV (0,1) needs to map to centered viewport
         
@@ -380,7 +380,11 @@ void main() {
     #endif
 
     #ifdef BLOOM
-        DoBloom(color, texCoord, dither, lViewPos);
+        #if defined TAA && RENDER_SCALE < 1.0
+            DoBloom(color, scaledUV * RENDER_SCALE, dither, lViewPos); // i have no idea as to why, but we need to multiply by renderscale again
+        #else
+            DoBloom(color, texCoord, dither, lViewPos);
+        #endif
     #endif
 
     #ifdef COLORGRADING
