@@ -27,15 +27,15 @@ float GetLinearDepth2(float depth) {
 #include "/lib/util/spaceConversion.glsl"
 
 bool IsActivePixel(vec2 fragCoord) {
-    #if PT_RENDER_RESOLUTION == 0
+    #if PT_RENDER_RESOLUTION == 3
         return true;
-    #elif PT_RENDER_RESOLUTION == 1
-        ivec2 p = ivec2(fragCoord);
-        return !((p.x & 1) != 0 && (p.y & 1) != 0);
     #elif PT_RENDER_RESOLUTION == 2
         ivec2 p = ivec2(fragCoord);
+        return !((p.x & 1) != 0 && (p.y & 1) != 0);
+    #elif PT_RENDER_RESOLUTION == 1
+        ivec2 p = ivec2(fragCoord);
         return ((p.x + p.y) & 1) == 0;
-    #elif PT_RENDER_RESOLUTION == 3
+    #elif PT_RENDER_RESOLUTION == 0
         ivec2 p = ivec2(fragCoord);
         return ((p.x & 1) == 0 && (p.y & 1) == 0);
     #endif

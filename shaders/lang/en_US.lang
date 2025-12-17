@@ -353,10 +353,16 @@ option.PLANAR_CLOUDS=Cirrus Clouds
 
 option.CLOUD_RENDER_RESOLUTION=Cloud Resolution
     option.CLOUD_RENDER_RESOLUTION.comment=Will increase performance but will be blurrier and more visible instability.
-    value.CLOUD_RENDER_RESOLUTION.0=100%
-    value.CLOUD_RENDER_RESOLUTION.1=75%
-    value.CLOUD_RENDER_RESOLUTION.2=50%
-    value.CLOUD_RENDER_RESOLUTION.3=25%
+    value.CLOUD_RENDER_RESOLUTION.3=100%
+    value.CLOUD_RENDER_RESOLUTION.2=75%
+    value.CLOUD_RENDER_RESOLUTION.1=50%
+
+option.RENDER_SCALE=Render Scale
+    option.RENDER_SCALE.comment=Will increase performance but will be blurrier and more visible instability.
+    value.RENDER_SCALE.3=100%
+    value.RENDER_SCALE.2=75%
+    value.RENDER_SCALE.1=50%
+    value.RENDER_SCALE.0=25%
 
 option.CLOUD_CLOSED_AREA_CHECK=Prevent Clouds in Interiors
 option.CLOUD_CLOSED_AREA_CHECK.comment=Does additional checks to remove clouds in closed areas. §e[*]§r This setting only works with the "Reimagined" or "Unbound" Cloud Styles. §e[*]§r This setting will be disabled if "Real-Time Shadows" is OFF.
@@ -1119,10 +1125,10 @@ screen.INDIRECT_LIGHTING=Indirect Lighting
         option.SKY_I.comment=Affects how much skylight is contributing to global illumination, sort of adds a sheen to surfaces from skylight, giving it a more natural feel.
         option.PT_RENDER_RESOLUTION=Indirect Lighting Resolution
             option.PT_RENDER_RESOLUTION.comment=Change how many rays are calculated for a fraction of the pixels. Will increase performance but will increase noise and instability.
-            value.PT_RENDER_RESOLUTION.0=100%
-            value.PT_RENDER_RESOLUTION.1=75%
-            value.PT_RENDER_RESOLUTION.2=50%
-            value.PT_RENDER_RESOLUTION.3=25%
+            value.PT_RENDER_RESOLUTION.3=100%
+            value.PT_RENDER_RESOLUTION.2=75%
+            value.PT_RENDER_RESOLUTION.1=50%
+            value.PT_RENDER_RESOLUTION.0=25%
         option.PT_MAX_BOUNCES=Bounces
             option.PT_MAX_BOUNCES.comment=Change to increase how many times light can bounce in a scene
         option.PT_STEPS=Pathtrace Steps

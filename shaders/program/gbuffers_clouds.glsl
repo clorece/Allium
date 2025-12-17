@@ -52,9 +52,6 @@
 
 //Program//
 void main() {
-    #if RENDER_SCALE >= 2
-        if (!ShouldRenderPixel(gl_FragCoord.xy)) discard;
-    #endif
 
     #if CLOUD_STYLE_DEFINE != 50
         discard;

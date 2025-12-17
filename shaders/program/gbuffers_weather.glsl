@@ -34,9 +34,6 @@ float sunVisibility2 = sunVisibility * sunVisibility;
 
 //Program//
 void main() {
-    #if RENDER_SCALE >= 2
-        if (!ShouldRenderPixel(gl_FragCoord.xy)) discard;
-    #endif
 
     vec4 color = texture2D(tex, texCoord);
     color *= glColor;

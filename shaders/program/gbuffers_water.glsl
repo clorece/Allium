@@ -136,9 +136,6 @@ float GetLinearDepth(float depth) {
 
 //Program//
 void main() {
-    #if RENDER_SCALE >= 2
-        if (!ShouldRenderPixel(gl_FragCoord.xy)) discard;
-    #endif
 
     vec4 colorP = texture2D(tex, texCoord);
     vec4 color = colorP * vec4(glColor.rgb, 1.0);

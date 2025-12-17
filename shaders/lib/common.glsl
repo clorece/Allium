@@ -33,8 +33,8 @@
 
     #define RENDER_SCALE 1 //[0 1 2 3]
     #define VL_RENDER_RESOLUTION 3 //[0 1 2 3]
-    #define CLOUD_RENDER_RESOLUTION 2 //[0 1 2]
-    #define PT_RENDER_RESOLUTION 2 //[0 1 2 3] 
+    #define CLOUD_RENDER_RESOLUTION 1 //[1 2 3]
+    #define PT_RENDER_RESOLUTION 1 //[0 1 2 3] 
 
     #define GLOBAL_ILLUMINATION 2 //[0 1 2]
         #define AO_I 1.0 //[0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0 1.1 1.2 1.3 1.4 1.5 1.6 1.7 1.8 1.9 2.0]

@@ -44,14 +44,14 @@ flat in vec3 upVec, sunVec;
 #endif
 
 bool IsActivePixel(vec2 coord) {
-    #if CLOUD_RENDER_RESOLUTION == 0
+    #if CLOUD_RENDER_RESOLUTION == 3
         return true;
     #else
         ivec2 p = ivec2(coord);
         
-        if (CLOUD_RENDER_RESOLUTION == 1) return !((p.x & 1) != 0 && (p.y & 1) != 0);
-        if (CLOUD_RENDER_RESOLUTION == 2) return ((p.x + p.y) & 1) == 0;
-        if (CLOUD_RENDER_RESOLUTION == 3) return ((p.x & 1) == 0 && (p.y & 1) == 0);
+        if (CLOUD_RENDER_RESOLUTION == 2) return !((p.x & 1) != 0 && (p.y & 1) != 0);
+        if (CLOUD_RENDER_RESOLUTION == 1) return ((p.x + p.y) & 1) == 0;
+        //if (CLOUD_RENDER_RESOLUTION == 0) return ((p.x & 1) == 0 && (p.y & 1) == 0);
         
         return true;
     #endif
