@@ -7,12 +7,13 @@
     #include "/lib/colors/moonPhaseInfluence.glsl"
 #endif
 
-#ifdef BORDER_FOG
-    #ifdef OVERWORLD
+#ifdef OVERWORLD
         #include "/lib/atmospherics/sky.glsl"
     #elif defined NETHER
         #include "/lib/colors/skyColors.glsl"
     #endif
+
+#ifdef BORDER_FOG
 
     void DoBorderFog(inout vec3 color, inout float skyFade, float lPos, float VdotU, float VdotS, float dither) {
         #ifdef OVERWORLD

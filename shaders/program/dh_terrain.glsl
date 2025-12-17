@@ -88,6 +88,10 @@ float Noise3D(vec3 p) {
 
 //Program//
 void main() {
+    #if RENDER_SCALE >= 2
+        if (!ShouldRenderPixel(gl_FragCoord.xy)) discard;
+    #endif
+
     vec4 color = vec4(glColor.rgb, 1.0);
 
     vec3 screenPos = vec3(gl_FragCoord.xy / vec2(viewWidth, viewHeight), gl_FragCoord.z);
@@ -199,6 +203,11 @@ void main() {
     playerPos = (gbufferModelViewInverse * gl_ModelViewMatrix * gl_Vertex).xyz;
 
     glColor = gl_Color;
+
+    #if defined TAA && RENDER_SCALE < 1.0
+        gl_Position.xy = gl_Position.xy * RENDER_SCALE + RENDER_SCALE * gl_Position.w - gl_Position.w;
+    #endif
+
 }
 
 #endif

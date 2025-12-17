@@ -12,8 +12,6 @@
     #include "/lib/colors/moonPhaseInfluence.glsl"
 #endif
 
-vec3 refPos = vec3(0.0);
-
 #define LQ_CLOUD
 
 vec4 GetReflection(vec3 normalM, vec3 viewPos, vec3 nViewPos, vec3 playerPos, float lViewPos, float z0,
