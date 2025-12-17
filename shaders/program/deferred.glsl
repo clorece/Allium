@@ -76,6 +76,18 @@ void main() {
         return;
     }
 
+    #if RENDER_SCALE < 1.0
+        // The viewport is CENTERED on screen
+        // Full screen UV (0,1) needs to map to centered viewport
+        
+        // For RENDER_SCALE = 0.5:
+        // The viewport goes from 0.25 to 0.75 (centered)
+        
+        // Transform: scale around center point (0.5, 0.5)
+        vec2 scaledCoord = (texCoord) * RENDER_SCALE;
+    
+    #endif
+
     float z0 = texelFetch(depthtex0, texelCoord, 0).r;
     vec3 gi = vec3(0.0);
     vec3 ao = vec3(0.0);

@@ -6,6 +6,12 @@ void DoRefraction(inout vec3 color, inout float z0, inout float z1, vec3 viewPos
     // Prep
     if (int(texelFetch(colortex6, texelCoord, 0).g * 255.1) != 241) return;
 
+    #if defined TAA && RENDER_SCALE < 1.0
+        vec2 scaledCoord = texCoord * RENDER_SCALE;
+    #else
+        vec2 scaledCoord = texCoord;
+    #endif
+
     float fovScale = gbufferProjection[1][1];
 
     vec3 playerPos = ViewToPlayer(viewPos.xyz);

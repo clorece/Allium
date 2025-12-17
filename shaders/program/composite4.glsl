@@ -49,7 +49,7 @@ void main() {
 
     #ifdef BLOOM
         vec2 scaledCoord = texCoord * max(vec2(viewWidth, viewHeight) / vec2(1920.0, 1080.0), vec2(1.0));
-
+        
         #if defined OVERWORLD || defined END
             blur += BloomTile(2.0, vec2(0.0      , 0.0   ), scaledCoord);
             blur += BloomTile(3.0, vec2(0.0      , 0.26  ), scaledCoord);

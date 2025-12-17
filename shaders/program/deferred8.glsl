@@ -96,7 +96,6 @@ const bool colortex0MipmapEnabled = true;
     #include "/lib/atmospherics/clouds/mainClouds.glsl"
 #endif
 
-vec3 refPos = vec3(0.0);
 #ifdef PBR_REFLECTIONS
     #include "/lib/materials/materialMethods/reflections.glsl"
 #endif
@@ -252,7 +251,9 @@ void main() {
 
     float z0 = texelFetch(depthtex0, texelCoord, 0).r;
 
-    vec4 screenPos = vec4(texCoord, z0, 1.0);
+    vec2 scaledUV = texCoord * RENDER_SCALE;
+
+    vec4 screenPos = vec4(scaledUV, z0, 1.0);
     vec4 viewPos = gbufferProjectionInverse * (screenPos * 2.0 - 1.0);
     viewPos /= viewPos.w;
     float lViewPos = length(viewPos);
@@ -260,8 +261,8 @@ void main() {
     vec3 playerPos = ViewToPlayer(viewPos.xyz);
     vec3 worldPos = playerPos + cameraPosition;
 
-    float dither = texture2D(noisetex, texCoord * vec2(viewWidth, viewHeight) / 128.0).b;
-    vec3 dither2 = texture2D(noisetex, texCoord * vec2(viewWidth, viewHeight) / 128.0).xyz;
+    float dither = texture2D(noisetex, scaledUV * vec2(viewWidth, viewHeight) / 128.0).b;
+    vec3 dither2 = texture2D(noisetex, scaledUV * vec2(viewWidth, viewHeight) / 128.0).xyz;
     #if defined TAA || defined TEMPORAL_FILTER
         dither = fract(dither + goldenRatio * mod(float(frameCounter), 360.0));
         dither2.x = fract(dither + goldenRatio * mod(float(frameCounter), 360.0));
@@ -496,8 +497,8 @@ void main() {
                 vec3 cameraOffset = cameraPosition - previousCameraPosition;
                 vec2 prvCoord = SHalfReprojection(playerPos, cameraOffset);
 
-                vec2 prvRefCoord = Reprojection(vec3(texCoord, z0), cameraOffset);
-                        vec2 prvRefCoord2 = Reprojection(vec3(texCoord, max(refPos.z, z0)), cameraOffset);
+                vec2 prvRefCoord = Reprojection(vec3(scaledUV, z0), cameraOffset);
+                        vec2 prvRefCoord2 = Reprojection(vec3(scaledUV, max(refPos.z, z0)), cameraOffset);
                         //vec4 oldRef1 = texture2D(colortex7, prvRefCoord);
                         //vec4 oldRef2 = texture2D(colortex7, prvRefCoord2);
                         vec4 oldRef1 = vec4(textureCatmullRom(colortex7, prvRefCoord, vec2(viewWidth, viewHeight)), 1.0);
@@ -526,7 +527,7 @@ void main() {
                 float colorChangeWeight = exp(-diffMagnitude * colorSensitivity);
 
                 vec4 newRef = vec4(colorAdd, colorMultInv);
-                vec2 oppositePreCoord = texCoord - 2.0 * (prvCoord - texCoord);
+                vec2 oppositePreCoord = scaledUV - 2.0 * (prvCoord - scaledUV);
                 
 
                 // Reduce blending if depth changed

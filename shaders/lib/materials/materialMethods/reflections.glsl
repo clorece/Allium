@@ -14,6 +14,8 @@
 
 #define LQ_CLOUD
 
+vec3 refPos = vec3(0.0);
+
 vec4 GetReflection(vec3 normalM, vec3 viewPos, vec3 nViewPos, vec3 playerPos, float lViewPos, float z0,
                    sampler2D depthtex, float dither, float skyLightFactor, float fresnel,
                    float smoothness, vec3 geoNormal, vec3 color, vec3 shadowMult, float highlightMult) {
@@ -59,6 +61,10 @@ vec4 GetReflection(vec3 normalM, vec3 viewPos, vec3 nViewPos, vec3 playerPos, fl
             for (int i = 0; i < 15; i++) { //originally 30 itterations but cut in half to save fps
                 refPos = nvec3(gbufferProjection * vec4(viewPosRT, 1.0)) * 0.5 + 0.5;
                 if (abs(refPos.x - 0.5) > rEdge.x || abs(refPos.y - 0.5) > rEdge.y) break;
+
+                #if RENDER_SCALE < 1.0
+                    refPos *= RENDER_SCALE;
+                #endif
 
                 rfragpos = vec3(refPos.xy, texture2D(depthtex, refPos.xy).r);
                 rfragpos = nvec3(gbufferProjectionInverse * vec4(rfragpos * 2.0 - 1.0, 1.0));

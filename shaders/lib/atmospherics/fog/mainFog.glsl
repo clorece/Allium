@@ -8,10 +8,10 @@
 #endif
 
 #ifdef OVERWORLD
-        #include "/lib/atmospherics/sky.glsl"
-    #elif defined NETHER
-        #include "/lib/colors/skyColors.glsl"
-    #endif
+    #include "/lib/atmospherics/sky.glsl"
+#elif defined NETHER
+    #include "/lib/colors/skyColors.glsl"
+#endif
 
 #ifdef BORDER_FOG
 
@@ -250,8 +250,6 @@ void DoDarknessFog(inout vec3 color, float lViewPos) {
 }
 
 void DoFog(inout vec3 color, inout float skyFade, float lViewPos, vec3 playerPos, float VdotU, float VdotS, float dither) {
-
-
     #ifdef CAVE_FOG
         DoCaveFog(color, lViewPos);
     #endif
@@ -263,9 +261,9 @@ void DoFog(inout vec3 color, inout float skyFade, float lViewPos, vec3 playerPos
     #endif
 
     vec3 worldPos = playerPos + cameraPosition;
-    if (isEyeInWater == 1) DoWaterFog(color, lViewPos);
-    else if (isEyeInWater == 2) DoLavaFog(color, lViewPos);
-    else if (isEyeInWater == 3) DoPowderSnowFog(color, lViewPos);
+    //if (isEyeInWater == 1) DoWaterFog(color, lViewPos);
+    //else if (isEyeInWater == 2) DoLavaFog(color, lViewPos);
+    //else if (isEyeInWater == 3) DoPowderSnowFog(color, lViewPos);
 
     if (blindness > 0.00001) DoBlindnessFog(color, lViewPos);
     if (darknessFactor > 0.00001) DoDarknessFog(color, lViewPos);
