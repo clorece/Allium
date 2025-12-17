@@ -1,6 +1,6 @@
 # Allium Shaders
 
-<img width="2560" height="1080" alt="Allium Banner" src="https://github.com/user-attachments/assets/235d23be-84dd-4d7e-bd91-f3ce3a29d87e" />
+<img width="2560" height="1080" alt="Allium Banner" src="https://github.com/user-attachments/assets/d821f623-32a1-474d-bc23-5dc2f2faeec5" />
 
 Allium is an edit of Complementary Unbound focused on bringing my creative vision to life. Emphasizing the beauty in colors and effects, all while staying as performant as it can be. With Allium, I hope to deliver a unique style and aesthetic that pushes my creativity to it's limits.
 
@@ -9,6 +9,9 @@ v2.0 has received a massive overhaul on it's overall look, feel and atmospherics
 ### Huge Thanks
 - Emin for using Complementary as the base shader
 - Query for their wonderful LUT code
+
+### DISCLAIMER
+This shaderpack includes code that was generated or assisted by Artificial Intelligence. While all code has been tested for functionality and performance, users should be aware that parts of the logic (e.g., GLSL functions or noise algorithms) were created with the help of generative AI tools.
 
 ## Beta & Release Versions
 ### Beta
@@ -42,8 +45,13 @@ If you happen to find any bugs, please report them on the [Github Page](https://
 - Upload log files if applicable.
 
 ## Screenshots
-<img width="2560" height="1440" alt="2025-10-31_00 43 13" src="https://github.com/user-attachments/assets/2322d64d-1a7d-4fd5-9b20-b01fd248ba07" />
+<img width="2560" height="1440" alt="2025-12-16_19 01 43" src="https://github.com/user-attachments/assets/b70dbab3-6220-46c4-99d7-91df8239c1bd" />
+<img width="2560" height="1440" alt="2025-12-16_18 54 15" src="https://github.com/user-attachments/assets/08f784b5-722f-456c-a47d-9d7c2b6ac2bc" />
+<img width="2560" height="1440" alt="2025-12-16_18 52 52" src="https://github.com/user-attachments/assets/7c3ebfbe-0a07-4232-90be-2c759f7e3c35" />
+<img width="2560" height="1440" alt="2025-12-16_18 46 51" src="https://github.com/user-attachments/assets/8d00e756-63e2-4645-829e-f12fd6242c0d" />
+<img width="2560" height="1440" alt="2025-12-16_19 05 45" src="https://github.com/user-attachments/assets/073621f3-ef81-46b9-b9cf-ddcb9a7427e0" />
+<img width="2560" height="1440" alt="2025-12-16_19 06 41" src="https://github.com/user-attachments/assets/50d3fc1b-b647-4b42-a9ec-f5becf2e95b8" />
+<img width="2560" height="1440" alt="2025-12-16_19 10 21" src="https://github.com/user-attachments/assets/d72bc2fe-907e-48e9-901b-c0d95e4cb111" />
+<img width="2560" height="1440" alt="2025-12-16_19 10 30" src="https://github.com/user-attachments/assets/41d701b1-4354-4476-b40d-02fca12f0b49" />
+<img width="2560" height="1440" alt="2025-12-16_19 11 01" src="https://github.com/user-attachments/assets/d89280c9-5ea3-4757-b64a-07635a8c515a" />
 
-<img width="2560" height="1440" alt="2025-10-31_00 58 49" src="https://github.com/user-attachments/assets/8e308574-e454-4882-8a26-9258b3b09262" />
-
-<img width="2560" height="1440" alt="2025-10-31_00 39 05" src="https://github.com/user-attachments/assets/b50618fc-a69c-4bb4-88bb-5dc855def1be" />
