@@ -479,8 +479,8 @@ void main() {
         #else
             //#ifdef EXCLUDE_ENTITIES
             //#endif
-            vec3 gi = texture2D(colortex9, texCoord).rgb;
-            vec3 rtao = texture2D(colortex11, texCoord).rgb;
+            vec3 gi = texture2D(colortex9, texCoord * RENDER_SCALE).rgb;
+            vec3 rtao = texture2D(colortex11, texCoord * RENDER_SCALE).rgb;
 
             
             #ifdef PT_VIEW

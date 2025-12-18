@@ -53,6 +53,7 @@ vec3 GetWorldSunDir() {
 }
 //Program//
 void main() {
+    vec4 color0 = texture2DLod(tex, texCoord * RENDER_SCALE, 0); 
     vec4 color1 = texture2DLod(tex, texCoord, 0); // Shadow Color
     vec3 normalM = normal, geoNormal = normal, shadowMult = vec3(1.0);
     vec3 worldGeoNormal = normalize((gbufferModelViewInverse * vec4(normalM, 0.0)).xyz);
@@ -61,7 +62,7 @@ void main() {
     //vec3 baseAlbedo = texture2DLod(tex, texCoord, 0).rgb * glColor.rgb;
 
     #if SHADOW_QUALITY >= 1
-        vec4 color2 = color1; // Light Shaft Color
+        vec4 color2 = color0; // Light Shaft Color
 
         color2.rgb *= 0.25; // Natural Strength
 

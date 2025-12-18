@@ -74,7 +74,7 @@ noperspective in vec2 texCoord;
 
 //Program//
 void main() {
-    vec2 texCoordM = texCoord;
+    vec2 texCoordM = texCoord * RENDER_SCALE;
 
     #ifdef UNDERWATER_DISTORTION
         if (isEyeInWater == 1)

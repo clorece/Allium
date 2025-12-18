@@ -170,6 +170,7 @@ vec2 GetCombinedWaves(vec2 uv, vec2 wind) {
 void main() {
     
     vec3 color = texelFetch(colortex0, texelCoord, 0).rgb;
+    vec3 unscaledcolor = texture2D(colortex0, texCoord * RENDER_SCALE * RENDER_SCALE, 0).rgb;
     float z0 = texelFetch(depthtex0, texelCoord, 0).r;
     float z1 = texelFetch(depthtex1, texelCoord, 0).r;
 
@@ -197,7 +198,7 @@ void main() {
     vec4 volumetricEffect = vec4(0.0);
 
     #if WATER_MAT_QUALITY >= 3
-        DoRefraction(color, z0, z1, viewPos.xyz, lViewPos);
+        DoRefraction(unscaledcolor, z0, z1, viewPos.xyz, lViewPos);
     #endif
 
     vec4 screenPos1 = vec4(texCoord, z1, 1.0);
@@ -225,6 +226,7 @@ void main() {
         vec3 nPlayerPos = normalize(playerPos);
     //#endif
 
+    
     #if RAINBOWS > 0 && defined OVERWORLD
         if (isEyeInWater == 0) color += GetRainbow(translucentMult, z0, z1, lViewPos, lViewPos1, VdotL, dither);
     #endif
