@@ -76,7 +76,7 @@ void main() {
 
     #ifdef MOTION_BLURRING
         float z = texture2D(depthtex1, texCoord).x;
-        float dither = Bayer64(gl_FragCoord.xy);
+        float dither = Bayer64(gl_FragCoord.xy / RENDER_SCALE);
 
         color = MotionBlur(color, z, dither);
 

@@ -370,7 +370,8 @@ void main() {
         float lViewPos = 0.0;
     #endif
 
-    float dither = texture2D(noisetex, texCoord * view / 128.0).b;
+    vec2 scaledDither = texCoord / RENDER_SCALE;
+    float dither = texture2D(noisetex, scaledDither * view / 128.0).b;
     #ifdef TAA
         dither = fract(dither + goldenRatio * mod(float(frameCounter), 3600.0));
     #endif
@@ -380,7 +381,7 @@ void main() {
     #endif
 
     #ifdef BLOOM
-            DoBloom(color, texCoord * RENDER_SCALE, dither, lViewPos);
+            DoBloom(color, texCoord, dither, lViewPos);
     #endif
 
     #ifdef COLORGRADING
@@ -486,10 +487,6 @@ void main() {
     #if defined BLOOM_FOG || LENSFLARE_MODE > 0 && defined OVERWORLD
         upVec = normalize(gbufferModelView[1].xyz);
         sunVec = GetSunVector();
-    #endif
-
-    #if defined TAA && RENDER_SCALE < 1.0
-        gl_Position.xy = gl_Position.xy * RENDER_SCALE + RENDER_SCALE * gl_Position.w - gl_Position.w;
     #endif
 }
 

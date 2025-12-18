@@ -187,7 +187,8 @@ void main() {
         lViewPos = min(lViewPos, length(viewPosDH.xyz));
     #endif
 
-    float dither = texture2D(noisetex, texCoord * view / 128.0).b;
+    vec2 scaledDither = texCoord / RENDER_SCALE;
+    float dither = texture2D(noisetex, scaledDither * view / 128.0).b;
     #ifdef TAA
         dither = fract(dither + goldenRatio * mod(float(frameCounter), 3600.0));
     #endif

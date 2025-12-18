@@ -261,8 +261,9 @@ void main() {
     vec3 playerPos = ViewToPlayer(viewPos.xyz);
     vec3 worldPos = playerPos + cameraPosition;
 
-    float dither = texture2D(noisetex, texCoord * vec2(viewWidth, viewHeight) / 128.0).b;
-    vec3 dither2 = texture2D(noisetex, texCoord * vec2(viewWidth, viewHeight) / 128.0).xyz;
+    vec2 scaledDither = texCoord / RENDER_SCALE;
+    float dither = texture2D(noisetex, scaledDither * vec2(viewWidth, viewHeight) / 128.0).b;
+    vec3 dither2 = texture2D(noisetex, scaledDither * vec2(viewWidth, viewHeight) / 128.0).xyz;
     #if defined TAA || defined TEMPORAL_FILTER
         dither = fract(dither + goldenRatio * mod(float(frameCounter), 360.0));
         dither2.x = fract(dither + goldenRatio * mod(float(frameCounter), 360.0));
