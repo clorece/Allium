@@ -3,7 +3,7 @@
 #define AUTO_EXPOSURE_MAX 6.0        
 #define AUTO_EXPOSURE_TARGET 0.18    // default is 0.25
 #define AUTO_EXPOSURE_BIAS 0.0       // [-1.0, 1.0]
-#define AUTO_EXPOSURE_THRESHOLD 0.01 
+#define AUTO_EXPOSURE_THRESHOLD 50.0 
 
 // Metering modes
 #define METERING_MODE 1              // [0 1 2] 0=Average, 1=Center-Weighted, 2=Spot

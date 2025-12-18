@@ -538,7 +538,7 @@ void main() {
 
                 //blendFactor *= float(prvCoord.x > 0.0 && prvCoord.x < 1.0 && prvCoord.y > 0.0 && prvCoord.y < 1.0);
                 float velocity = length(cameraOffset) * max(16.0 - lViewPos / gbufferProjection[1][1], 3.0);
-                blendFactor *= mix(1.0, exp(-velocity) * 0.5 + 0.5, smoothnessD);
+                blendFactor *= mix(0.5, exp(-velocity) * 0.5 + 0.5, smoothnessD);
 
                 blendFactor *= colorChangeWeight;
 

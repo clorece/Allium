@@ -563,7 +563,7 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
 
     // Lighting Tweaks
     #ifdef OVERWORLD
-        ambientMult = mix(lightmapYM, pow2(lightmapYM) * lightmapYM, rainFactor);
+        ambientMult = mix(lightmapYM, pow2(lightmapYM), rainFactor);
 
         #if SHADOW_QUALITY == -1
             float tweakFactor = 1.0 + 0.6 * (1.0 - pow2(pow2(pow2(noonFactor))));
