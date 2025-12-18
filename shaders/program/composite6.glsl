@@ -30,30 +30,13 @@ float GetLinearDepth(float depth) {
 
 //Program//
 void main() {
-    #if defined TAA && RENDER_SCALE < 1.0
-        // The viewport is CENTERED on screen
-        // Full screen UV (0,1) needs to map to centered viewport
-        
-        // For RENDER_SCALE = 0.5:
-        // The viewport goes from 0.25 to 0.75 (centered)
-        
-        // Transform: scale around center point (0.5, 0.5)
-        vec2 scaledUV = (texCoord) * RENDER_SCALE;
-        
-        vec3 color = texture2D(colortex3, scaledUV).rgb;
-    #else
-        vec3 color = texelFetch(colortex2, texelCoord, 0).rgb;
-    #endif
+    vec3 color = texelFetch(colortex3, texelCoord, 0).rgb;
 
     vec3 temp = vec3(0.0);
     float z1 = 0.0;
 
     #if defined TAA || defined TEMPORAL_FILTER
-        #if RENDER_SCALE < 1.0
-            z1 = texture2D(depthtex1, scaledUV).r;
-        #else
             z1 = texelFetch(depthtex1, texelCoord, 0).r;
-        #endif
     #endif
 
     #ifdef TAA

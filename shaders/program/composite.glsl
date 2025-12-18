@@ -168,6 +168,7 @@ vec2 GetCombinedWaves(vec2 uv, vec2 wind) {
 
 //Program//
 void main() {
+    
     vec3 color = texelFetch(colortex0, texelCoord, 0).rgb;
     float z0 = texelFetch(depthtex0, texelCoord, 0).r;
     float z1 = texelFetch(depthtex1, texelCoord, 0).r;
@@ -365,7 +366,10 @@ void main() {
             #endif
         #endif
     #endif
-    
+
+    #if defined TAA && RENDER_SCALE < 1.0
+        gl_Position.xy = gl_Position.xy * RENDER_SCALE + RENDER_SCALE * gl_Position.w - gl_Position.w;
+    #endif
 }
 
 #endif

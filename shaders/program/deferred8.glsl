@@ -247,11 +247,11 @@ vec3 textureCatmullRom(sampler2D colortex, vec2 texcoord, vec2 view) {
 
 //Program//
 void main() {
+
+    vec2 scaledUV = (texCoord) * RENDER_SCALE;
+    
     vec3 color = texelFetch(colortex0, texelCoord, 0).rgb;
-
     float z0 = texelFetch(depthtex0, texelCoord, 0).r;
-
-    vec2 scaledUV = texCoord * RENDER_SCALE;
 
     vec4 screenPos = vec4(scaledUV, z0, 1.0);
     vec4 viewPos = gbufferProjectionInverse * (screenPos * 2.0 - 1.0);
@@ -586,7 +586,7 @@ void main() {
         #ifdef DISTANT_HORIZONS
             float z0DH = texelFetch(dhDepthTex, texelCoord, 0).r;
             if (z0DH < 1.0) { // Distant Horizons Chunks
-                vec4 screenPosDH = vec4(texCoord, z0DH, 1.0);
+                vec4 screenPosDH = vec4(scaledUV, z0DH, 1.0);
                 vec4 viewPosDH = dhProjectionInverse * (screenPosDH * 2.0 - 1.0);
                 viewPosDH /= viewPosDH.w;
                 lViewPos = length(viewPosDH.xyz);

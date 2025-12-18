@@ -68,7 +68,7 @@ void main() {
     vec2 actualTexCoord = texCoord;
     
     // Sample depth at downscaled resolution
-    float z0 = texture2D(depthtex0, actualTexCoord).r;
+    float z0 = texture2D(depthtex0, actualTexCoord * RENDER_SCALE).r;
     
     vec4 screenPos = vec4(actualTexCoord, z0, 1.0);
     vec4 viewPos = gbufferProjectionInverse * (screenPos * 2.0 - 1.0);
