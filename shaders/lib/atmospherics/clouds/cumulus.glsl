@@ -35,7 +35,7 @@ float GetCumulusCloud(vec3 position, int stepCount, int baseAltitude, float dist
     baseNoise += Noise3D(tracePosM * 1.0 / CloudSizeMultiplier + offset + GlobalWindDirection * CalculateWindSpeed() * 0.05) * 6.0;
     baseNoise /= 12.0 / CUMULUS_CLOUD_COVERAGE;
     baseNoise += rainFactor * 0.75;
-    baseNoise -= nightFactor * 0.2;
+    //baseNoise -= nightFactor * 0.2;
 
     float detailNoise = CalculateCloudDetail(tracePosM, offset, persistence);
 

@@ -1,14 +1,20 @@
 //#define TAA_TWEAKS
 
-float blendMinimum = 0.5;
-float blendVariable = 0.09;
-float blendConstant = 0.5;
+#if TAA_MODE == 1
+    float blendMinimum = 0.8;
+    float blendVariable = 0.2;
+    float blendConstant = 0.7;
 
-float regularEdge = 20.0;
-float extraEdgeMult = 3.0;
+    float regularEdge = 20.0;
+    float extraEdgeMult = 3.0;
+#elif TAA_MODE == 2
+    float blendMinimum = 0.85;
+    float blendVariable = 0.2;
+    float blendConstant = 0.7;
 
-
-#include "/lib/antialiasing/jitter.glsl"
+    float regularEdge = 5.0;
+    float extraEdgeMult = 3.0;
+#endif
 
 #ifdef TAA_MOVEMENT_IMPROVEMENT_FILTER
     //Catmull-Rom sampling from Filmic SMAA presentation
@@ -74,122 +80,115 @@ ivec2 neighbourhoodOffsets[8] = ivec2[8](
     ivec2( 0,-1)
 );
 
-// In taa.glsl, replace NeighbourhoodClamping function
 void NeighbourhoodClamping(vec3 color, inout vec3 tempColor, float z0, float z1, inout float edge) {
     vec3 minclr = color;
-    vec3 maxclr = color;
-    vec3 moment1 = color;
-    vec3 moment2 = color * color;
+    vec3 maxclr = minclr;
 
     int cc = 2;
-    ivec2 texelCoordM1 = clamp(texelCoord, ivec2(cc), ivec2(view) - cc);
-    
+    ivec2 texelCoordM1 = clamp(texelCoord, ivec2(cc), ivec2(view) - cc); // Fixes screen edges
     for (int i = 0; i < 8; i++) {
         ivec2 texelCoordM2 = texelCoordM1 + neighbourhoodOffsets[i];
 
         float z0Check = texelFetch(depthtex0, texelCoordM2, 0).r;
         float z1Check = texelFetch(depthtex1, texelCoordM2, 0).r;
-        if (max(abs(GetLinearDepth(z0Check) - GetLinearDepth(z0)), 
-                abs(GetLinearDepth(z1Check) - GetLinearDepth(z1))) > 0.09) {
+        if (max(abs(GetLinearDepth(z0Check) - GetLinearDepth(z0)), abs(GetLinearDepth(z1Check) - GetLinearDepth(z1))) > 0.09) {
             edge = regularEdge;
 
-            if (int(texelFetch(colortex6, texelCoordM2, 0).g * 255.1) == 253)
+            if (int(texelFetch(colortex6, texelCoordM2, 0).g * 255.1) == 253) // Reduced Edge TAA
                 edge *= extraEdgeMult;
         }
 
         vec3 clr = texelFetch(colortex3, texelCoordM2, 0).rgb;
-        
-        // Variance clipping instead of min/max
-        moment1 += clr;
-        moment2 += clr * clr;
-        
-        minclr = min(minclr, clr);
-        maxclr = max(maxclr, clr);
+        minclr = min(minclr, clr); maxclr = max(maxclr, clr);
     }
 
-    // Calculate variance
-    moment1 /= 9.0;
-    moment2 /= 9.0;
-    vec3 variance = sqrt(max(moment2 - moment1 * moment1, 0.0));
-    
-    // Softer clamping using variance at low resolution
-    #if RENDER_SCALE < 1.0
-        float varianceScale = mix(2.5, 1.5, RENDER_SCALE); // Wider bounds at low res
-    #else
-        float varianceScale = 1.5;
-    #endif
-    
-    vec3 boxMin = moment1 - variance * varianceScale;
-    vec3 boxMax = moment1 + variance * varianceScale;
-    
-    // Fallback to hard min/max if variance is too small
-    boxMin = min(boxMin, minclr);
-    boxMax = max(boxMax, maxclr);
-
-    tempColor = ClipAABB(tempColor, boxMin, boxMax);
+    tempColor = ClipAABB(tempColor, minclr, maxclr);
 }
 
 void DoTAA(inout vec3 color, inout vec3 temp, float z1) {
     int materialMask = int(texelFetch(colortex6, texelCoord, 0).g * 255.1);
-    
-    // --- TAAU Sampling ---
-    // Instead of using the standard color input, we resample colortex3 
-    // with the sub-pixel jitter offset to accumulate detail.
-    vec2 jitteredTC = TAAJitter(texCoord, 1.0);
-   color = texture2D(colortex3, texCoord).rgb;
 
     vec4 screenPos1 = vec4(texCoord, z1, 1.0);
     vec4 viewPos1 = gbufferProjectionInverse * (screenPos1 * 2.0 - 1.0);
     viewPos1 /= viewPos1.w;
 
     #ifdef ENTITY_TAA_NOISY_CLOUD_FIX
-        float cloudLinearDepth = texture2D(colortex5, texCoord).a;
+        float cloudLinearDepth =  texture2D(colortex5, texCoord).a;
         float lViewPos1 = length(viewPos1);
+
         if (pow2(cloudLinearDepth) * renderDistance < min(lViewPos1, renderDistance)) {
+            // Material in question is obstructed by the cloud volume
             materialMask = 0;
         }
     #endif
+
+    /*if (
+        abs(materialMask - 149.5) < 50.0 // Entity Reflection Handling (see common.glsl for details)
+        || materialMask == 254 // No SSAO, No TAA
+    ) { 
+        return;
+    }*/
+
+    /*if (materialMask == 254) { // No SSAO, No TAA
+        #ifndef CUSTOM_PBR
+            if (z1 <= 0.56) return; // The edge pixel trick doesn't look nice on hand
+        #endif
+        int i = 0;
+        while (i < 4) {
+            int mms = int(texelFetch(colortex6, texelCoord + neighbourhoodOffsets[i], 0).g * 255.1);
+            if (mms != materialMask) break;
+            i++;
+        } // Checking edge-pixels prevents flickering
+        if (i == 4) return;
+    }*/
 
     float z0 = texelFetch(depthtex0, texelCoord, 0).r;
 
     vec2 prvCoord = texCoord;
     if (z1 > 0.56) prvCoord = Reprojection(viewPos1);
 
-    // --- High Quality History Reconstruction ---
-    // For TAAU, Catmull-Rom is essential to prevent blurriness during upscaling.
     #ifndef TAA_MOVEMENT_IMPROVEMENT_FILTER
         vec3 tempColor = texture2D(colortex2, prvCoord).rgb;
     #else
         vec3 tempColor = textureCatmullRom(colortex2, prvCoord, view);
     #endif
 
-    if (tempColor == vec3(0.0) || any(isnan(tempColor))) {
+    if (tempColor == vec3(0.0) || any(isnan(tempColor))) { // Fixes the first frame and nans
         temp = color;
         return;
     }
 
     float edge = 0.0;
     NeighbourhoodClamping(color, tempColor, z0, z1, edge);
-    
-    if (materialMask == 253) edge *= extraEdgeMult;
+
+    if (materialMask == 253) // Reduced Edge TAA
+        edge *= extraEdgeMult;
+
+    #ifdef DISTANT_HORIZONS
+        if (z0 == 1.0) {
+            blendMinimum = 0.75;
+            blendVariable = 0.05;
+            blendConstant = 0.9;
+            edge = 1.0;
+        }
+    #endif
 
     vec2 velocity = (texCoord - prvCoord.xy) * view;
-    float velocityLength = length(velocity);
-    
-    // NEW: Detect sub-pixel motion
-    float subPixelMotion = smoothstep(0.0, 1.0, velocityLength);
-    
-    // Increase blend factor for sub-pixel motion to prevent flickering
-    float subPixelBoost = mix(0.3, 0.0, subPixelMotion);
-    
-    float blendFactor = float(prvCoord.x > 0.0 && prvCoord.x < 1.0 && 
+    float blendFactor = float(prvCoord.x > 0.0 && prvCoord.x < 1.0 &&
                               prvCoord.y > 0.0 && prvCoord.y < 1.0);
-    
     float velocityFactor = dot(velocity, velocity) * 10.0;
-    blendFactor *= max(exp(-velocityFactor) * blendVariable + blendConstant - 
-                       length(cameraPosition - previousCameraPosition) * edge + subPixelBoost, 
-                       blendMinimum);
-    
+    blendFactor *= max(exp(-velocityFactor) * blendVariable + blendConstant - length(cameraPosition - previousCameraPosition) * edge, blendMinimum);
+
+    #ifdef EPIC_THUNDERSTORM
+        blendFactor *= 1.0 - isLightningActive();
+    #endif
+
+    #ifdef MIRROR_DIMENSION
+        blendFactor = 0.0;
+    #endif
+
     color = mix(color, tempColor, blendFactor);
     temp = color;
+
+    //if (edge > 0.05) color.rgb = vec3(1.0, 0.0, 1.0);
 }

@@ -253,10 +253,10 @@ vec4 GetVolumetricClouds(int cloudAltitude,
         
 
         vec3 skyColor = GetSky(viewDotUp, viewDotSun, dither, true, false);
-        vec3 directSun = (lightColor * 164) * (scatter.x);
+        vec3 directSun = (lightColor * 92 + nightFactor * 15.0) * (scatter.x);
         vec3 ambSky = (skyColor * 2.0) * scatter.y;
         vec3 cloudCol = directSun + ambSky + multiScatter;
-        cloudCol = pow(cloudCol, vec3(2.2)) * 0.02;
+        cloudCol = pow(cloudCol, vec3(2.4)) * 0.02;
         cloudCol = mix(cloudCol, pow(cloudCol, vec3(1.0 / 1.2)) * 10.0, nightFactor);
 
         #ifdef LQ_CLOUD
