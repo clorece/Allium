@@ -41,6 +41,18 @@ void main() {
 
     #ifdef TAA
         DoTAA(color, temp, z1);
+        #if RENDER_SCALE < 1.0
+        // Sharpen to recover sub-pixel detail
+        vec3 sharpened = color * 1.2;
+        for (int i = 0; i < 4; i++) {
+            ivec2 offset = ivec2(
+                i == 0 ? 1 : (i == 2 ? -1 : 0),
+                i == 1 ? 1 : (i == 3 ? -1 : 0)
+            );
+            sharpened -= texelFetch(colortex3, texelCoord + offset, 0).rgb * 0.05;
+        }
+        color = mix(color, sharpened, 0.3 * (1.0 - RENDER_SCALE));
+    #endif
     #endif
 
     float averageLuma = GetLuminance(color);
