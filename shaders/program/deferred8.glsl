@@ -253,7 +253,7 @@ void main() {
     vec3 color = texelFetch(colortex0, texelCoord, 0).rgb;
     float z0 = texelFetch(depthtex0, texelCoord, 0).r;
 
-    vec4 screenPos = vec4(scaledUV, z0, 1.0);
+    vec4 screenPos = vec4(texCoord, z0, 1.0);
     vec4 viewPos = gbufferProjectionInverse * (screenPos * 2.0 - 1.0);
     viewPos /= viewPos.w;
     float lViewPos = length(viewPos);
@@ -261,8 +261,8 @@ void main() {
     vec3 playerPos = ViewToPlayer(viewPos.xyz);
     vec3 worldPos = playerPos + cameraPosition;
 
-    float dither = texture2D(noisetex, scaledUV * vec2(viewWidth, viewHeight) / 128.0).b;
-    vec3 dither2 = texture2D(noisetex, scaledUV * vec2(viewWidth, viewHeight) / 128.0).xyz;
+    float dither = texture2D(noisetex, texCoord * vec2(viewWidth, viewHeight) / 128.0).b;
+    vec3 dither2 = texture2D(noisetex, texCoord * vec2(viewWidth, viewHeight) / 128.0).xyz;
     #if defined TAA || defined TEMPORAL_FILTER
         dither = fract(dither + goldenRatio * mod(float(frameCounter), 360.0));
         dither2.x = fract(dither + goldenRatio * mod(float(frameCounter), 360.0));
@@ -497,8 +497,8 @@ void main() {
                 vec3 cameraOffset = cameraPosition - previousCameraPosition;
                 vec2 prvCoord = SHalfReprojection(playerPos, cameraOffset);
 
-                vec2 prvRefCoord = Reprojection(vec3(scaledUV, z0), cameraOffset);
-                        vec2 prvRefCoord2 = Reprojection(vec3(scaledUV, max(refPos.z, z0)), cameraOffset);
+                vec2 prvRefCoord = Reprojection(vec3(texCoord, z0), cameraOffset);
+                        vec2 prvRefCoord2 = Reprojection(vec3(texCoord, max(refPos.z, z0)), cameraOffset);
                         //vec4 oldRef1 = texture2D(colortex7, prvRefCoord);
                         //vec4 oldRef2 = texture2D(colortex7, prvRefCoord2);
                         vec4 oldRef1 = vec4(textureCatmullRom(colortex7, prvRefCoord, vec2(viewWidth, viewHeight)), 1.0);
@@ -527,7 +527,7 @@ void main() {
                 float colorChangeWeight = exp(-diffMagnitude * colorSensitivity);
 
                 vec4 newRef = vec4(colorAdd, colorMultInv);
-                vec2 oppositePreCoord = scaledUV - 2.0 * (prvCoord - scaledUV);
+                vec2 oppositePreCoord = texCoord - 2.0 * (prvCoord - texCoord);
                 
 
                 // Reduce blending if depth changed
@@ -586,7 +586,7 @@ void main() {
         #ifdef DISTANT_HORIZONS
             float z0DH = texelFetch(dhDepthTex, texelCoord, 0).r;
             if (z0DH < 1.0) { // Distant Horizons Chunks
-                vec4 screenPosDH = vec4(scaledUV, z0DH, 1.0);
+                vec4 screenPosDH = vec4(texCoord, z0DH, 1.0);
                 vec4 viewPosDH = dhProjectionInverse * (screenPosDH * 2.0 - 1.0);
                 viewPosDH /= viewPosDH.w;
                 lViewPos = length(viewPosDH.xyz);
@@ -769,6 +769,10 @@ void main() {
                 else                                                 vlFactor = min(vlFactor + OSIEBCA*2, 1.0);
             }
         #endif
+    #endif
+
+    #if defined TAA && RENDER_SCALE < 1.0
+        gl_Position.xy = gl_Position.xy * RENDER_SCALE + RENDER_SCALE * gl_Position.w - gl_Position.w;
     #endif
 }
 

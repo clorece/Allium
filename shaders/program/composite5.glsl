@@ -325,7 +325,7 @@ void EndLookup(inout vec3 color) {
 
 //Program//
 void main() {
-    #if defined TAA && RENDER_SCALE < 1.0
+    /*#if defined TAA && RENDER_SCALE < 1.0
         // The viewport is CENTERED on screen
         // Full screen UV (0,1) needs to map to centered viewport
         
@@ -336,9 +336,9 @@ void main() {
         vec2 scaledUV = (texCoord) * RENDER_SCALE;
         
         vec3 color = texture2D(colortex0, scaledUV).rgb;
-    #else
+    #else*/
         vec3 color = texelFetch(colortex0, texelCoord, 0).rgb;
-    #endif
+    //#endif
 
     // Normalized pixel coordinates (from 0 to 1)
     vec2 uv = texCoord * view;
@@ -380,11 +380,7 @@ void main() {
     #endif
 
     #ifdef BLOOM
-        #if defined TAA && RENDER_SCALE < 1.0
-            DoBloom(color, scaledUV * RENDER_SCALE, dither, lViewPos); // i have no idea as to why, but we need to multiply by renderscale again
-        #else
-            DoBloom(color, texCoord, dither, lViewPos);
-        #endif
+            DoBloom(color, texCoord * RENDER_SCALE, dither, lViewPos);
     #endif
 
     #ifdef COLORGRADING
@@ -490,6 +486,10 @@ void main() {
     #if defined BLOOM_FOG || LENSFLARE_MODE > 0 && defined OVERWORLD
         upVec = normalize(gbufferModelView[1].xyz);
         sunVec = GetSunVector();
+    #endif
+
+    #if defined TAA && RENDER_SCALE < 1.0
+        gl_Position.xy = gl_Position.xy * RENDER_SCALE + RENDER_SCALE * gl_Position.w - gl_Position.w;
     #endif
 }
 

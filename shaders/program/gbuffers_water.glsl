@@ -261,7 +261,7 @@ void main() {
     #endif
 
     float sky = 0.0;
-    DoFog(color.rgb, sky, lViewPos, playerPos, VdotU, VdotS, dither);
+    //DoFog(color.rgb, sky, lViewPos, playerPos, VdotU, VdotS, dither);
     color.a *= 1.0 - sky;
 
     /* DRAWBUFFERS:03 */

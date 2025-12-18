@@ -32,7 +32,7 @@
     #define ANISOTROPIC_FILTER 4 //[0 4 8 16]
     //#define WATER_MAT_QUALITY 0
 
-    #define RENDER_SCALE 0.75
+    #define RENDER_SCALE 0.5 // DOES NOT WORK
     #define VL_RENDER_RESOLUTION 3 //[0 1 2 3]
     #define CLOUD_RENDER_RESOLUTION 1 //[1 2 3]
     #define PT_RENDER_RESOLUTION 1 //[0 1 2 3] 
