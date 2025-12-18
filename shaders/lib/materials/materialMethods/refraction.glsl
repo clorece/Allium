@@ -6,12 +6,6 @@ void DoRefraction(inout vec3 color, inout float z0, inout float z1, vec3 viewPos
     // Prep
     if (int(texelFetch(colortex6, texelCoord, 0).g * 255.1) != 241) return;
 
-    #if defined TAA && RENDER_SCALE < 1.0
-        vec2 scaledCoord = texCoord * RENDER_SCALE;
-    #else
-        vec2 scaledCoord = texCoord;
-    #endif
-
     float fovScale = gbufferProjection[1][1];
 
     vec3 playerPos = ViewToPlayer(viewPos.xyz);
@@ -43,6 +37,7 @@ void DoRefraction(inout vec3 color, inout float z0, inout float z1, vec3 viewPos
 
     // Sample
     refractCoord = texCoord.xy + refractNoise;
+    refractCoord *= RENDER_SCALE;
     color = texture2D(colortex0, refractCoord).rgb;
     z0 = texture2D(depthtex0, refractCoord).r;
     z1 = texture2D(depthtex1, refractCoord).r;

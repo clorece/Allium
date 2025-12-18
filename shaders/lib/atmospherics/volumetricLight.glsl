@@ -319,7 +319,7 @@ vec4 GetVolumetricLight(inout vec3 color, inout float vlFactor, vec3 translucent
         if (viewWidth + viewHeight - gl_FragCoord.x - gl_FragCoord.y < 1.5) {
             if (frameCounter % int(0.06666 / frameTimeSmooth + 0.5) == 0) {
                 int salsX = 5; int salsY = 5; float heightThreshold = 6.0;
-                vec2 viewM = 1.0 / vec2(salsX, salsY);
+                vec2 viewM = 1.0 / vec2(salsX, salsY) * RENDER_SCALE;
                 float salsSampleSum = 0.0; int salsSampleCount = 0;
                 for (float i = 0.25; i < salsX; i++) {
                     for (float h = 0.45; h < salsY; h++) {

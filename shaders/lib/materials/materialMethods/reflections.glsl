@@ -23,6 +23,10 @@ vec4 GetReflection(vec3 normalM, vec3 viewPos, vec3 nViewPos, vec3 playerPos, fl
     vec2 rEdge = vec2(0.6, 0.55);
     vec3 normalMR = normalM;
 
+    #ifdef RENDER_SCALE < 1.0
+        z0 = texture2D(depthtex0, gl_FragCoord.xy * RENDER_SCALE).x;
+    #endif
+
     #if defined GBUFFERS_WATER && WATER_STYLE == 1 && defined GENERATED_NORMALS
         normalMR = normalize(mix(geoNormal, normalM, 0.05));
     #endif
@@ -58,15 +62,19 @@ vec4 GetReflection(vec3 normalM, vec3 viewPos, vec3 nViewPos, vec3 playerPos, fl
             int sr = 0;
             float dist = 0.0;
             vec3 rfragpos = vec3(0.0);
-            for (int i = 0; i < 15; i++) { //originally 30 itterations but cut in half to save fps
+            for (int i = 0; i < 32; i++) { //originally 30 itterations but cut in half to save fps
                 refPos = nvec3(gbufferProjection * vec4(viewPosRT, 1.0)) * 0.5 + 0.5;
+
+                // Check bounds in UNSCALED space
                 if (abs(refPos.x - 0.5) > rEdge.x || abs(refPos.y - 0.5) > rEdge.y) break;
 
+                // Scale ONLY for texture sampling
+                vec2 refPosSample = refPos.xy;
                 #if RENDER_SCALE < 1.0
-                    refPos *= RENDER_SCALE;
+                    refPosSample *= RENDER_SCALE;
                 #endif
 
-                rfragpos = vec3(refPos.xy, texture2D(depthtex, refPos.xy).r);
+                rfragpos = vec3(refPosSample, texture2D(depthtex, refPosSample).r);
                 rfragpos = nvec3(gbufferProjectionInverse * vec4(rfragpos * 2.0 - 1.0, 1.0));
                 dist = length(start - rfragpos);
 
@@ -144,7 +152,13 @@ vec4 GetReflection(vec3 normalM, vec3 viewPos, vec3 nViewPos, vec3 playerPos, fl
                 vec2 edgeFactor = pow2(pow2(pow2(screenPosRM / rEdge)));
                 screenPosR.y += (dither - 0.5) * (0.03 * (edgeFactor.x + edgeFactor.y) + 0.004);
 
-                screenPosR.z = texture2D(depthtex1, screenPosR.xy).x;
+                #if RENDER_SCALE < 1.0
+                    vec2 scaledScreenPos = screenPosR.xy * RENDER_SCALE;
+                #else
+                    vec2 scaledScreenPos = screenPosR.xy;
+                #endif
+                
+                screenPosR.z = texture2D(depthtex1, scaledScreenPos).x;
                 vec3 viewPosR = ScreenToView(screenPosR);
                 if (lViewPos <= 2.0 + length(viewPosR)) {
                     reflection = texture2D(gaux2, screenPosR.xy);

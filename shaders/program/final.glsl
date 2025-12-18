@@ -78,7 +78,7 @@ void main() {
 
     #ifdef UNDERWATER_DISTORTION
         if (isEyeInWater == 1)
-            texCoordM += WATER_REFRACTION_INTENSITY * 0.00035 * sin((texCoord.x + texCoord.y) * 25.0 + frameTimeCounter * 3.0);
+            texCoordM += WATER_REFRACTION_INTENSITY * 0.00035 * sin((texCoordM.x + texCoordM.y) * 25.0 + frameTimeCounter * 3.0);
     #endif
 
     vec3 color = texture2D(colortex3, texCoordM).rgb;

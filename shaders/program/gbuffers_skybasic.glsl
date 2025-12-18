@@ -223,10 +223,6 @@ void main() {
         vanillaStars = float(glColor.r == glColor.g && glColor.g == glColor.b && glColor.r > 0.0 && glColor.r < 0.51);
     #endif
 
-    #if defined TAA && RENDER_SCALE < 1.0
-        gl_Position.xy = gl_Position.xy * RENDER_SCALE + RENDER_SCALE * gl_Position.w - gl_Position.w;
-    #endif
-
 }
 
 #endif

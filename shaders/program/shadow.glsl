@@ -139,6 +139,7 @@ void main() {
 
                     // Underwater Light Shafts
                     vec3 worldPosM = worldPos;
+                    worldPosM.xy *= RENDER_SCALE;
  
                     #if WATER_FOG_MULT > 100
                         #define WATER_FOG_MULT_M WATER_FOG_MULT * 0.01;

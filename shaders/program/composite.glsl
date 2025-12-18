@@ -198,7 +198,7 @@ void main() {
     vec4 volumetricEffect = vec4(0.0);
 
     #if WATER_MAT_QUALITY >= 3
-        DoRefraction(unscaledcolor, z0, z1, viewPos.xyz, lViewPos);
+        DoRefraction(color.rgb, z0, z1, viewPos.xyz, lViewPos);
     #endif
 
     vec4 screenPos1 = vec4(texCoord, z1, 1.0);
@@ -274,7 +274,15 @@ void main() {
     #endif
 
     if (isEyeInWater == 1) {
-        if (z0 == 1.0) color.rgb = waterFogColor;
+        // Ensure we're checking the correct depth buffer at scaled coordinates
+        #if RENDER_SCALE < 1.0
+            vec2 scaledCoord = texCoord * RENDER_SCALE;
+            float z0Check = texture2D(depthtex0, scaledCoord).r;
+        #else
+            float z0Check = z0;
+        #endif
+        
+        if (z0Check == 1.0) color.rgb = waterFogColor;
 
         vec3 underwaterMult = vec3(0.80, 0.87, 0.97);
         color.rgb *= underwaterMult * 0.85;
@@ -282,13 +290,6 @@ void main() {
 
         #ifdef COLORED_LIGHT_FOG
             lightFog *= underwaterMult;
-        #endif
-    } else if (isEyeInWater == 2) {
-        if (z1 == 1.0) color.rgb = fogColor * 5.0;
-
-        volumetricEffect.rgb *= 0.0;
-        #ifdef COLORED_LIGHT_FOG
-            lightFog *= 0.0;
         #endif
     }
 

@@ -261,9 +261,9 @@ void DoFog(inout vec3 color, inout float skyFade, float lViewPos, vec3 playerPos
     #endif
 
     vec3 worldPos = playerPos + cameraPosition;
-    //if (isEyeInWater == 1) DoWaterFog(color, lViewPos);
-    //else if (isEyeInWater == 2) DoLavaFog(color, lViewPos);
-    //else if (isEyeInWater == 3) DoPowderSnowFog(color, lViewPos);
+    if (isEyeInWater == 1) DoWaterFog(color, lViewPos);
+    else if (isEyeInWater == 2) DoLavaFog(color, lViewPos);
+    else if (isEyeInWater == 3) DoPowderSnowFog(color, lViewPos);
 
     if (blindness > 0.00001) DoBlindnessFog(color, lViewPos);
     if (darknessFactor > 0.00001) DoDarknessFog(color, lViewPos);
