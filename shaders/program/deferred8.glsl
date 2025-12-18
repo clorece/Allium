@@ -490,7 +490,7 @@ void main() {
                 color += gi - rtao;
                 vec3 colorAdd = color * 0.5;
             #endif
-            if (z0 > 0.56) {
+            //if (z0 > 0.56) {
                 #ifdef TEMPORAL_FILTER
                 float blendFactor = 1.0;
                 float writeFactor = 1.0;
@@ -563,7 +563,7 @@ void main() {
                         color.rgb = colorAdd;
                 #endif
             //#ifdef EXCLUDE_ENTITIES
-            }
+            //}
             //#endif
         #endif
 
