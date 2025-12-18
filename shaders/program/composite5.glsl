@@ -338,7 +338,7 @@ void main() {
         vec3 color = texture2D(colortex0, scaledUV).rgb;
     #else*/
         vec3 color = texelFetch(colortex0, texelCoord, 0).rgb;
-    //#endif
+    //=#endif
 
     // Normalized pixel coordinates (from 0 to 1)
     vec2 uv = texCoord * view;

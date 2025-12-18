@@ -9,11 +9,13 @@ vec2 jitterOffsets[8] = vec2[8](
                         vec2( 0.375,-0.875),
                         vec2( 0.875, 0.875)
                         );
-
 vec2 TAAJitter(vec2 coord, float w) {
-    vec2 offset = jitterOffsets[int(framemod8)] * (w / vec2(viewWidth, viewHeight));
-    #if TAA_MODE == 1 && !defined DH_TERRAIN && !defined DH_WATER
+    vec2 renderSize = vec2(viewWidth, viewHeight) * RENDER_SCALE;
+    vec2 offset = jitterOffsets[int(framemod8)] * (w / renderSize);
+
+    #if TAA_MODE == 1
         offset *= 0.125;
     #endif
+
     return coord + offset;
 }

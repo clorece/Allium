@@ -111,7 +111,7 @@ vec4 GetReflection(vec3 normalM, vec3 viewPos, vec3 nViewPos, vec3 playerPos, fl
                         if (z0 <= 0.56) lod *= 2.22; // Using more lod to compensate for less roughness noise on held items
                         lod = max(lod - 1.0, 0.0);
 
-                        reflection.rgb = texture2DLod(colortex0, refPos.xy, lod).rgb;
+                        reflection.rgb = texture2DLod(colortex0, refPos.xy * RENDER_SCALE, lod).rgb;
                     #else
                         reflection = texture2D(gaux2, refPos.xy);
                         reflection.rgb = pow2(reflection.rgb + 1.0);
