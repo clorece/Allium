@@ -57,7 +57,7 @@ void main() {
     vec4 color = glColor;
 
     vec3 screenPos = vec3(gl_FragCoord.xy / vec2(viewWidth, viewHeight), gl_FragCoord.z);
-    #ifdef TAA
+    #ifdef TAA && RENDER_SCALE == 1.0
         vec3 viewPos = ScreenToView(vec3(TAAJitter(screenPos.xy, -0.5), screenPos.z));
     #else
         vec3 viewPos = ScreenToView(screenPos);
@@ -165,7 +165,11 @@ void main() {
             gl_Position = vec4((ndc1 - vec3(lineOffset, 0.0)) * linePosStart.w, linePosStart.w);
     #endif
 
-    #ifdef TAA
+    #if defined TAA && RENDER_SCALE < 1.0
+        gl_Position.xy = gl_Position.xy * RENDER_SCALE + RENDER_SCALE * gl_Position.w - gl_Position.w;
+    #endif
+
+    #if defined TAA && RENDER_SCALE == 1.0
         gl_Position.xy = TAAJitter(gl_Position.xy, gl_Position.w);
     #endif
 
@@ -179,10 +183,6 @@ void main() {
     eastVec = normalize(gbufferModelView[0].xyz);
     northVec = normalize(gbufferModelView[2].xyz);
     sunVec = GetSunVector();
-
-    #if defined TAA && RENDER_SCALE < 1.0
-        gl_Position.xy = gl_Position.xy * RENDER_SCALE + RENDER_SCALE * gl_Position.w - gl_Position.w;
-    #endif
 
 }
 

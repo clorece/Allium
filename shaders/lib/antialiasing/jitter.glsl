@@ -17,5 +17,9 @@ vec2 TAAJitter(vec2 coord, float w) {
         offset *= 0.125;
     #endif
 
+    #if RENDER_SCALE < 1.0
+        offset *= pow2(RENDER_SCALE); // Makes jitter larger at lower resolutions
+    #endif
+
     return coord + offset;
 }

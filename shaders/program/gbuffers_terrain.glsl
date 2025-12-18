@@ -197,7 +197,7 @@ void main() {
     vec3 flux = albedo * lightColor * max(dot(normal, lightVec), 0.0);
 
     vec3 screenPos = vec3(gl_FragCoord.xy / vec2(viewWidth, viewHeight), gl_FragCoord.z);
-    #ifdef TAA
+    #if defined TAA && RENDER_SCALE == 1.0
         vec3 viewPos = ScreenToView(vec3(TAAJitter(screenPos.xy, -0.5), screenPos.z));
     #else
         vec3 viewPos = ScreenToView(screenPos);
@@ -464,7 +464,12 @@ void main() {
         if (mat == 10257) gl_Position.z -= 0.00001; // Iron Bars
     #endif
 
-    #ifdef TAA
+    #if defined TAA && RENDER_SCALE < 1.0
+        gl_Position.xy = gl_Position.xy * RENDER_SCALE + RENDER_SCALE * gl_Position.w - gl_Position.w;
+    #endif
+    
+    
+    #if defined TAA && RENDER_SCALE == 1.0
         gl_Position.xy = TAAJitter(gl_Position.xy, gl_Position.w);
     #endif
 
@@ -493,9 +498,7 @@ void main() {
         spriteBounds = vec4(bottomLeft, topRight);
     #endif
 
-    #if defined TAA && RENDER_SCALE < 1.0
-        gl_Position.xy = gl_Position.xy * RENDER_SCALE + RENDER_SCALE * gl_Position.w - gl_Position.w;
-    #endif
+
 }
 
 #endif

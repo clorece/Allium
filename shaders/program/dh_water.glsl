@@ -133,7 +133,7 @@ void main() {
         if (pow2(cloudLinearDepth + OSIEBCA * dither) * renderDistance < min(lViewPos, renderDistance)) discard;
     #endif
 
-    #ifdef TAA
+    #ifdef TAA && RENDER_SCALE == 1.0
         vec3 viewPos = ScreenToView(vec3(TAAJitter(screenPos.xy, -0.5), screenPos.z));
     #else
         vec3 viewPos = ScreenToView(screenPos);
@@ -223,7 +223,12 @@ attribute vec4 at_tangent;
 //Program//
 void main() {
     gl_Position = ftransform();
-    #ifdef TAA
+
+    #if defined TAA && RENDER_SCALE < 1.0
+        gl_Position.xy = gl_Position.xy * RENDER_SCALE + RENDER_SCALE * gl_Position.w - gl_Position.w;
+    #endif
+
+    #if defined TAA && RENDER_SCALE == 1.0
         gl_Position.xy = TAAJitter(gl_Position.xy, gl_Position.w);
     #endif
 
@@ -248,10 +253,6 @@ void main() {
     viewVector = tbnMatrix * (gl_ModelViewMatrix * gl_Vertex).xyz;
 
     glColor = gl_Color;
-
-    #if defined TAA && RENDER_SCALE < 1.0
-        gl_Position.xy = gl_Position.xy * RENDER_SCALE + RENDER_SCALE * gl_Position.w - gl_Position.w;
-    #endif
 
 }
 

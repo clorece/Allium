@@ -253,7 +253,7 @@ void main() {
     vec3 color = texelFetch(colortex0, texelCoord, 0).rgb;
     float z0 = texelFetch(depthtex0, texelCoord, 0).r;
 
-    vec4 screenPos = vec4(scaledUV, z0, 1.0);
+    vec4 screenPos = vec4(texCoord, z0, 1.0);
     vec4 viewPos = gbufferProjectionInverse * (screenPos * 2.0 - 1.0);
     viewPos /= viewPos.w;
     float lViewPos = length(viewPos);
@@ -523,7 +523,7 @@ void main() {
 
                 float diffMagnitude = dot(colorDiff, colorDiff); 
                 
-                float colorSensitivity = 90.0; 
+                float colorSensitivity = 50.0; 
 
                 float colorChangeWeight = exp(-diffMagnitude * colorSensitivity);
 

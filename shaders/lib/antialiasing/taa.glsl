@@ -1,9 +1,9 @@
 //#define TAA_TWEAKS
 
 #if TAA_MODE == 1
-    float blendMinimum = 0.3;
-    float blendVariable = 0.2;
-    float blendConstant = 0.7;
+    float blendMinimum = 0.5;
+    float blendVariable = 0.45;
+    float blendConstant = 0.5;
 
     float regularEdge = 20.0;
     float extraEdgeMult = 3.0;
@@ -114,7 +114,7 @@ void DoTAA(inout vec3 color, inout vec3 temp, float z1) {
     // Instead of using the standard color input, we resample colortex3 
     // with the sub-pixel jitter offset to accumulate detail.
     vec2 jitteredTC = TAAJitter(texCoord, 1.0);
-    color = texture2D(colortex3, jitteredTC).rgb;
+   //color = texture2D(colortex3, texCoord).rgb;
 
     vec4 screenPos1 = vec4(texCoord, z1, 1.0);
     vec4 viewPos1 = gbufferProjectionInverse * (screenPos1 * 2.0 - 1.0);
