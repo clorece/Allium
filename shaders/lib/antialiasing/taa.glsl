@@ -1,11 +1,12 @@
 //#define TAA_TWEAKS
+#define TAA_MOVEMENT_IMPROVEMENT_FILTER
 
 #if TAA_MODE == 1
     float blendMinimum = 0.75;
     float blendVariable = 0.2;
     float blendConstant = 0.7;
 
-    float regularEdge = 20.0;
+    float regularEdge = 5.0;
     float extraEdgeMult = 3.0;
 #elif TAA_MODE == 2
     float blendMinimum = 0.85;
@@ -80,12 +81,37 @@ ivec2 neighbourhoodOffsets[8] = ivec2[8](
     ivec2( 0,-1)
 );
 
+// YCoCg Color Space Conversions
+vec3 RGBToYCoCg(vec3 rgb) {
+    float y = dot(rgb, vec3(0.25, 0.5, 0.25));
+    float co = dot(rgb, vec3(0.5, 0.0, -0.5));
+    float cg = dot(rgb, vec3(-0.25, 0.5, -0.25));
+    return vec3(y, co, cg);
+}
+
+vec3 YCoCgToRGB(vec3 ycocg) {
+    float y = ycocg.x;
+    float co = ycocg.y;
+    float cg = ycocg.z;
+    return vec3(
+        y + co - cg,
+        y + cg,
+        y - co - cg
+    );
+}
+
 void NeighbourhoodClamping(vec3 color, inout vec3 tempColor, float z0, float z1, inout float edge) {
-    vec3 minclr = color;
-    vec3 maxclr = minclr;
+    vec3 m1 = vec3(0.0);
+    vec3 m2 = vec3(0.0);
 
     int cc = 2;
     ivec2 texelCoordM1 = clamp(texelCoord, ivec2(cc), ivec2(view) - cc); // Fixes screen edges
+    
+    // Center pixel
+    vec3 centerClr = RGBToYCoCg(texelFetch(colortex3, texelCoordM1, 0).rgb);
+    m1 += centerClr;
+    m2 += centerClr * centerClr;
+
     for (int i = 0; i < 8; i++) {
         ivec2 texelCoordM2 = texelCoordM1 + neighbourhoodOffsets[i];
 
@@ -98,13 +124,22 @@ void NeighbourhoodClamping(vec3 color, inout vec3 tempColor, float z0, float z1,
                 edge *= extraEdgeMult;
         }
 
-        vec3 clr = texelFetch(colortex3, texelCoordM2, 0).rgb;
-        minclr = min(minclr, clr); maxclr = max(maxclr, clr);
+        vec3 clr = RGBToYCoCg(texelFetch(colortex3, texelCoordM2, 0).rgb);
+        m1 += clr;
+        m2 += clr * clr;
     }
 
-    tempColor = ClipAABB(tempColor, minclr, maxclr);
-}
+    vec3 mean = m1 / 9.0;
+    vec3 sigma = sqrt(max(m2 / 9.0 - mean * mean, 0.0));
+    float gamma = 1.25; // Slightly looser gamma for YCoCg to preserve detail
+    
+    vec3 minclr = mean - gamma * sigma;
+    vec3 maxclr = mean + gamma * sigma;
 
+    vec3 tempColorYCoCg = RGBToYCoCg(tempColor);
+    tempColorYCoCg = ClipAABB(tempColorYCoCg, minclr, maxclr);
+    tempColor = YCoCgToRGB(tempColorYCoCg);
+}
 void DoTAA(inout vec3 color, inout vec3 temp, float z1) {
     int materialMask = int(texelFetch(colortex6, texelCoord, 0).g * 255.1);
 
@@ -124,41 +159,11 @@ void DoTAA(inout vec3 color, inout vec3 temp, float z1) {
         vec2 texCoord01 = texCoord;
     #endif
 
+    float z0 = texelFetch(depthtex0, texelCoord, 0).r;
+
     vec4 screenPos1 = vec4(texCoord01, z1, 1.0);
     vec4 viewPos1 = gbufferProjectionInverse * (screenPos1 * 2.0 - 1.0);
     viewPos1 /= viewPos1.w;
-
-    #ifdef ENTITY_TAA_NOISY_CLOUD_FIX
-        float cloudLinearDepth =  texture2D(colortex5, texCoord).a;
-        float lViewPos1 = length(viewPos1);
-
-        if (pow2(cloudLinearDepth) * renderDistance < min(lViewPos1, renderDistance)) {
-            // Material in question is obstructed by the cloud volume
-            materialMask = 0;
-        }
-    #endif
-
-    /*if (
-        abs(materialMask - 149.5) < 50.0 // Entity Reflection Handling (see common.glsl for details)
-        || materialMask == 254 // No SSAO, No TAA
-    ) { 
-        return;
-    }*/
-
-    /*if (materialMask == 254) { // No SSAO, No TAA
-        #ifndef CUSTOM_PBR
-            if (z1 <= 0.56) return; // The edge pixel trick doesn't look nice on hand
-        #endif
-        int i = 0;
-        while (i < 4) {
-            int mms = int(texelFetch(colortex6, texelCoord + neighbourhoodOffsets[i], 0).g * 255.1);
-            if (mms != materialMask) break;
-            i++;
-        } // Checking edge-pixels prevents flickering
-        if (i == 4) return;
-    }*/
-
-    float z0 = texelFetch(depthtex0, texelCoord, 0).r;
 
     // Reprojection in 0-1 space using valid viewPos1
     vec2 prvCoord01 = texCoord01;

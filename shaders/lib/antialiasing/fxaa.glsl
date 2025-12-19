@@ -17,7 +17,7 @@ float quality[12] = float[12] (1.0, 1.0, 1.0, 1.0, 1.0, 1.5, 2.0, 2.0, 2.0, 2.0,
 void FXAA311(inout vec3 color) {
     float edgeThresholdMin = 0.03125;
     float edgeThresholdMax = 0.0625;
-    float subpixelQuality = 0.75;
+    float subpixelQuality = 1.00; // Increased from 0.75 for better subpixel AA
     int iterations = 12;
 
     vec2 view = 1.0 / vec2(viewWidth, viewHeight);
@@ -163,7 +163,7 @@ void FXAA311(inout vec3 color) {
             // Less FXAA when moving
             vec3 newColor = texture2D(colortex3, finalUv).rgb;
             float skipFactor = min1(
-                20.0 * length(cameraPosition - previousCameraPosition)
+                5.0 * length(cameraPosition - previousCameraPosition) // Reduced from 20.0 to 5.0 for stronger FXAA during motion
                 #ifdef TAA_MOVEMENT_IMPROVEMENT_FILTER
                     + 0.25 // Catmull-Rom sampling gives us headroom to still do a bit of fxaa
                 #endif

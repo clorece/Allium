@@ -73,25 +73,43 @@ noperspective in vec2 texCoord;
 #endif
 
 //Program//
-void main() {
-    vec2 texCoordM = texCoord * RENDER_SCALE;
+    // Includes
+    #include "/lib/antialiasing/upscale.glsl"
 
-    #ifdef UNDERWATER_DISTORTION
-        if (isEyeInWater == 1)
-            texCoordM += WATER_REFRACTION_INTENSITY * 0.00035 * sin((texCoordM.x + texCoordM.y) * 25.0 + frameTimeCounter * 3.0);
-    #endif
+    // Program
+    void main() {
+        vec2 texCoordM = texCoord * RENDER_SCALE; // Use screen coords for upscaling logic (0-1)
 
-    vec3 color = texture2D(colortex3, texCoordM).rgb;
+        #ifdef UNDERWATER_DISTORTION
+            if (isEyeInWater == 1)
+                texCoordM += WATER_REFRACTION_INTENSITY * 0.00035 * sin((texCoord.x + texCoord.y) * 25.0 + frameTimeCounter * 3.0);
+        #endif
 
-    #if CHROMA_ABERRATION > 0
-        vec2 scale = vec2(1.0, viewHeight / viewWidth);
-        vec2 aberration = (texCoordM - 0.5) * (2.0 / vec2(viewWidth, viewHeight)) * scale * CHROMA_ABERRATION;
-        color.rb = vec2(texture2D(colortex3, texCoordM + aberration).r, texture2D(colortex3, texCoordM - aberration).b);
-    #endif
+        vec3 color;
+        
+        #if RENDER_SCALE < 1.0
+            // FSR 1.0 (EASU) Upscaling
+            // Upscale from RENDER_SCALE resolution to Viewport resolution
+            vec2 sourceRes = vec2(viewWidth, viewHeight);
+            color = textureEASU(colortex3, texCoordM, sourceRes);
+        #else
+            // Native resolution
+            color = texture2D(colortex3, texCoordM).rgb;
+            
+            #if IMAGE_SHARPENING > 0
+               SharpenImage(color, texCoordM);
+            #endif
+        #endif
 
-    #if IMAGE_SHARPENING > 0
-        SharpenImage(color, texCoordM);
-    #endif
+        #if CHROMA_ABERRATION > 0
+            vec2 scale = vec2(1.0, viewHeight / viewWidth);
+            vec2 aberration = (texCoordM - 0.5) * (2.0 / vec2(viewWidth, viewHeight)) * scale * CHROMA_ABERRATION;
+            // Note: Chroma also needs upscaling if we want high quality, but for subtle effect texture2D is fine or we sample EASU again (expensive). 
+            // Just use bilinear for aberration offset simple sampling to save perf.
+             color.rb = vec2(texture2D(colortex3, (texCoordM + aberration) * RENDER_SCALE).r, texture2D(colortex3, (texCoordM - aberration) * RENDER_SCALE).b);
+        #endif
+
+        // Old sharpening loop removed/conditional above
 
     /*ivec2 boxOffsets[8] = ivec2[8](
         ivec2( 1, 0),

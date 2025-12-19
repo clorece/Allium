@@ -28,6 +28,25 @@ float GetLinearDepth(float depth) {
     #include "/lib/antialiasing/taa.glsl"
 #endif
 
+// CAS Sharpening (Contrast Adaptive Sharpening)
+vec3 ContrastAdaptiveSharpening(vec3 color, ivec2 coord, float sharpness) {
+    vec3 u = texelFetch(colortex3, coord + ivec2(0, 1), 0).rgb;
+    vec3 d = texelFetch(colortex3, coord + ivec2(0, -1), 0).rgb;
+    vec3 l = texelFetch(colortex3, coord + ivec2(-1, 0), 0).rgb;
+    vec3 r = texelFetch(colortex3, coord + ivec2(1, 0), 0).rgb;
+
+    vec3 blur = (u + d + l + r) * 0.25;
+    vec3 sharp = color + (color - blur) * sharpness;
+
+    // Anti-ringing clamp: restrict result to local neighborhood
+    vec3 minNeigh = min(min(min(u, d), l), r);
+    vec3 maxNeigh = max(max(max(u, d), l), r);
+    minNeigh = min(minNeigh, color);
+    maxNeigh = max(maxNeigh, color);
+    
+    return clamp(sharp, minNeigh, maxNeigh);
+}
+
 //Program//
 void main() {
     vec3 color = texelFetch(colortex3, texelCoord, 0).rgb;
@@ -42,16 +61,11 @@ void main() {
     #ifdef TAA
         DoTAA(color, temp, z1);
         #if RENDER_SCALE < 1.0
-            // Sharpen to recover sub-pixel detail
-            vec3 sharpened = color * 1.2;
-            for (int i = 0; i < 4; i++) {
-                ivec2 offset = ivec2(
-                    i == 0 ? 1 : (i == 2 ? -1 : 0),
-                    i == 1 ? 1 : (i == 3 ? -1 : 0)
-                );
-                sharpened -= texelFetch(colortex3, texelCoord + offset, 0).rgb * 0.05;
-            }
-            color = mix(color, sharpened, 0.3 * (1.0 - RENDER_SCALE));
+            // CAS Sharpening for TAAU
+            // Increase sharpness as resolution decreases to recover more detail
+            // Tuning: conservative sharpening (0.4 + dynamic) to prevent artifacts
+            float sharpness = 0.4 + (1.0 - RENDER_SCALE) * 1.0; 
+            color = ContrastAdaptiveSharpening(color, texelCoord, sharpness);
         #endif
     #endif
 
