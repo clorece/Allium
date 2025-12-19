@@ -1,7 +1,7 @@
 //#define TAA_TWEAKS
 
 #if TAA_MODE == 1
-    float blendMinimum = 0.8;
+    float blendMinimum = 0.75;
     float blendVariable = 0.2;
     float blendConstant = 0.7;
 
@@ -108,7 +108,23 @@ void NeighbourhoodClamping(vec3 color, inout vec3 tempColor, float z0, float z1,
 void DoTAA(inout vec3 color, inout vec3 temp, float z1) {
     int materialMask = int(texelFetch(colortex6, texelCoord, 0).g * 255.1);
 
-    vec4 screenPos1 = vec4(texCoord, z1, 1.0);
+    // Early exit for pixels outside valid render region
+    // When RENDER_SCALE < 1.0, content is only rendered in [0, RENDER_SCALE]
+    #if RENDER_SCALE < 1.0
+        if (texCoord.x > RENDER_SCALE || texCoord.y > RENDER_SCALE) {
+            temp = color; // Don't blend, just pass through
+            return;
+        }
+    #endif
+
+    // texCoord remains in 0-1 for reprojection calculations
+    #if RENDER_SCALE < 1.0
+        vec2 texCoord01 = texCoord / RENDER_SCALE; // Convert to 0-1 for reprojection
+    #else
+        vec2 texCoord01 = texCoord;
+    #endif
+
+    vec4 screenPos1 = vec4(texCoord01, z1, 1.0);
     vec4 viewPos1 = gbufferProjectionInverse * (screenPos1 * 2.0 - 1.0);
     viewPos1 /= viewPos1.w;
 
@@ -144,13 +160,21 @@ void DoTAA(inout vec3 color, inout vec3 temp, float z1) {
 
     float z0 = texelFetch(depthtex0, texelCoord, 0).r;
 
-    vec2 prvCoord = texCoord;
-    if (z1 > 0.56) prvCoord = Reprojection(viewPos1);
+    // Reprojection in 0-1 space using valid viewPos1
+    vec2 prvCoord01 = texCoord01;
+    if (z1 > 0.56) prvCoord01 = Reprojection(viewPos1);
+
+    // Calculate velocity in 0-1 space
+    vec2 velocity01 = prvCoord01 - texCoord01;
+    
+    // Scale history coordinate back to RENDER_SCALE space for sampling
+    // because colortex2 data lives in [0, RENDER_SCALE]
+    vec2 historyCoord = (texCoord01 + velocity01) * RENDER_SCALE;
 
     #ifndef TAA_MOVEMENT_IMPROVEMENT_FILTER
-        vec3 tempColor = texture2D(colortex2, prvCoord).rgb;
+        vec3 tempColor = texture2D(colortex2, historyCoord).rgb;
     #else
-        vec3 tempColor = textureCatmullRom(colortex2, prvCoord, view);
+        vec3 tempColor = textureCatmullRom(colortex2, historyCoord, view);
     #endif
 
     if (tempColor == vec3(0.0) || any(isnan(tempColor))) { // Fixes the first frame and nans
@@ -173,11 +197,10 @@ void DoTAA(inout vec3 color, inout vec3 temp, float z1) {
         }
     #endif
 
-    // Adjust for render scale - velocity should be in rendered pixel space
-    vec2 velocity = (texCoord - prvCoord.xy) * view * RENDER_SCALE;
-    float blendFactor = float(prvCoord.x > 0.0 && prvCoord.x < 1.0 &&
-                              prvCoord.y > 0.0 && prvCoord.y < 1.0);
-    float velocityFactor = dot(velocity, velocity) * 10.0;
+    vec2 velocityPixels = -velocity01 * view;
+    float blendFactor = float(prvCoord01.x > 0.0 && prvCoord01.x < 1.0 &&
+                              prvCoord01.y > 0.0 && prvCoord01.y < 1.0);
+    float velocityFactor = dot(velocityPixels, velocityPixels) * 10.0;
     blendFactor *= max(exp(-velocityFactor) * blendVariable + blendConstant - length(cameraPosition - previousCameraPosition) * edge, blendMinimum);
 
     #ifdef EPIC_THUNDERSTORM
