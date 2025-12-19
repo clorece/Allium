@@ -170,7 +170,7 @@ void main() {
             vec4 history = texture2D(colortex11, prevUV * RENDER_SCALE);
             vec3 historyGI = history.rgb;
             
-            float blendFactor = 0.95;
+            float blendFactor = 1.0 - clamp(BLEND_WEIGHT * 50.0, 0.01, 0.5);
             finalGI = mix(gi, historyGI, blendFactor);
             
             vec3 prevEmissive = texture2D(colortex9, prevUV * RENDER_SCALE).rgb;
