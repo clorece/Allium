@@ -59,7 +59,7 @@ void main() {
     texCoord = (gl_TextureMatrix[0] * gl_MultiTexCoord0).xy;
     glColor = gl_Color;
 
-    #if defined TAA && RENDER_SCALE < 1.0
+    #if defined TAA
         gl_Position.xy = gl_Position.xy * RENDER_SCALE + RENDER_SCALE * gl_Position.w - gl_Position.w;
     #endif
 }

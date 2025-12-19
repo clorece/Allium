@@ -88,8 +88,7 @@ noperspective in vec2 texCoord;
         vec3 color;
         
         #if RENDER_SCALE < 1.0
-            // FSR 1.0 (EASU) Upscaling
-            // Upscale from RENDER_SCALE resolution to Viewport resolution
+            // EASU Upscaling
             vec2 sourceRes = vec2(viewWidth, viewHeight);
             color = textureEASU(colortex3, texCoordM, sourceRes);
         #else

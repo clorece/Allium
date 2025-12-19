@@ -163,9 +163,9 @@ void FXAA311(inout vec3 color) {
             // Less FXAA when moving
             vec3 newColor = texture2D(colortex3, finalUv).rgb;
             float skipFactor = min1(
-                5.0 * length(cameraPosition - previousCameraPosition) // Reduced from 20.0 to 5.0 for stronger FXAA during motion
+                5.0 * length(cameraPosition - previousCameraPosition)
                 #ifdef TAA_MOVEMENT_IMPROVEMENT_FILTER
-                    + 0.25 // Catmull-Rom sampling gives us headroom to still do a bit of fxaa
+                    + 0.25
                 #endif
             );
 

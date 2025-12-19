@@ -325,7 +325,7 @@ void EndLookup(inout vec3 color) {
 
 //Program//
 void main() {
-    /*#if defined TAA && RENDER_SCALE < 1.0
+    /*#if defined TAA
         // The viewport is CENTERED on screen
         // Full screen UV (0,1) needs to map to centered viewport
         
@@ -370,7 +370,7 @@ void main() {
         float lViewPos = 0.0;
     #endif
 
-    vec2 scaledDither = texCoord / RENDER_SCALE;
+    vec2 scaledDither = texCoord;
     float dither = texture2D(noisetex, scaledDither * view / 128.0).b;
     #ifdef TAA
         dither = fract(dither + goldenRatio * mod(float(frameCounter), 3600.0));

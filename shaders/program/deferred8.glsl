@@ -525,7 +525,7 @@ void main() {
 
                 float diffMagnitude = dot(colorDiff, colorDiff); 
                 
-                float colorSensitivity = 50.0; 
+                float colorSensitivity = 50.0 * RENDER_SCALE; 
 
                 float colorChangeWeight = exp(-diffMagnitude * colorSensitivity);
 
@@ -774,7 +774,7 @@ void main() {
         #endif
     #endif
 
-    #if defined TAA && RENDER_SCALE < 1.0
+    #if defined TAA
         gl_Position.xy = gl_Position.xy * RENDER_SCALE + RENDER_SCALE * gl_Position.w - gl_Position.w;
     #endif
 }

@@ -113,7 +113,7 @@ void main() {
     float isMissingEntity = 1.0;
     float isEntity = 0.5;
 
-    vec3 screenPos = vec3(gl_FragCoord.xy / vec2(viewWidth, viewHeight), gl_FragCoord.z);
+    vec3 screenPos = vec3(gl_FragCoord.xy / vec2(viewWidth, viewHeight) / RENDER_SCALE, gl_FragCoord.z);
     vec3 viewPos = ScreenToView(screenPos);
     vec3 nViewPos = normalize(viewPos);
     vec3 playerPos = ViewToPlayer(viewPos);
@@ -310,7 +310,7 @@ void main() {
         #endif
     #endif
 
-    #if defined TAA && RENDER_SCALE < 1.0
+    #if defined TAA
         gl_Position.xy = gl_Position.xy * RENDER_SCALE + RENDER_SCALE * gl_Position.w - gl_Position.w;
     #endif
 }

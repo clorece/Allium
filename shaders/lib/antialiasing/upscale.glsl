@@ -1,5 +1,4 @@
 // Lanczos-2 Upscaling Function
-// Approximates FSR 1.0 EASU quality for upscaling
 float lanczos2(float x) {
     if (x == 0.0) return 1.0;
     return 2.0 * sin(3.14159 * x) * sin(3.14159 * x / 2.0) / (3.14159 * 3.14159 * x * x);

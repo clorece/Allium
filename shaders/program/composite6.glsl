@@ -62,8 +62,6 @@ void main() {
         DoTAA(color, temp, z1);
         #if RENDER_SCALE < 1.0
             // CAS Sharpening for TAAU
-            // Increase sharpness as resolution decreases to recover more detail
-            // Tuning: conservative sharpening (0.4 + dynamic) to prevent artifacts
             float sharpness = 0.4 + (1.0 - RENDER_SCALE) * 1.0; 
             color = ContrastAdaptiveSharpening(color, texelCoord, sharpness);
         #endif

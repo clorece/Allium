@@ -143,11 +143,10 @@ void NeighbourhoodClamping(vec3 color, inout vec3 tempColor, float z0, float z1,
 void DoTAA(inout vec3 color, inout vec3 temp, float z1) {
     int materialMask = int(texelFetch(colortex6, texelCoord, 0).g * 255.1);
 
-    // Early exit for pixels outside valid render region
-    // When RENDER_SCALE < 1.0, content is only rendered in [0, RENDER_SCALE]
+    // Optimization: Skip invalid pixels
     #if RENDER_SCALE < 1.0
         if (texCoord.x > RENDER_SCALE || texCoord.y > RENDER_SCALE) {
-            temp = color; // Don't blend, just pass through
+            temp = color;
             return;
         }
     #endif
