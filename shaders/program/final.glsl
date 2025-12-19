@@ -101,11 +101,13 @@ noperspective in vec2 texCoord;
         #endif
 
         #if CHROMA_ABERRATION > 0
+            // Calculate aberration relative to the scaled viewport center
+            vec2 scaledCenter = vec2(RENDER_SCALE * 0.5);
             vec2 scale = vec2(1.0, viewHeight / viewWidth);
-            vec2 aberration = (texCoordM - 0.5) * (2.0 / vec2(viewWidth, viewHeight)) * scale * CHROMA_ABERRATION;
-            // Note: Chroma also needs upscaling if we want high quality, but for subtle effect texture2D is fine or we sample EASU again (expensive). 
-            // Just use bilinear for aberration offset simple sampling to save perf.
-             color.rb = vec2(texture2D(colortex3, (texCoordM + aberration) * RENDER_SCALE).r, texture2D(colortex3, (texCoordM - aberration) * RENDER_SCALE).b);
+            // Scale the aberration offset by RENDER_SCALE to match the reduced viewport
+            vec2 aberration = (texCoordM - scaledCenter) * (2.0 / vec2(viewWidth, viewHeight)) * scale * CHROMA_ABERRATION * RENDER_SCALE;
+            // texCoordM is already in scaled coordinates, don't multiply by RENDER_SCALE again
+            color.rb = vec2(texture2D(colortex3, texCoordM + aberration).r, texture2D(colortex3, texCoordM - aberration).b);
         #endif
 
         // Old sharpening loop removed/conditional above

@@ -47,13 +47,17 @@ void main() {
     
     float z0 = texelFetch(depthtex0, texelCoord, 0).r;
     
+    vec3 emissiveFiltered = vec3(0.0);
     vec3 giFiltered = vec3(0.0);
     vec3 aoFiltered = vec3(0.0);
     
     #if GLOBAL_ILLUMINATION == 2
-        vec4 rawData = texture2D(colortex9, texCoord);
-        vec3 rawGI = rawData.rgb;
-        vec3 rawAO = vec3(rawData.a);
+        vec4 rawEmissiveData = texture2D(colortex9, texCoord);
+        vec3 rawEmissive = rawEmissiveData.rgb;
+        vec3 rawAO = vec3(rawEmissiveData.a);
+        
+        vec4 rawGIData = texture2D(colortex11, texCoord);
+        vec3 rawGI = rawGIData.rgb;
         
         float centerDepth = GetLinearDepth(z0);
         vec3 texture5 = texelFetch(colortex5, texelCoord, 0).rgb;
@@ -79,41 +83,46 @@ void main() {
 
                 float sampleDepth = GetLinearDepth(texture2D(depthtex0, sampleCoord).r);
                 float depthDiff = abs(centerDepth - sampleDepth) * far;
-                float depthWeight = exp(-depthDiff * depthDiff * 1.0); // Reduced from 4.0 to 1.0 for softer filtering
+                float depthWeight = exp(-depthDiff * depthDiff * 1.0);
 
                 vec3 sampleTexture5 = texture2D(colortex5, sampleCoord).rgb;
                 vec3 sampleNormal = mat3(gbufferModelView) * sampleTexture5;
                 float normalDot = max(dot(centerNormal, sampleNormal), 0.0);
-                float normalWeight = pow(normalDot, 8.0); // Reduced from 32.0 to 8.0 for softer filtering
-                
-                vec4 sampleData = texture2D(colortex9, sampleCoord);
-                vec3 sampleGI = sampleData.rgb;
-                vec3 sampleAO = vec3(sampleData.a);
+                float normalWeight = pow(normalDot, 8.0);
+                // Sample emissive
+                vec4 sampleEmissiveData = texture2D(colortex9, sampleCoord);
+                vec3 sampleEmissive = sampleEmissiveData.rgb;
+                vec3 sampleAO = vec3(sampleEmissiveData.a);
+                // Sample GI
+                vec3 sampleGI = texture2D(colortex11, sampleCoord).rgb;
                 
                 float weight = spatialWeight * depthWeight * normalWeight;
                 
+                emissiveFiltered += sampleEmissive * weight;
                 giFiltered += sampleGI * weight;
                 aoFiltered += sampleAO * weight;
                 totalWeight += weight;
             }
         }
         
-        // Prevent division by zero if NO valid neighbors were found (rare/edge of screen)
         if (totalWeight > 0.0001) {
+            emissiveFiltered /= totalWeight;
             giFiltered /= totalWeight;
             aoFiltered /= totalWeight;
         } else {
-            // If reconstruction fails, pass through raw data (or black)
+            emissiveFiltered = rawEmissive;
             giFiltered = rawGI;
             aoFiltered = rawAO;
         }
     #endif
 
+    emissiveFiltered = max(emissiveFiltered, 0.0);
     giFiltered = max(giFiltered, 0.0);
     aoFiltered = max(aoFiltered, 0.0);
     
-    /* RENDERTARGETS: 8 */
-    gl_FragData[0] = vec4(giFiltered, aoFiltered.r);
+    /* RENDERTARGETS: 8,11 */
+    gl_FragData[0] = vec4(emissiveFiltered, aoFiltered.r);
+    gl_FragData[1] = vec4(giFiltered, 1.0);
 }
 
 #endif

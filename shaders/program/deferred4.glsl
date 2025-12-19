@@ -30,19 +30,22 @@ float GetLinearDepth2(float depth) {
 void main() {
     float z0 = texelFetch(depthtex0, texelCoord, 0).r;
     
+    vec3 emissiveFiltered = vec3(0.0);
     vec3 giFiltered = vec3(0.0);
     vec3 aoFiltered = vec3(0.0);
     
     #if GLOBAL_ILLUMINATION == 2
-        vec4 prevData = texture2D(colortex8, texCoord);
-        vec3 prevGI = prevData.rgb;
-        vec3 prevAO = vec3(prevData.a);
+        vec4 prevEmissiveData = texture2D(colortex8, texCoord);
+        vec3 prevEmissive = prevEmissiveData.rgb;
+        vec3 prevAO = vec3(prevEmissiveData.a);
+        
+        vec3 prevGI = texture2D(colortex11, texCoord).rgb;
 
         float centerDepth = GetLinearDepth(z0);
         vec3 texture5 = texelFetch(colortex5, texelCoord, 0).rgb;
         vec3 centerNormal = mat3(gbufferModelView) * texture5;
         
-        const int stepSize = 4;
+        const int stepSize = 8;
         float totalWeight = 0.0;
 
         const float kernel[3] = float[3](1.0, 2.0, 1.0);
@@ -56,32 +59,40 @@ void main() {
 
                 float sampleDepth = GetLinearDepth(texture2D(depthtex0, sampleCoord).r);
                 float depthDiff = abs(centerDepth - sampleDepth) * far;
-                float depthWeight = exp(-depthDiff * depthDiff * 1.0); // Reduced from 4.0 to 1.0
+                float depthWeight = exp(-depthDiff * depthDiff * 1.0);
 
                 vec3 sampleTexture5 = texture2D(colortex5, sampleCoord).rgb;
                 vec3 sampleNormal = mat3(gbufferModelView) * sampleTexture5;
                 float normalDot = max(dot(centerNormal, sampleNormal), 0.0);
-                float normalWeight = pow(normalDot, 8.0); // Reduced from 32.0 to 8.0
+                float normalWeight = pow(normalDot, 8.0);
 
-                vec4 sampleData = texture2D(colortex8, sampleCoord);
-                vec3 sampleGI = sampleData.rgb;
-                vec3 sampleAO = vec3(sampleData.a);
+                vec4 sampleEmissiveData = texture2D(colortex8, sampleCoord);
+                vec3 sampleEmissive = sampleEmissiveData.rgb;
+                vec3 sampleAO = vec3(sampleEmissiveData.a);
+                
+                vec3 sampleGI = texture2D(colortex11, sampleCoord).rgb;
 
                 float weight = spatialWeight * depthWeight * normalWeight;
                 
+                emissiveFiltered += sampleEmissive * weight;
                 giFiltered += sampleGI * weight;
                 aoFiltered += sampleAO * weight;
                 totalWeight += weight;
             }
         }
         
+        emissiveFiltered /= totalWeight;
         giFiltered /= totalWeight;
         aoFiltered /= totalWeight;
     #endif
     
+    emissiveFiltered = max(emissiveFiltered, 0.0);
+    giFiltered = max(giFiltered, 0.0);
+    aoFiltered = max(aoFiltered, 0.0);
+    
     /* RENDERTARGETS: 9,11 */
-    gl_FragData[0] = vec4(giFiltered, aoFiltered.r); // Write final result to colortex9
-    gl_FragData[1] = vec4(giFiltered, 1.0); // Write reconstructed GI to history buffer
+    gl_FragData[0] = vec4(emissiveFiltered, aoFiltered.r);
+    gl_FragData[1] = vec4(giFiltered, 1.0);
 }
 
 #endif

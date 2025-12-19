@@ -6,7 +6,7 @@
 #include "/lib/common.glsl"
 
 //////////Shadowcomp 1//////////Shadowcomp 1//////////Shadowcomp 1//////////
-#ifdef SHADOWCOMP
+#if defined SHADOWCOMP && COLORED_LIGHTING_INTERNAL > 0
 
 #define OPTIMIZATION_ACL_HALF_RATE_UPDATES
 #define OPTIMIZATION_ACL_BEHIND_PLAYER
@@ -36,6 +36,67 @@ ivec3[6] face_offsets = ivec3[6](
 	ivec3(-1,  0,  0),
 	ivec3( 0, -1,  0),
 	ivec3( 0,  0, -1)
+);
+
+// Tint colors for stained glass and similar blocks (voxel IDs 200+)
+// Index 0 = voxelID 200 (White Stained Glass), etc.
+// Based on Minecraft stained glass colors
+const vec3[] specialTintColor = vec3[](
+	vec3(1.0, 1.0, 1.0),       // 200: White Stained Glass
+	vec3(0.95, 0.65, 0.2),     // 201: Honey Block (Orange tint)
+	vec3(0.85, 0.5, 0.2),      // 202: Orange Stained Glass
+	vec3(0.75, 0.35, 0.55),    // 203: Magenta Stained Glass
+	vec3(0.4, 0.6, 0.85),      // 204: Light Blue Stained Glass
+	vec3(0.9, 0.9, 0.2),       // 205: Yellow Stained Glass
+	vec3(0.5, 0.8, 0.2),       // 206: Lime Stained Glass
+	vec3(0.9, 0.5, 0.55),      // 207: Pink Stained Glass
+	vec3(0.3, 0.3, 0.3),       // 208: Gray Stained Glass
+	vec3(0.6, 0.6, 0.6),       // 209: Light Gray Stained Glass
+	vec3(0.3, 0.5, 0.6),       // 210: Cyan Stained Glass
+	vec3(0.5, 0.25, 0.7),      // 211: Purple Stained Glass
+	vec3(0.2, 0.25, 0.7),      // 212: Blue Stained Glass
+	vec3(0.45, 0.75, 0.35),    // 213: Slime Block (Green tint)
+	vec3(0.25, 0.45, 0.15),    // 214: Green Stained Glass
+	vec3(0.55, 0.25, 0.15),    // 215: Red Stained Glass (also Brown)
+	vec3(0.6, 0.8, 1.0),       // 216: Ice
+	vec3(1.0, 1.0, 1.0),       // 217: Glass (clear)
+	vec3(1.0, 1.0, 1.0),       // 218: Glass Pane (clear)
+	vec3(1.0, 1.0, 1.0),       // 219-253: Reserved slots
+	vec3(1.0, 1.0, 1.0),       // 220
+	vec3(1.0, 1.0, 1.0),       // 221
+	vec3(1.0, 1.0, 1.0),       // 222
+	vec3(1.0, 1.0, 1.0),       // 223
+	vec3(1.0, 1.0, 1.0),       // 224
+	vec3(1.0, 1.0, 1.0),       // 225
+	vec3(1.0, 1.0, 1.0),       // 226
+	vec3(1.0, 1.0, 1.0),       // 227
+	vec3(1.0, 1.0, 1.0),       // 228
+	vec3(1.0, 1.0, 1.0),       // 229
+	vec3(1.0, 1.0, 1.0),       // 230
+	vec3(1.0, 1.0, 1.0),       // 231
+	vec3(1.0, 1.0, 1.0),       // 232
+	vec3(1.0, 1.0, 1.0),       // 233
+	vec3(1.0, 1.0, 1.0),       // 234
+	vec3(1.0, 1.0, 1.0),       // 235
+	vec3(1.0, 1.0, 1.0),       // 236
+	vec3(1.0, 1.0, 1.0),       // 237
+	vec3(1.0, 1.0, 1.0),       // 238
+	vec3(1.0, 1.0, 1.0),       // 239
+	vec3(1.0, 1.0, 1.0),       // 240
+	vec3(1.0, 1.0, 1.0),       // 241
+	vec3(1.0, 1.0, 1.0),       // 242
+	vec3(1.0, 1.0, 1.0),       // 243
+	vec3(1.0, 1.0, 1.0),       // 244
+	vec3(1.0, 1.0, 1.0),       // 245
+	vec3(1.0, 1.0, 1.0),       // 246
+	vec3(1.0, 1.0, 1.0),       // 247
+	vec3(1.0, 1.0, 1.0),       // 248
+	vec3(1.0, 1.0, 1.0),       // 249
+	vec3(1.0, 1.0, 1.0),       // 250
+	vec3(1.0, 1.0, 1.0),       // 251
+	vec3(1.0, 1.0, 1.0),       // 252
+	vec3(1.0, 1.0, 1.0),       // 253
+	vec3(0.15, 0.15, 0.15)     // 254: Tinted Glass (dark)
 );
 
 writeonly uniform image3D floodfill_img;
@@ -133,5 +194,13 @@ void main() {
 		imageStore(floodfill_img, pos, light);
 	}
 }
+
+#else
+// Fallback: minimal compute shader when colored lighting is disabled
+#ifdef SHADOWCOMP
+layout (local_size_x = 1, local_size_y = 1, local_size_z = 1) in;
+const ivec3 workGroups = ivec3(1, 1, 1);
+void main() {}
+#endif
 
 #endif

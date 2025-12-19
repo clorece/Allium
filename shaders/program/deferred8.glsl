@@ -482,15 +482,44 @@ void main() {
         #else
             //#ifdef EXCLUDE_ENTITIES
             //#endif
-            vec4 packedData = texture2D(colortex9, ScaleToViewport(texCoord));
-            vec3 gi = packedData.rgb;
-            vec3 rtao = vec3(packedData.a);
+            vec4 packedEmissive = texture2D(colortex9, ScaleToViewport(texCoord));
+            vec3 emissiveColor = packedEmissive.rgb;
+            vec3 rtao = vec3(packedEmissive.a);
+            
+            vec4 packedGI = texture2D(colortex11, ScaleToViewport(texCoord));
+            vec3 gi = packedGI.rgb;
 
             
             #ifdef PT_VIEW
-                vec3 colorAdd = gi - rtao;
+                vec3 colorAdd = gi + emissiveColor - rtao;
             #else
-                color += gi - rtao;
+                vec3 albedo = color;
+                
+                #if defined GENERATED_NORMALS && defined PT_GI_NORMALS
+                {
+                    vec2 pixelOffset = 1.0 / vec2(viewWidth, viewHeight);
+                    float centerBrightness = dot(albedo, vec3(0.299, 0.587, 0.114));
+                    float rightBrightness = dot(texture2D(colortex0, texCoord + vec2(pixelOffset.x, 0.0)).rgb, vec3(0.299, 0.587, 0.114));
+                    float upBrightness = dot(texture2D(colortex0, texCoord + vec2(0.0, pixelOffset.y)).rgb, vec3(0.299, 0.587, 0.114));
+                    
+                    vec2 gradient = vec2(rightBrightness - centerBrightness, upBrightness - centerBrightness);
+                    gradient *= GENERATED_NORMAL_MULT * 15.0;
+                    gradient = clamp(gradient, vec2(-0.8), vec2(0.8));
+                    
+                    vec3 genNormal = normalize(vec3(gradient.x, gradient.y, 1.0));
+                    float genNdotL = 0.2 + 0.8 * genNormal.z;
+                    gi *= genNdotL;
+                }
+                #endif
+                
+                color += gi * albedo - rtao;
+                
+                float refIntensity = 2.0;
+                float intensityRatio = refIntensity / max(PT_EMISSIVE_I, 0.01);
+                float pureAdditive = 0.3 * intensityRatio;
+                float albedoMod = 1.0 - pureAdditive;
+                color += emissiveColor * (pureAdditive + albedoMod * albedo) * PT_EMISSIVE_I;
+                
                 vec3 colorAdd = color * 0.5;
             #endif
             //if (z0 > 0.56) {

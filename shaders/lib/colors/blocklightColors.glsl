@@ -11,13 +11,13 @@ void AddSpecialLightDetail(inout vec3 light, vec3 albedo, float emission) {
 	light += pow2(lightM / (albedo + 0.1));
 }
 
-#if COLORED_LIGHTING == 0 && GLOBAL_ILLUMINATION == 2
-	vec3 fireSpecialLightColor = vec3(3.05, 0.13, 0.077); //3.05, 0.13, 0.077
-	vec3 lavaSpecialLightColor = fireSpecialLightColor;
-#else
-	vec3 fireSpecialLightColor = vec3(2.05, 0.83, 0.27) * 3.8;
+//#if COLORED_LIGHTING == 0 && GLOBAL_ILLUMINATION == 2
+//	vec3 fireSpecialLightColor = vec3(3.05, 0.13, 0.077); //3.05, 0.13, 0.077
+//	vec3 lavaSpecialLightColor = fireSpecialLightColor;
+//#else
+	vec3 fireSpecialLightColor = vec3(2.55, 0.83, 0.27) * 3.8;
 	vec3 lavaSpecialLightColor = vec3(3.0, 0.9, 0.2) * 4.0;
-#endif
+//#endif
 
 vec3 netherPortalSpecialLightColor = vec3(1.8, 0.4, 2.2) * 0.8;
 vec3 redstoneSpecialLightColor = vec3(4.0, 0.1, 0.1);
@@ -36,11 +36,11 @@ vec4 GetSpecialBlocklightColor(int mat) {
 		if (mat < 26) {
 			if (mat < 14) {
 				if (mat < 8) {
-					#if COLORED_LIGHTING == 0 && GLOBAL_ILLUMINATION == 2
-						if (mat == 2) return vec4(vec3(3.05, 0.33, 0.17), 0.0); // Torch
-					#else
+					//#if COLORED_LIGHTING == 0 && GLOBAL_ILLUMINATION == 2
+					//	if (mat == 2) return vec4(vec3(3.05, 0.33, 0.17), 0.0); // Torch
+					//#else
 						if (mat == 2) return vec4(fireSpecialLightColor, 0.0); // Torch
-					#endif
+					//#endif
 					#ifndef END
 						if (mat == 3) return vec4(vec3(1.0, 1.0, 1.0) * 4.0, 0.0); // End Rod - This is the base for all lights. Total value 12
 					#else

@@ -100,6 +100,7 @@ void main() {
     float z0 = texelFetch(depthtex0, scaledTexelCoord, 0).r;
     vec3 gi = vec3(0.0);
     vec3 ao = vec3(0.0);
+    vec3 emissive = vec3(0.0); // New: separate emissive output
 
     vec4 screenPos = vec4(scaledCoord, z0, 1.0);
     vec4 viewPos = gbufferProjectionInverse * (screenPos * 2.0 - 1.0);
@@ -133,11 +134,12 @@ void main() {
     roughNoise = noiseMult * (roughNoise - 0.5);
     normalG += roughNoise;
 
-    gi = min(GetGI(ao, normalG, viewPos.xyz, nViewPos, depthtex0, dither, skyLightFactor, 1.0, VdotU, VdotS, entityOrHand).rgb, vec3(4.0));
+    gi = min(GetGI(ao, emissive, normalG, viewPos.xyz, nViewPos, depthtex0, dither, skyLightFactor, 1.0, VdotU, VdotS, entityOrHand).rgb, vec3(4.0));
     gi = max(gi, vec3(0.0));
     
     // Temporal Accumulation
     vec3 finalGI = gi;
+    vec3 finalEmissive = emissive;
     
     #ifdef TEMPORAL_FILTER
         vec3 cameraOffset = cameraPosition - previousCameraPosition;
@@ -165,24 +167,23 @@ void main() {
         */
 
         if (validReprojection) {
-            vec3 history = texture2D(colortex11, prevUV * RENDER_SCALE).rgb;
+            vec4 history = texture2D(colortex11, prevUV * RENDER_SCALE);
+            vec3 historyGI = history.rgb;
             
-            // Blending - 5% new frame contribution
             float blendFactor = 0.95;
-            finalGI = mix(gi, history, blendFactor);
+            finalGI = mix(gi, historyGI, blendFactor);
+            
+            vec3 prevEmissive = texture2D(colortex9, prevUV * RENDER_SCALE).rgb;
+            finalEmissive = mix(emissive, prevEmissive, blendFactor);
         } else {
-            // History Invalid - Use Current
-            finalGI = gi; 
+            finalGI = gi;
+            finalEmissive = emissive;
         }
     #endif
 
-    vec3 colorAdd = finalGI - ao; // Keeping this logic from original, though ao is modifying gi in GetGI?
-    // GetGI returns gi. ao is accumulated.
-    // original: vec3 colorAdd = gi - ao; -> unused?
-    
-    /* RENDERTARGETS: 9 */
-    gl_FragData[0] = vec4(finalGI, ao.r); // Pack AO into Alpha - Use blended result for output
-    // History is now written from deferred4 after reconstruction
+    /* RENDERTARGETS: 9,11 */
+    gl_FragData[0] = vec4(finalEmissive, ao.r);
+    gl_FragData[1] = vec4(finalGI, 1.0);
 }
 #endif
 //////////Vertex Shader//////////Vertex Shader//////////Vertex Shader//////////

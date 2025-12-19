@@ -57,7 +57,7 @@ vec2 texelSize = 1.0 / vec2(viewWidth, viewHeight);
 
 //#define PT_USE_DIRECT_LIGHT_SAMPLING
 #define PT_USE_RUSSIAN_ROULETTE
-//#define PT_USE_VOXEL_LIGHT
+#define PT_USE_VOXEL_LIGHT
 
 const float PHI = 1.618033988749895;
 const float PHI_INV = 0.618033988749895;
@@ -246,13 +246,14 @@ float CosinePDF(float NdotL) {
 
 vec3 giScreenPos = vec3(0.0);
 
-vec4 GetGI(inout vec3 occlusion, vec3 normalM, vec3 viewPos, vec3 nViewPos, sampler2D depthtex, 
+vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 viewPos, vec3 nViewPos, sampler2D depthtex, 
            float dither, float skyLightFactor, float smoothness, float VdotU, float VdotS, bool entityOrHand) {
     vec2 screenEdge = vec2(0.6, 0.55);
     vec3 normalMR = normalM;
 
     vec4 gi = vec4(0.0);
     vec3 totalRadiance = vec3(0.0);
+    vec3 emissiveRadiance = vec3(0.0);
     
     vec3 startPos = viewPos + normalMR * 0.01;
     vec3 startWorldPos = mat3(gbufferModelViewInverse) * startPos;
@@ -288,7 +289,7 @@ vec4 GetGI(inout vec3 occlusion, vec3 normalM, vec3 viewPos, vec3 nViewPos, samp
                 
                 vec3 hitNormalEncoded = texture2DLod(colortex5, jitteredUV, 0.0).rgb;
                 vec3 hitNormal = normalize(hitNormalEncoded * 2.0 - 1.0);
-                vec3 hitAlbedo = hitColor;
+                vec3 hitAlbedo = texture2DLod(colortex0, jitteredUV, 0.0).rgb;
                 float hitSmoothness = texture2DLod(colortex6, jitteredUV, 0.0).r;
 
                 vec3 brdf = EvaluateBRDF(hitAlbedo, currentNormal, rayDir, -normalize(currentPos));
@@ -327,10 +328,9 @@ vec4 GetGI(inout vec3 occlusion, vec3 normalM, vec3 viewPos, vec3 nViewPos, samp
                 // Check if this is an emissive block (voxelID 2-100 are light sources, 1 = solid block)
                 if (voxelID > 1 && voxelID < 100) {
                     vec4 blockLightColor = GetSpecialBlocklightColor(voxelID);
-                    // Boost color saturation with pow2
-                    vec3 boostedColor = pow(blockLightColor.rgb, vec3(3.0));
-                    vec3 emissiveColor = boostedColor * PT_EMISSIVE_I;
-                    pathRadiance += emissiveColor;
+                    vec3 boostedColor = blockLightColor.rgb;
+                    vec3 emissiveColor = pow(boostedColor, vec3(1.0/2.2));
+                    emissiveRadiance += pathThroughput * emissiveColor * hitAlbedo;
                 }
                 #endif
 
@@ -376,11 +376,14 @@ vec4 GetGI(inout vec3 occlusion, vec3 normalM, vec3 viewPos, vec3 nViewPos, samp
     }
     
     totalRadiance /= float(numPaths);
+    emissiveRadiance /= float(numPaths);
     occlusion /= float(numPaths);
     
     #if defined DEFERRED1 && defined TEMPORAL_FILTER
         giScreenPos = vec3(texCoord, 1.0);
     #endif
+    
+    emissiveOut = emissiveRadiance;
     
     gi.rgb = max(totalRadiance - occlusion, 0.0);
     gi.rgb = max(gi.rgb, vec3(0.0));
