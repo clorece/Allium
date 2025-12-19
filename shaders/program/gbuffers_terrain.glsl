@@ -127,6 +127,7 @@ void DoOceanBlockTweaks(inout float smoothnessD) {
 }
 
 //Includes//
+#include "/lib/misc/voxelization.glsl"
 #include "/lib/util/spaceConversion.glsl"
 #include "/lib/util/dither.glsl"
 #include "/lib/lighting/mainLighting.glsl"
@@ -356,15 +357,16 @@ void main() {
     #endif
 
     /* RENDERTARGETS: 0,6,10 */
+    int voxelID = GetVoxelIDs(mat); // Small blocklight ID (2=torch, 10=glowstone, etc.)
     gl_FragData[0] = color;
     gl_FragData[1] = vec4(smoothnessD, materialMask, skyLightFactor, subsurfaceMode);
-    gl_FragData[2] = vec4(vec3(0.0), lmCoord.x);
+    gl_FragData[2] = vec4(0.0, float(voxelID) / 255.0, 0.0, lmCoord.x); // .g = voxel blocklight ID for path tracer
 
     #if BLOCK_REFLECT_QUALITY >= 2 && RP_MODE != 0
         /* RENDERTARGETS: 0,6,10,5 */
         gl_FragData[0] = color;
         gl_FragData[1] = vec4(smoothnessD, materialMask, skyLightFactor, subsurfaceMode);
-        gl_FragData[2] = vec4(vec3(0.0), lmCoord.x);
+        gl_FragData[2] = vec4(0.0, float(voxelID) / 255.0, 0.0, lmCoord.x); // .g = voxel blocklight ID for path tracer
         gl_FragData[3] = vec4(mat3(gbufferModelViewInverse) * normalM, 1.0);
     #endif
 }

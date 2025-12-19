@@ -51,6 +51,10 @@
 
 vec2 texelSize = 1.0 / vec2(viewWidth, viewHeight);
 
+// Colored block light emission for path tracer
+// Uses voxel IDs stored in colortex10.g from gbuffers_terrain
+#include "/lib/colors/blocklightColors.glsl"
+
 //#define PT_USE_DIRECT_LIGHT_SAMPLING
 #define PT_USE_RUSSIAN_ROULETTE
 
@@ -289,7 +293,9 @@ vec4 GetGI(inout vec3 occlusion, vec3 normalM, vec3 viewPos, vec3 nViewPos, samp
                 vec3 brdf = EvaluateBRDF(hitAlbedo, currentNormal, rayDir, -normalize(currentPos));
                 float pdf = CosinePDF(NdotL);
                 
-                pathThroughput *= brdf * NdotL / max(pdf, 0.0001);
+                // Apply softer energy falloff (sqrt to reduce harshness)
+                vec3 throughputMult = brdf * NdotL / max(pdf, 0.0001);
+                pathThroughput *= sqrt(throughputMult + 0.01);
                 
                 #ifdef PT_USE_DIRECT_LIGHT_SAMPLING
                     vec3 hitWorldPos = mat3(gbufferModelViewInverse) * hit.worldPos + cameraPosition;
@@ -311,9 +317,18 @@ vec4 GetGI(inout vec3 occlusion, vec3 normalM, vec3 viewPos, vec3 nViewPos, samp
                         pathRadiance += pathThroughput * hitAlbedo * directLightColor * sunAlignment;
                     }
                 #endif
-                float brightness = dot(hitColor, vec3(0.299, 0.587, 0.114));
-                if (brightness > 3.0) {
-                    pathRadiance += pathThroughput * hitColor * 0.5 * GI_I;
+                
+                // Voxel ID based emissive detection
+                // Read voxel blocklight ID from gbuffer (stored as voxelID / 255.0)
+                int voxelID = int(texture2DLod(colortex10, jitteredUV, 0.0).g * 255.0 + 0.5);
+                
+                // Check if this is an emissive block (voxelID 2-100 are light sources, 1 = solid block)
+                if (voxelID > 1 && voxelID < 100) {
+                    vec4 blockLightColor = GetSpecialBlocklightColor(voxelID);
+                    // Boost color saturation with pow2
+                    vec3 boostedColor = blockLightColor.rgb * blockLightColor.rgb;
+                    vec3 emissiveColor = boostedColor * PT_EMISSIVE_I;
+                    pathRadiance += emissiveColor;
                 }
 
                 #ifdef PT_USE_RUSSIAN_ROULETTE
@@ -330,7 +345,7 @@ vec4 GetGI(inout vec3 occlusion, vec3 normalM, vec3 viewPos, vec3 nViewPos, samp
                 currentNormal = hitNormal;
                 
                 if (bounce == PT_MAX_BOUNCES - 1) {
-                    pathRadiance += pathThroughput * hitColor * 0.25 * GI_I;
+                    pathRadiance += pathThroughput * hitColor * 0.5 * GI_I;
                 }
                 
             } else {

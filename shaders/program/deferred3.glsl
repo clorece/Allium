@@ -34,14 +34,15 @@ void main() {
     vec3 aoFiltered = vec3(0.0);
     
     #if GLOBAL_ILLUMINATION == 2
-        vec3 prevGI = texture2D(colortex9, texCoord).rgb; // Read from colortex9
-        vec3 prevAO = texture2D(colortex11, texCoord).rgb;
+        vec4 prevData = texture2D(colortex9, texCoord);
+        vec3 prevGI = prevData.rgb;
+        vec3 prevAO = vec3(prevData.a);
 
         float centerDepth = GetLinearDepth(z0);
         vec3 texture5 = texelFetch(colortex5, texelCoord, 0).rgb;
         vec3 centerNormal = mat3(gbufferModelView) * texture5;
 
-        const int stepSize = 6;
+        const int stepSize = 3;
         float totalWeight = 0.0;
 
         const float kernel[3] = float[3](1.0, 2.0, 1.0);
@@ -62,8 +63,9 @@ void main() {
                 float normalDot = max(dot(centerNormal, sampleNormal), 0.0);
                 float normalWeight = pow(normalDot, 8.0); // Reduced from 32.0 to 8.0
 
-                vec3 sampleGI = texture2D(colortex9, sampleCoord).rgb; // Read from colortex9
-                vec3 sampleAO = texture2D(colortex11, sampleCoord).rgb;
+                vec4 sampleData = texture2D(colortex9, sampleCoord);
+                vec3 sampleGI = sampleData.rgb;
+                vec3 sampleAO = vec3(sampleData.a);
 
                 float weight = spatialWeight * depthWeight * normalWeight;
                 
@@ -80,9 +82,8 @@ void main() {
     giFiltered = max(giFiltered, 0.0);
     aoFiltered = max(aoFiltered, 0.0);
     
-    /* RENDERTARGETS: 8,11 */
-    gl_FragData[0] = vec4(giFiltered, 1.0); // Write to colortex8
-    gl_FragData[1] = vec4(aoFiltered, 1.0);
+    /* RENDERTARGETS: 8 */
+    gl_FragData[0] = vec4(giFiltered, aoFiltered.r); // Write to colortex8
 }
 
 #endif

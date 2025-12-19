@@ -51,8 +51,9 @@ void main() {
     vec3 aoFiltered = vec3(0.0);
     
     #if GLOBAL_ILLUMINATION == 2
-        vec3 rawGI = texture2D(colortex9, texCoord).rgb;
-        vec3 rawAO = texture2D(colortex11, texCoord).rgb;
+        vec4 rawData = texture2D(colortex9, texCoord);
+        vec3 rawGI = rawData.rgb;
+        vec3 rawAO = vec3(rawData.a);
         
         float centerDepth = GetLinearDepth(z0);
         vec3 texture5 = texelFetch(colortex5, texelCoord, 0).rgb;
@@ -85,8 +86,9 @@ void main() {
                 float normalDot = max(dot(centerNormal, sampleNormal), 0.0);
                 float normalWeight = pow(normalDot, 8.0); // Reduced from 32.0 to 8.0 for softer filtering
                 
-                vec3 sampleGI = texture2D(colortex9, sampleCoord).rgb;
-                vec3 sampleAO = texture2D(colortex11, sampleCoord).rgb;
+                vec4 sampleData = texture2D(colortex9, sampleCoord);
+                vec3 sampleGI = sampleData.rgb;
+                vec3 sampleAO = vec3(sampleData.a);
                 
                 float weight = spatialWeight * depthWeight * normalWeight;
                 
@@ -102,17 +104,16 @@ void main() {
             aoFiltered /= totalWeight;
         } else {
             // If reconstruction fails, pass through raw data (or black)
-            giFiltered = texture2D(colortex9, texCoord).rgb;
-            aoFiltered = texture2D(colortex11, texCoord).rgb;
+            giFiltered = rawGI;
+            aoFiltered = rawAO;
         }
     #endif
 
     giFiltered = max(giFiltered, 0.0);
     aoFiltered = max(aoFiltered, 0.0);
     
-    /* RENDERTARGETS: 8,11 */
-    gl_FragData[0] = vec4(giFiltered, 1.0);
-    gl_FragData[1] = vec4(aoFiltered, 1.0);
+    /* RENDERTARGETS: 8 */
+    gl_FragData[0] = vec4(giFiltered, aoFiltered.r);
 }
 
 #endif
