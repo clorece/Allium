@@ -36,7 +36,14 @@ vec4 textureAF(sampler2D texSampler, vec2 uv) {
     #if defined GBUFFERS_TERRAIN
         // Prevent distant pixelation (aliasing)
         if (absMidCoordPos.x > 0.0001 && absMidCoordPos.y > 0.0001) {
-             lod = miplevel; 
+             // Dynamic LOD based on Render Scale
+             if (RENDER_SCALE < 0.99) {
+                 // Low Res: Full smoothing to prevent pixelation artifacts
+                 lod = miplevel;
+             } else {
+                 // Native Res: Reduced smoothing for sharpness and visibility of thin objects
+                 lod = miplevel * 0.5;
+             }
         }
     #endif
 
