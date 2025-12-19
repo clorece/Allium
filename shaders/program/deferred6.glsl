@@ -92,7 +92,9 @@ vec4 SmartBlurHorizontal(sampler2D cloudTex, vec2 coord, float centerDepth) {
     // If we found only a few neighbors (edge of cloud), fade it out.
     // If we found many neighbors (checkerboard hole), keep it opaque.
     float density = validWeightSum / max(totalKernelWeight, 0.0001);
-    float fadeFactor = smoothstep(0.1, 0.45, density); // Magic numbers for softness
+    
+    // Lower threshold to preventing flickering at low resolutions (checkerboard pattern reduces density)
+    float fadeFactor = smoothstep(0.05, 0.2, density); 
     
     result.a *= fadeFactor;
 

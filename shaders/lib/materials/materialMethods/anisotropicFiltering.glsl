@@ -32,12 +32,12 @@ vec4 textureAF(sampler2D texSampler, vec2 uv) {
     vec2 A = M * normalize(vec2(-J[0][1], J[0][0]-V));
 
     float lod = 0.0;
-    #if ANISOTROPIC_FILTER >= 8 && defined GBUFFERS_TERRAIN
-        // Fix257062 - Checking if absMidCoordPos is fine or else miplevel will be broken. This can be an issue for flowing lava.
-        if (absMidCoordPos.x > 0.0001 && absMidCoordPos.y > 0.0001)
-        // Excluding cutout blocks for better looks
-        if (texture2DLod(texSampler, uv, 10000.0).a == 1.0)
-            lod = miplevel * 0.4;
+
+    #if defined GBUFFERS_TERRAIN
+        // Prevent distant pixelation (aliasing)
+        if (absMidCoordPos.x > 0.0001 && absMidCoordPos.y > 0.0001) {
+             lod = miplevel; 
+        }
     #endif
 
     float samplesDiv2 = ANISOTROPIC_FILTER / 2.0;

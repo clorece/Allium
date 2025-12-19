@@ -36,30 +36,8 @@ noperspective in vec2 texCoord;
 #endif
 
 //Common Functions//
-#if IMAGE_SHARPENING > 0
-    vec2 viewD = 1.0 / vec2(viewWidth, viewHeight);
-
-    vec2 sharpenOffsets[4] = vec2[4](
-        vec2( viewD.x,  0.0),
-        vec2( 0.0,  viewD.x),
-        vec2(-viewD.x,  0.0),
-        vec2( 0.0, -viewD.x)
-    );
-
-    void SharpenImage(inout vec3 color, vec2 texCoordM) {
-        #ifdef TAA
-            float sharpenMult = IMAGE_SHARPENING;
-        #else
-            float sharpenMult = IMAGE_SHARPENING * 0.5;
-        #endif
-        float mult = 0.0125 * sharpenMult;
-        color *= 1.0 + 0.05 * sharpenMult;
-
-        for (int i = 0; i < 4; i++) {
-            color -= texture2D(colortex3, texCoordM + sharpenOffsets[i]).rgb * mult;
-        }
-    }
-#endif
+//Common Functions//
+// Sharpening replaced by FSR RCAS in main()
 
 //Includes//
 #ifdef ANY_ERROR_MESSAGE
@@ -78,7 +56,11 @@ noperspective in vec2 texCoord;
 
     // Program
     void main() {
-        vec2 texCoordM = texCoord * RENDER_SCALE; // Use screen coords for upscaling logic (0-1)
+        #if defined TAA && RENDER_SCALE < 1.0
+            vec2 texCoordM = texCoord * RENDER_SCALE; // Use screen coords for upscaling logic (0-1)
+        #else
+            vec2 texCoordM = texCoord;
+        #endif
 
         #ifdef UNDERWATER_DISTORTION
             if (isEyeInWater == 1)
@@ -87,18 +69,31 @@ noperspective in vec2 texCoord;
 
         vec3 color;
         
-        #if RENDER_SCALE < 1.0
-            // EASU Upscaling
-            vec2 sourceRes = vec2(viewWidth, viewHeight);
-            color = textureEASU(colortex3, texCoordM, sourceRes);
+        #if TAA_MODE != 0 && RENDER_SCALE < 1.0
+            if (texCoordM.x > 1.0 || texCoordM.y > 1.0) {
+                color = vec3(0.0);
+            } else {
+                // Calculate source pixel size roughly
+                vec2 sourcePixelSize = 1.0 / (vec2(viewWidth, viewHeight) * RENDER_SCALE);
+            float sharpness = IMAGE_SHARPENING;
+            // Limit sharpness to 1.2 to prevent negative lobe inversion (RCAS singularity at ~1.25)
+            sharpness = clamp(sharpness, 0.0, 1.2);
+
+            if (sharpness > 0.001) {
+                // FSR RCAS (Upscaling or Native Sharpening)
+                color = FsrRcas(colortex3, texCoordM, sourcePixelSize, sharpness);
+            } else {
+                #if RENDER_SCALE < 1.0
+                    // FSR EASU Upscaling (High Quality, softer)
+                    vec2 sourceRes = vec2(viewWidth, viewHeight) * RENDER_SCALE;
+                    color = textureEASU(colortex3, texCoordM, sourceRes);
+                #endif
+            }
+        }
         #else
-            // Native resolution
             color = texture2D(colortex3, texCoordM).rgb;
-            
-            #if IMAGE_SHARPENING > 0
-               SharpenImage(color, texCoordM);
-            #endif
         #endif
+
 
         #if CHROMA_ABERRATION > 0
             // Calculate aberration relative to the scaled viewport center

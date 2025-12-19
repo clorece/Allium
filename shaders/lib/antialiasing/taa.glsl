@@ -2,16 +2,16 @@
 #define TAA_MOVEMENT_IMPROVEMENT_FILTER
 
 #if TAA_MODE == 1
-    float blendMinimum = 0.85;
+    float blendMinimum = 0.8;
     float blendVariable = 0.2;
-    float blendConstant = 0.75;
+    float blendConstant = 0.725;
 
-    float regularEdge = 5.0;
-    float extraEdgeMult = 3.0;
+    float regularEdge = 10.0;
+    float extraEdgeMult = 7.0;
 #elif TAA_MODE == 2
     float blendMinimum = 0.85;
     float blendVariable = 0.2;
-    float blendConstant = 0.7;
+    float blendConstant = 0.75;
 
     float regularEdge = 5.0;
     float extraEdgeMult = 3.0;
@@ -26,7 +26,7 @@
         vec2 f2 = f * f;
         vec2 f3 = f * f2;
 
-        float c = 0.7;
+        float c = 0.5 + clamp(IMAGE_SHARPENING, 0.0, 1.0) * 0.5;
         vec2 w0 =        -c  * f3 +  2.0 * c         * f2 - c * f;
         vec2 w1 =  (2.0 - c) * f3 - (3.0 - c)        * f2         + 1.0;
         vec2 w2 = -(2.0 - c) * f3 + (3.0 -  2.0 * c) * f2 + c * f;

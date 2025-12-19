@@ -45,18 +45,21 @@ vec4 SoftBlurVertical(sampler2D cloudTex, vec2 coord, float centerDepth) {
         // Up
         vec2 posU = coord + offset;
         float depthU = texture2D(colortex15, posU).r;
-        if (abs(centerDepth - depthU) < 0.01) {
+        
+        // Relaxed depth check to allow blurring across checkerboard pattern
+        // if (abs(centerDepth - depthU) < 0.01) { 
             sum += texture2D(cloudTex, posU) * w;
             totalWeight += w;
-        }
+        //}
 
         // Down
         vec2 posD = coord - offset;
         float depthD = texture2D(colortex15, posD).r;
-        if (abs(centerDepth - depthD) < 0.01) {
+        
+        // if (abs(centerDepth - depthD) < 0.01) {
             sum += texture2D(cloudTex, posD) * w;
             totalWeight += w;
-        }
+        //}
     }
 
     if (totalWeight > 0.0001) return sum / totalWeight;

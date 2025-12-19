@@ -78,7 +78,8 @@ void main() {
     vec3 playerPos = ViewToPlayer(viewPos.xyz);
     
     // Dither for temporal stability
-    vec2 scaledDither = texCoord / RENDER_SCALE;
+    // Use texCoord directly to map 1:1 with screen pixels (preventing noise aliasing)
+    vec2 scaledDither = texCoord;
     float dither = texture2D(noisetex, scaledDither * vec2(viewWidth, viewHeight) / 128.0).b;
     #ifdef TAA
         dither = fract(dither + goldenRatio * mod(float(frameCounter), 360.0));
