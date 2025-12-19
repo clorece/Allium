@@ -39,10 +39,14 @@ void main() {
 
     #ifdef OVERWORLD || END
         vec2 tSize = textureSize(tex, 0);
-        vec4 color = texture2D(tex, texCoord * RENDER_SCALE);
+        vec4 color = texture2D(tex, texCoord);
         color.rgb *= glColor.rgb;
 
-        vec4 screenPos = vec4(gl_FragCoord.xy / vec2(viewWidth, viewHeight), gl_FragCoord.z, 1.0);
+        vec2 screenCoord = gl_FragCoord.xy / vec2(viewWidth, viewHeight);
+        #if RENDER_SCALE < 1.0
+            screenCoord = ViewportToScreen(screenCoord);
+        #endif
+        vec4 screenPos = vec4(screenCoord, gl_FragCoord.z, 1.0);
         vec4 viewPos = gbufferProjectionInverse * (screenPos * 2.0 - 1.0);
         viewPos /= viewPos.w;
         vec3 nViewPos = normalize(viewPos.xyz);

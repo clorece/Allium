@@ -113,8 +113,12 @@ void main() {
 
     //if (texture(depthtex0, (gl_FragCoord.xy) / vec2(viewSize)).x < 1.0 || length(worldPos) < far / 3) discard;
 
-    vec3 screenPos = vec3(gl_FragCoord.xy / vec2(viewWidth, viewHeight), gl_FragCoord.z);
-    if (texture2D(depthtex1, screenPos.xy).r < 1.0) discard;
+    vec2 screenCoord = gl_FragCoord.xy / vec2(viewWidth, viewHeight);
+    #if RENDER_SCALE < 1.0
+        screenCoord = ViewportToScreen(screenCoord);
+    #endif
+    vec3 screenPos = vec3(screenCoord, gl_FragCoord.z);
+    if (texture2D(depthtex1, ScaleToViewport(screenPos.xy)).r < 1.0) discard;
     float lViewPos = length(playerPos);
 
     float dither = Bayer64(gl_FragCoord.xy);

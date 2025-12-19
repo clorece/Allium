@@ -76,7 +76,11 @@ void main() {
             }
         #endif
 
-        vec4 screenPos = vec4(gl_FragCoord.xy / vec2(viewWidth, viewHeight), gl_FragCoord.z, 1.0);
+        vec2 screenCoord = gl_FragCoord.xy / vec2(viewWidth, viewHeight);
+        #if RENDER_SCALE < 1.0
+            screenCoord = ViewportToScreen(screenCoord);
+        #endif
+        vec4 screenPos = vec4(screenCoord, gl_FragCoord.z, 1.0);
         vec4 viewPos = gbufferProjectionInverse * (screenPos * 2.0 - 1.0);
         viewPos /= viewPos.w;
         vec3 nViewPos = normalize(viewPos.xyz);
@@ -223,6 +227,9 @@ void main() {
         vanillaStars = float(glColor.r == glColor.g && glColor.g == glColor.b && glColor.r > 0.0 && glColor.r < 0.51);
     #endif
 
+    #if defined TAA && RENDER_SCALE < 1.0
+        gl_Position.xy = gl_Position.xy * RENDER_SCALE + RENDER_SCALE * gl_Position.w - gl_Position.w;
+    #endif
 }
 
 #endif

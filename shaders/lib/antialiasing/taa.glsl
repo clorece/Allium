@@ -173,7 +173,8 @@ void DoTAA(inout vec3 color, inout vec3 temp, float z1) {
         }
     #endif
 
-    vec2 velocity = (texCoord - prvCoord.xy) * view;
+    // Adjust for render scale - velocity should be in rendered pixel space
+    vec2 velocity = (texCoord - prvCoord.xy) * view * RENDER_SCALE;
     float blendFactor = float(prvCoord.x > 0.0 && prvCoord.x < 1.0 &&
                               prvCoord.y > 0.0 && prvCoord.y < 1.0);
     float velocityFactor = dot(velocity, velocity) * 10.0;

@@ -253,6 +253,7 @@ void main() {
     vec3 color = texelFetch(colortex0, texelCoord, 0).rgb;
     float z0 = texelFetch(depthtex0, texelCoord, 0).r;
 
+    // texCoord in deferred pass is [0,1] (from fullscreen quad), which is correct for unprojection
     vec4 screenPos = vec4(texCoord, z0, 1.0);
     vec4 viewPos = gbufferProjectionInverse * (screenPos * 2.0 - 1.0);
     viewPos /= viewPos.w;
@@ -261,9 +262,10 @@ void main() {
     vec3 playerPos = ViewToPlayer(viewPos.xyz);
     vec3 worldPos = playerPos + cameraPosition;
 
-    vec2 scaledDither = texCoord / RENDER_SCALE;
-    float dither = texture2D(noisetex, scaledDither * vec2(viewWidth, viewHeight) / 128.0).b;
-    vec3 dither2 = texture2D(noisetex, scaledDither * vec2(viewWidth, viewHeight) / 128.0).xyz;
+    // Dither calculation - use scaled dimensions for proper dither pattern size
+    vec2 scaledViewSize = vec2(viewWidth, viewHeight) * RENDER_SCALE;
+    float dither = texture2D(noisetex, texCoord * scaledViewSize / 128.0).b;
+    vec3 dither2 = texture2D(noisetex, texCoord * scaledViewSize / 128.0).xyz;
     #if defined TAA || defined TEMPORAL_FILTER
         dither = fract(dither + goldenRatio * mod(float(frameCounter), 360.0));
         dither2.x = fract(dither + goldenRatio * mod(float(frameCounter), 360.0));
@@ -480,8 +482,8 @@ void main() {
         #else
             //#ifdef EXCLUDE_ENTITIES
             //#endif
-            vec3 gi = texture2D(colortex9, texCoord * RENDER_SCALE).rgb;
-            vec3 rtao = texture2D(colortex11, texCoord * RENDER_SCALE).rgb;
+            vec3 gi = texture2D(colortex9, ScaleToViewport(texCoord)).rgb;
+            vec3 rtao = texture2D(colortex11, ScaleToViewport(texCoord)).rgb;
 
             
             #ifdef PT_VIEW
@@ -500,10 +502,10 @@ void main() {
 
                 vec2 prvRefCoord = Reprojection(vec3(scaledUV, z0), cameraOffset);
                         vec2 prvRefCoord2 = Reprojection(vec3(scaledUV, max(refPos.z, z0)), cameraOffset);
-                        //vec4 oldRef1 = texture2D(colortex7, prvRefCoord);
-                        //vec4 oldRef2 = texture2D(colortex7, prvRefCoord2);
-                        vec4 oldRef1 = vec4(textureCatmullRom(colortex7, prvRefCoord, vec2(viewWidth, viewHeight)), 1.0);
-                        vec4 oldRef2 = vec4(textureCatmullRom(colortex7, prvRefCoord2, vec2(viewWidth, viewHeight)), 1.0);
+                        // Use scaled view dimensions for proper Catmull-Rom sampling
+                        vec2 scaledView = vec2(viewWidth, viewHeight) * RENDER_SCALE;
+                        vec4 oldRef1 = vec4(textureCatmullRom(colortex7, prvRefCoord, scaledView), 1.0);
+                        vec4 oldRef2 = vec4(textureCatmullRom(colortex7, prvRefCoord2, scaledView), 1.0);
                         vec3 dif1 = colorAdd - oldRef1.rgb;
                         vec3 dif2 = colorAdd - oldRef2.rgb;
                         float dotDif1 = dot(dif1, dif1);

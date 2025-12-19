@@ -23,8 +23,9 @@ vec4 GetReflection(vec3 normalM, vec3 viewPos, vec3 nViewPos, vec3 playerPos, fl
     vec2 rEdge = vec2(0.6, 0.55);
     vec3 normalMR = normalM;
 
-    #ifdef RENDER_SCALE < 1.0
-        z0 = texture2D(depthtex0, gl_FragCoord.xy * RENDER_SCALE).x;
+    #if RENDER_SCALE < 1.0
+        // With vertex scaling, gl_FragCoord.xy / view gives [0, RENDER_SCALE] which matches texture content
+        z0 = texture2D(depthtex0, gl_FragCoord.xy / vec2(viewWidth, viewHeight)).x;
     #endif
 
     #if defined GBUFFERS_WATER && WATER_STYLE == 1 && defined GENERATED_NORMALS
@@ -69,13 +70,16 @@ vec4 GetReflection(vec3 normalM, vec3 viewPos, vec3 nViewPos, vec3 playerPos, fl
                 if (abs(refPos.x - 0.5) > rEdge.x || abs(refPos.y - 0.5) > rEdge.y) break;
 
                 // Scale ONLY for texture sampling
-                vec2 refPosSample = refPos.xy;
                 #if RENDER_SCALE < 1.0
-                    refPosSample *= RENDER_SCALE;
+                    vec2 refPosSample = ScaleToViewport(refPos.xy);
+                #else
+                    vec2 refPosSample = refPos.xy;
                 #endif
 
-                rfragpos = vec3(refPosSample, texture2D(depthtex, refPosSample).r);
-                rfragpos = nvec3(gbufferProjectionInverse * vec4(rfragpos * 2.0 - 1.0, 1.0));
+                // Sample depth from scaled texture coords, but unproject using full [0,1] screen coords
+                // This is correct because gbufferProjectionInverse expects normalized screen coords
+                float sampledDepth = texture2D(depthtex, refPosSample).r;
+                rfragpos = nvec3(gbufferProjectionInverse * vec4(vec3(refPos.xy, sampledDepth) * 2.0 - 1.0, 1.0));
                 dist = length(start - rfragpos);
 
                 float err = length(viewPosRT - rfragpos);
@@ -111,9 +115,9 @@ vec4 GetReflection(vec3 normalM, vec3 viewPos, vec3 nViewPos, vec3 playerPos, fl
                         if (z0 <= 0.56) lod *= 2.22; // Using more lod to compensate for less roughness noise on held items
                         lod = max(lod - 1.0, 0.0);
 
-                        reflection.rgb = texture2DLod(colortex0, refPos.xy * RENDER_SCALE, lod).rgb;
+                        reflection.rgb = texture2DLod(colortex0, ScaleToViewport(refPos.xy), lod).rgb;
                     #else
-                        reflection = texture2D(gaux2, refPos.xy);
+                        reflection = texture2D(gaux2, ScaleToViewport(refPos.xy));
                         reflection.rgb = pow2(reflection.rgb + 1.0);
                     #endif
 
@@ -161,7 +165,7 @@ vec4 GetReflection(vec3 normalM, vec3 viewPos, vec3 nViewPos, vec3 playerPos, fl
                 screenPosR.z = texture2D(depthtex1, scaledScreenPos).x;
                 vec3 viewPosR = ScreenToView(screenPosR);
                 if (lViewPos <= 2.0 + length(viewPosR)) {
-                    reflection = texture2D(gaux2, screenPosR.xy);
+                    reflection = texture2D(gaux2, ScaleToViewport(screenPosR.xy));
                     reflection.rgb = pow2(reflection.rgb + 1.0);
                 }
 

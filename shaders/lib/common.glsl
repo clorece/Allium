@@ -32,7 +32,7 @@
     #define ANISOTROPIC_FILTER 4 //[0 4 8 16]
     //#define WATER_MAT_QUALITY 0
 
-    #define RENDER_SCALE 1.0 //broken
+    #define RENDER_SCALE 1.0 //[0.25 0.5 0.75 1.0]
     #define VL_RENDER_RESOLUTION 3 //[0 1 2 3]
     #define CLOUD_RENDER_RESOLUTION 1 //[1 2 3]
     #define PT_RENDER_RESOLUTION 2 //[0 1 2 3] 
@@ -773,20 +773,21 @@
 
 // 62 75 74 20 74 68 4F 73 65 20 77 68 6F 20 68 6F 70 65 20 69 6E 20 74 68 65 20 6C 69 6D 69 4E 61 6C 0A 77 69 6C 6C 20 72 65 6E 65 77 20 74 68 65 69 72 20 73 54 72 65 6E 67 74 48 2E 0A 74 68 65 79 20 77 69 6C 6C 20 73 6F 41 72 20 6F 6E 20 65 6C 79 54 72 61 73 20 6C 69 6B 65 20 70 68 61 6E 74 6F 6D 73 3B 0A 74 68 65 79 20 77 69 6C 6C 20 72 75 6E 20 61 6E 44 20 6E 6F 74 20 67 72 6F 77 20 77 65 41 72 79 2C 0A 74 68 65 59 20 77 69 6C 6C 20 77 61 6C 6B 20 61 6E 64 20 6E 6F 74 20 62 65 20 66 61 69 6E 74 2E
 
+// Render scale helper functions
+// When RENDER_SCALE < 1.0, content is rendered to [0, RENDER_SCALE] in screen space (bottom-left corner)
+// The vertex transformation: gl_Position.xy = gl_Position.xy * RENDER_SCALE + (RENDER_SCALE - 1.0) * gl_Position.w
+// maps NDC [-1,1] to [-1, 2*RENDER_SCALE-1], which in [0,1] screen space becomes [0, RENDER_SCALE]
+
 vec2 ScaleToViewport(vec2 coord) {
-    // Transform (0,1) coordinates to centered scaled viewport
-    return coord * RENDER_SCALE + (1.0 - RENDER_SCALE) * 0.5;
+    // Transform full [0,1] coordinates to scaled [0, RENDER_SCALE] viewport
+    return coord * RENDER_SCALE;
 }
 
 vec2 ViewportToScreen(vec2 coord) {
-    // Inverse: scaled viewport back to (0,1)
-    return (coord - (1.0 - RENDER_SCALE) * 0.5) / RENDER_SCALE;
+    // Transform scaled [0, RENDER_SCALE] viewport coordinates back to full [0,1]
+    return coord / RENDER_SCALE;
 }
 
 bool IsInScaledViewport(vec2 coord) {
-    vec2 centered = abs(coord - 0.5);
-    return centered.x <= RENDER_SCALE * 0.5 && centered.y <= RENDER_SCALE * 0.5;
+    return coord.x >= 0.0 && coord.x <= RENDER_SCALE && coord.y >= 0.0 && coord.y <= RENDER_SCALE;
 }
-#define ScaleToViewport(coord) coord
-#define ViewportToScreen(coord) coord
-#define IsInScaledViewport(coord) true
