@@ -32,7 +32,7 @@
     #define ANISOTROPIC_FILTER 4 //[0 4 8 16]
     //#define WATER_MAT_QUALITY 0
 
-    #define RENDER_SCALE 1.0 //[0.25 0.5 0.75 1.0]
+    #define RENDER_SCALE 0.9 //[0.25 0.3 0.35 0.4 0.45 0.5 0.55 0.6 0.65 0.7 0.75 0.8 0.85 0.9 0.95 1.0]
     #define VL_RENDER_RESOLUTION 3 //[0 1 2 3]
     #define CLOUD_RENDER_RESOLUTION 1 //[1 2 3]
     #define PT_RENDER_RESOLUTION 2 //[0 1 2 3] 
@@ -43,7 +43,7 @@
         #define SKY_I 0.5 //[0.1 0.15 0.2 0.25 0.3 0.35 0.4 0.45 0.5 0.55 0.6 0.65 0.7 0.75 0.8 0.85 0.9 0.95 1.0]
         #define PT_MAX_BOUNCES 1 //[1 2 3]
         #define PT_STEPS 30 //[10 15 25 30 35 40 45 50 65 70 75 80 85 90 95 100 105 110 115 120 125]
-        #define PT_EMISSIVE_I 1.0 //[0.1 0.25 0.5 0.75 1.0 1.5 2.0 3.0 4.0 5.0 7.5 10.0 15.0 20.0 50.0 100.0]
+        #define PT_EMISSIVE_I 100.0 //[0.1 0.25 0.5 0.75 1.0 1.5 2.0 3.0 4.0 5.0 7.5 10.0 15.0 20.0 50.0 100.0]
         #define EXCLUDE_ENTITIES
         //#define PT_VIEW
 

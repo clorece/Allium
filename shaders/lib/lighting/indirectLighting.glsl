@@ -57,6 +57,7 @@ vec2 texelSize = 1.0 / vec2(viewWidth, viewHeight);
 
 //#define PT_USE_DIRECT_LIGHT_SAMPLING
 #define PT_USE_RUSSIAN_ROULETTE
+//#define PT_USE_VOXEL_LIGHT
 
 const float PHI = 1.618033988749895;
 const float PHI_INV = 0.618033988749895;
@@ -320,16 +321,18 @@ vec4 GetGI(inout vec3 occlusion, vec3 normalM, vec3 viewPos, vec3 nViewPos, samp
                 
                 // Voxel ID based emissive detection
                 // Read voxel blocklight ID from gbuffer (stored as voxelID / 255.0)
+                #ifdef PT_USE_VOXEL_LIGHT
                 int voxelID = int(texture2DLod(colortex10, jitteredUV, 0.0).g * 255.0 + 0.5);
                 
                 // Check if this is an emissive block (voxelID 2-100 are light sources, 1 = solid block)
                 if (voxelID > 1 && voxelID < 100) {
                     vec4 blockLightColor = GetSpecialBlocklightColor(voxelID);
                     // Boost color saturation with pow2
-                    vec3 boostedColor = blockLightColor.rgb * blockLightColor.rgb;
+                    vec3 boostedColor = pow(blockLightColor.rgb, vec3(3.0));
                     vec3 emissiveColor = boostedColor * PT_EMISSIVE_I;
                     pathRadiance += emissiveColor;
                 }
+                #endif
 
                 #ifdef PT_USE_RUSSIAN_ROULETTE
                 if (bounce > 0) {

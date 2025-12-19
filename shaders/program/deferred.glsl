@@ -141,7 +141,7 @@ void main() {
     
     #ifdef TEMPORAL_FILTER
         vec3 cameraOffset = cameraPosition - previousCameraPosition;
-        vec2 prevUV = Reprojection(vec3(scaledCoord, z0), cameraOffset);
+        vec2 prevUV = Reprojection(vec3(texCoord, z0), cameraOffset);
         
         // 1. Validate Reprojection Bounds
         bool validReprojection = prevUV.x >= 0.0 && prevUV.x <= 1.0 && prevUV.y >= 0.0 && prevUV.y <= 1.0;

@@ -11,8 +11,14 @@ void AddSpecialLightDetail(inout vec3 light, vec3 albedo, float emission) {
 	light += pow2(lightM / (albedo + 0.1));
 }
 
-vec3 fireSpecialLightColor = vec3(2.05, 0.83, 0.27) * 3.8;
-vec3 lavaSpecialLightColor = vec3(3.0, 0.9, 0.2) * 4.0;
+#if COLORED_LIGHTING == 0 && GLOBAL_ILLUMINATION == 2
+	vec3 fireSpecialLightColor = vec3(3.05, 0.13, 0.077); //3.05, 0.13, 0.077
+	vec3 lavaSpecialLightColor = fireSpecialLightColor;
+#else
+	vec3 fireSpecialLightColor = vec3(2.05, 0.83, 0.27) * 3.8;
+	vec3 lavaSpecialLightColor = vec3(3.0, 0.9, 0.2) * 4.0;
+#endif
+
 vec3 netherPortalSpecialLightColor = vec3(1.8, 0.4, 2.2) * 0.8;
 vec3 redstoneSpecialLightColor = vec3(4.0, 0.1, 0.1);
 vec4 soulFireSpecialColor = vec4(vec3(0.3, 2.0, 2.2) * 1.0, 0.3);
@@ -30,7 +36,11 @@ vec4 GetSpecialBlocklightColor(int mat) {
 		if (mat < 26) {
 			if (mat < 14) {
 				if (mat < 8) {
-					if (mat == 2) return vec4(fireSpecialLightColor, 0.0); // Torch
+					#if COLORED_LIGHTING == 0 && GLOBAL_ILLUMINATION == 2
+						if (mat == 2) return vec4(vec3(3.05, 0.33, 0.17), 0.0); // Torch
+					#else
+						if (mat == 2) return vec4(fireSpecialLightColor, 0.0); // Torch
+					#endif
 					#ifndef END
 						if (mat == 3) return vec4(vec3(1.0, 1.0, 1.0) * 4.0, 0.0); // End Rod - This is the base for all lights. Total value 12
 					#else
@@ -178,48 +188,5 @@ vec4 GetSpecialBlocklightColor(int mat) {
 
 	return vec4(blocklightCol * 20.0, 0.0);
 }
-
-vec3[] specialTintColor = vec3[](
-	// 200: White
-	vec3(1.0),
-	// 201: Orange
-	vec3(1.0, 0.3, 0.1),
-	// 202: Magenta
-	vec3(1.0, 0.1, 1.0),
-	// 203: Light Blue
-	vec3(0.5, 0.65, 1.0),
-	// 204: Yellow
-	vec3(1.0, 1.0, 0.1),
-	// 205: Lime
-	vec3(0.1, 1.0, 0.1),
-	// 206: Pink
-	vec3(1.0, 0.4, 1.0),
-	// 207: Gray
-	vec3(1.0),
-	// 208: Light Gray
-	vec3(1.0),
-	// 209: Cyan
-	vec3(0.3, 0.8, 1.0),
-	// 210: Purple
-	vec3(0.7, 0.3, 1.0),
-	// 211: Blue
-	vec3(0.1, 0.15, 1.0),
-	// 212: Brown
-	vec3(1.0, 0.75, 0.5),
-	// 213: Green
-	vec3(0.3, 1.0, 0.3),
-	// 214: Red
-	vec3(1.0, 0.1, 0.1),
-	// 215: Black
-	vec3(1.0),
-	// 216: Ice
-	vec3(0.5, 0.65, 1.0),
-	// 217: Glass
-	vec3(1.0),
-	// 218: Glass Pane
-	vec3(1.0),
-	// 219++
-	vec3(0.0)
-);
 
 #endif // BLOCKLIGHT_COLORS_GLSL
