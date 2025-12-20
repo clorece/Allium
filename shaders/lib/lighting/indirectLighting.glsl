@@ -58,6 +58,7 @@ vec2 texelSize = 1.0 / vec2(viewWidth, viewHeight);
 //#define PT_USE_DIRECT_LIGHT_SAMPLING
 #define PT_USE_RUSSIAN_ROULETTE
 #define PT_USE_VOXEL_LIGHT
+#define PT_TRANSPARENT_TINTS
 
 #if COLORED_LIGHTING_INTERNAL > 0
     #include "/lib/misc/voxelization.glsl"
@@ -402,9 +403,7 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
                 float hitSmoothness = texture2DLod(colortex6, jitteredUV, 0.0).r;
 
                 // Calculate voxel tint for light passing through stained glass
-                #if COLORED_LIGHTING_INTERNAL > 0
-                    vec3 voxelTint = CheckVoxelTint(currentPos, hit.worldPos);
-                #endif
+                vec3 voxelTint = CheckVoxelTint(currentPos, hit.worldPos);
 
                 vec3 brdf = EvaluateBRDF(hitAlbedo, currentNormal, rayDir, -normalize(currentPos));
                 float pdf = CosinePDF(NdotL);
@@ -414,7 +413,7 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
                 pathThroughput *= sqrt(throughputMult + 0.01);
 
                 // Apply voxel tint to throughput for light traveling through glass
-                #if COLORED_LIGHTING_INTERNAL > 0
+                #if defined (PT_TRANSPARENT_TINTS) && defined (PT_USE_VOXEL_LIGHT)
                     pathThroughput *= voxelTint;
                 #endif
                 
@@ -450,7 +449,7 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
                     vec3 boostedColor = blockLightColor.rgb;
                     vec3 emissiveColor = pow(boostedColor, vec3(1.0/2.2));
                     // Tint emissive light passing through stained glass
-                    #if COLORED_LIGHTING_INTERNAL > 0
+                    #ifdef PT_TRANSPARENT_TINTS
                         emissiveColor *= voxelTint;
                     #endif
                     emissiveRadiance += pathThroughput * emissiveColor * hitAlbedo;
