@@ -108,13 +108,13 @@ void NeighbourhoodClamping(vec3 color, inout vec3 tempColor, float z0, float z1,
     ivec2 texelCoordM1 = clamp(texelCoord, ivec2(cc), ivec2(view) - cc); // Fixes screen edges
     
     // Center pixel
-    #ifdef TRUE_TAAU
+    //#ifdef TRUE_TAAU
         // Map native coordinates to low-res input resolution
         ivec2 inputCoord = ivec2(vec2(texelCoordM1) * RENDER_SCALE); 
         vec3 centerClr = RGBToYCoCg(texelFetch(colortex3, inputCoord, 0).rgb);
-    #else
-        vec3 centerClr = RGBToYCoCg(texelFetch(colortex3, texelCoordM1, 0).rgb);
-    #endif
+    //#else
+    //    vec3 centerClr = RGBToYCoCg(texelFetch(colortex3, texelCoordM1, 0).rgb);
+    //#endif
     m1 += centerClr;
     m2 += centerClr * centerClr;
 

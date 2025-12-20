@@ -43,27 +43,27 @@ ivec3[6] face_offsets = ivec3[6](
 // Based on Minecraft stained glass colors
 const vec3[] specialTintColor = vec3[](
 	vec3(1.0, 1.0, 1.0),       // 200: White Stained Glass
-	vec3(0.95, 0.65, 0.2),     // 201: Honey Block (Orange tint)
-	vec3(0.85, 0.5, 0.2),      // 202: Orange Stained Glass
-	vec3(0.75, 0.35, 0.55),    // 203: Magenta Stained Glass
-	vec3(0.4, 0.6, 0.85),      // 204: Light Blue Stained Glass
-	vec3(0.9, 0.9, 0.2),       // 205: Yellow Stained Glass
-	vec3(0.5, 0.8, 0.2),       // 206: Lime Stained Glass
-	vec3(0.9, 0.5, 0.55),      // 207: Pink Stained Glass
-	vec3(0.3, 0.3, 0.3),       // 208: Gray Stained Glass
-	vec3(0.6, 0.6, 0.6),       // 209: Light Gray Stained Glass
-	vec3(0.3, 0.5, 0.6),       // 210: Cyan Stained Glass
-	vec3(0.5, 0.25, 0.7),      // 211: Purple Stained Glass
-	vec3(0.2, 0.25, 0.7),      // 212: Blue Stained Glass
-	vec3(0.45, 0.75, 0.35),    // 213: Slime Block (Green tint)
-	vec3(0.25, 0.45, 0.15),    // 214: Green Stained Glass
-	vec3(0.55, 0.25, 0.15),    // 215: Red Stained Glass (also Brown)
+	vec3(0.95, 0.65, 0.2),     // 201: Orange Stained Glass
+	vec3(0.9, 0.2, 0.9),       // 202: Magenta Stained Glass
+	vec3(0.4, 0.6, 0.85),      // 203: Light Blue Stained Glass
+	vec3(0.9, 0.9, 0.2),       // 204: Yellow Stained Glass
+	vec3(0.5, 0.8, 0.2),       // 205: Lime Stained Glass
+	vec3(1.0, 0.4, 0.7),       // 206: Pink Stained Glass
+	vec3(0.3, 0.3, 0.3),       // 207: Gray Stained Glass
+	vec3(0.6, 0.6, 0.6),       // 208: Light Gray Stained Glass
+	vec3(0.3, 0.5, 0.6),       // 209: Cyan Stained Glass
+	vec3(0.5, 0.25, 0.7),      // 210: Purple Stained Glass
+	vec3(0.2, 0.25, 0.7),      // 211: Blue Stained Glass
+	vec3(0.45, 0.3, 0.2),      // 212: Brown Stained Glass
+	vec3(0.45, 0.75, 0.35),    // 213: Green Stained Glass
+	vec3(1.0, 0.05, 0.05),     // 214: Red Stained Glass
+	vec3(0.1, 0.1, 0.1),       // 215: Black Stained Glass
 	vec3(0.6, 0.8, 1.0),       // 216: Ice
 	vec3(1.0, 1.0, 1.0),       // 217: Glass (clear)
 	vec3(1.0, 1.0, 1.0),       // 218: Glass Pane (clear)
-	vec3(1.0, 1.0, 1.0),       // 219-253: Reserved slots
-	vec3(1.0, 1.0, 1.0),       // 220
-	vec3(1.0, 1.0, 1.0),       // 221
+	vec3(1.0, 1.0, 1.0),       // 219
+	vec3(0.95, 0.65, 0.2),     // 220: Honey Block
+	vec3(0.45, 0.75, 0.35),    // 221: Slime Block
 	vec3(1.0, 1.0, 1.0),       // 222
 	vec3(1.0, 1.0, 1.0),       // 223
 	vec3(1.0, 1.0, 1.0),       // 224

@@ -279,8 +279,8 @@
                         if (mat == 10976) return  81; // Open Eyeblossom
                         if (mat == 10980) return  81; // Potted Open Eyeblossom
                         if (mat == 30008) return 254; // Tinted Glass
-                        if (mat == 30012) return 213; // Slime Block
-                        if (mat == 30016) return 201; // Honey Block
+                        if (mat == 30012) return 221; // Slime Block
+                        if (mat == 30016) return 220; // Honey Block
                     } else {
                         if (mat == 30020) return  25; // Nether Portal
                         if (mat >= 31000 && mat < 32000) return 200 + (mat - 31000) / 2; // Stained Glass+
