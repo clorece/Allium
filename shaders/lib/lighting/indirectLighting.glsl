@@ -57,7 +57,9 @@ vec2 texelSize = 1.0 / vec2(viewWidth, viewHeight);
 
 //#define PT_USE_DIRECT_LIGHT_SAMPLING
 #define PT_USE_RUSSIAN_ROULETTE
-#define PT_USE_VOXEL_LIGHT
+#if COLORED_LIGHTING_INTERNAL > 0
+    #define PT_USE_VOXEL_LIGHT
+#endif
 #define PT_TRANSPARENT_TINTS
 
 #if COLORED_LIGHTING_INTERNAL > 0
@@ -164,6 +166,10 @@ vec2 texelSize = 1.0 / vec2(viewWidth, viewHeight);
             // Any other ID (219-253, or invalid values) is ignored
         }
         return tint;
+    }
+#else
+    vec3 CheckVoxelTint(vec3 startViewPos, vec3 endViewPos) {
+        return vec3(1.0);
     }
 #endif
 
