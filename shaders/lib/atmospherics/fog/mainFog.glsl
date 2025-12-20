@@ -182,7 +182,7 @@
 
             #ifdef OVERWORLD
                 //vec3 fogColorM = GetAtmFogColor(altitudeFactorRaw, VdotS);
-                vec3 fogColorM = pow(GetSky(VdotU, VdotS, dither, true, true), vec3(1.0 / 2.2)) - nightFactor * 0.3;
+                vec3 fogColorM = pow(GetSky(VdotU, VdotS, dither, true, true), vec3(1.0 / 2.2)) - nightFactor * 0.35;
             #else
                 vec3 fogColorM = endSkyColor * 1.5;
             #endif

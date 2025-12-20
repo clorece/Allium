@@ -394,7 +394,7 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
                 float lod = log2(hit.hitDist * 0.5) * 0.5;
                 lod = max(lod, 0.0);
                 
-                vec3 hitColor = texture2DLod(colortex0, jitteredUV, lod).rgb * GI_I;
+                vec3 hitColor = pow(texture2DLod(colortex0, jitteredUV, lod).rgb, vec3(1.2)) * 1.5 * GI_I - nightFactor * 0.2;;
                 float hitFoliage = texture2D(colortex10, jitteredUV).a;
                 
                 vec3 hitNormalEncoded = texture2DLod(colortex5, jitteredUV, 0.0).rgb;
@@ -490,10 +490,10 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
         // AO calculation
         RayHit firstHit = MarchRay(startPos, RayDirection(normalMR, dither, i), depthtex, screenEdge);
         if (firstHit.hit) {
-            float aoRadius = 2.0;
+            float aoRadius = AO_RADIUS;
             float curve = 1.0 - clamp(firstHit.hitDist / aoRadius, 0.0, 1.0);
             curve = pow(curve, 2.0);
-            occlusion += curve * AO_I * 0.5 * max(skyLightFactor, 0.5);
+            occlusion += curve * AO_I * 3.0 * max(skyLightFactor, 0.5) - nightFactor * 1.5;
         }
     }
     
