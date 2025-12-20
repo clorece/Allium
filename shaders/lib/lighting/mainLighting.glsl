@@ -439,7 +439,7 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
 
     vec3 blockLighting = lightmapXM * blocklightCol;
 
-    #if COLORED_LIGHTING_INTERNAL > 0
+    #if COLORED_LIGHTING > 0
         // Prepare
         #if defined GBUFFERS_HAND
             vec3 voxelPos = SceneToVoxel(vec3(0.0));

@@ -59,6 +59,113 @@ vec2 texelSize = 1.0 / vec2(viewWidth, viewHeight);
 #define PT_USE_RUSSIAN_ROULETTE
 #define PT_USE_VOXEL_LIGHT
 
+#if COLORED_LIGHTING_INTERNAL > 0
+    #include "/lib/misc/voxelization.glsl"
+
+    const vec3[] specialTintColorPT = vec3[](
+        vec3(1.0, 1.0, 1.0),       // 200
+        vec3(0.95, 0.65, 0.2),     // 201
+        vec3(0.85, 0.5, 0.2),      // 202
+        vec3(0.75, 0.35, 0.55),    // 203
+        vec3(0.4, 0.6, 0.85),      // 204
+        vec3(0.9, 0.9, 0.2),       // 205
+        vec3(0.5, 0.8, 0.2),       // 206
+        vec3(0.9, 0.5, 0.55),      // 207
+        vec3(0.3, 0.3, 0.3),       // 208
+        vec3(0.6, 0.6, 0.6),       // 209
+        vec3(0.3, 0.5, 0.6),       // 210
+        vec3(0.5, 0.25, 0.7),      // 211
+        vec3(0.2, 0.25, 0.7),      // 212
+        vec3(0.45, 0.75, 0.35),    // 213
+        vec3(0.25, 0.45, 0.15),    // 214
+        vec3(0.55, 0.25, 0.15),    // 215
+        vec3(0.6, 0.8, 1.0),       // 216
+        vec3(1.0, 1.0, 1.0),       // 217
+        vec3(1.0, 1.0, 1.0),       // 218
+        vec3(1.0, 1.0, 1.0),       // 219
+        vec3(1.0, 1.0, 1.0),       // 220
+        vec3(1.0, 1.0, 1.0),       // 221
+        vec3(1.0, 1.0, 1.0),       // 222
+        vec3(1.0, 1.0, 1.0),       // 223
+        vec3(1.0, 1.0, 1.0),       // 224
+        vec3(1.0, 1.0, 1.0),       // 225
+        vec3(1.0, 1.0, 1.0),       // 226
+        vec3(1.0, 1.0, 1.0),       // 227
+        vec3(1.0, 1.0, 1.0),       // 228
+        vec3(1.0, 1.0, 1.0),       // 229
+        vec3(1.0, 1.0, 1.0),       // 230
+        vec3(1.0, 1.0, 1.0),       // 231
+        vec3(1.0, 1.0, 1.0),       // 232
+        vec3(1.0, 1.0, 1.0),       // 233
+        vec3(1.0, 1.0, 1.0),       // 234
+        vec3(1.0, 1.0, 1.0),       // 235
+        vec3(1.0, 1.0, 1.0),       // 236
+        vec3(1.0, 1.0, 1.0),       // 237
+        vec3(1.0, 1.0, 1.0),       // 238
+        vec3(1.0, 1.0, 1.0),       // 239
+        vec3(1.0, 1.0, 1.0),       // 240
+        vec3(1.0, 1.0, 1.0),       // 241
+        vec3(1.0, 1.0, 1.0),       // 242
+        vec3(1.0, 1.0, 1.0),       // 243
+        vec3(1.0, 1.0, 1.0),       // 244
+        vec3(1.0, 1.0, 1.0),       // 245
+        vec3(1.0, 1.0, 1.0),       // 246
+        vec3(1.0, 1.0, 1.0),       // 247
+        vec3(1.0, 1.0, 1.0),       // 248
+        vec3(1.0, 1.0, 1.0),       // 249
+        vec3(1.0, 1.0, 1.0),       // 250
+        vec3(1.0, 1.0, 1.0),       // 251
+        vec3(1.0, 1.0, 1.0),       // 252
+        vec3(1.0, 1.0, 1.0),       // 253
+        vec3(0.15, 0.15, 0.15)     // 254
+    );
+
+    vec3 CheckVoxelTint(vec3 startViewPos, vec3 endViewPos) {
+        vec3 tint = vec3(1.0);
+        
+        // Correct View -> World (Player) Space transform using vec4/mat4
+        vec4 startWorld4 = gbufferModelViewInverse * vec4(startViewPos, 1.0);
+        vec4 endWorld4 = gbufferModelViewInverse * vec4(endViewPos, 1.0);
+        vec3 startWorld = startWorld4.xyz;
+        vec3 endWorld = endWorld4.xyz;
+        
+        vec3 startVoxel = SceneToVoxel(startWorld);
+        vec3 endVoxel = SceneToVoxel(endWorld);
+        vec3 volumeSize = vec3(voxelVolumeSize);
+
+        int steps = 24; 
+        vec3 dir = endVoxel - startVoxel;
+        float dist = length(dir);
+        if (dist < 0.001) return tint;
+        
+        vec3 stepDir = dir / float(steps);
+        vec3 pos = startVoxel;
+
+        for(int i = 0; i < steps; i++) {
+            pos += stepDir;
+            
+            // Safety margin bounds check to avoid edge sampling issues
+            if (any(lessThan(pos, vec3(0.5))) || any(greaterThanEqual(pos, volumeSize - 0.5))) continue;
+
+            // Use texelFetch for precise integer grid sampling
+            uint id = texelFetch(voxel_sampler, ivec3(pos), 0).r;
+            
+            // Skip air (0), solid blocks (1), and non-transparent blocks
+            if (id <= 1u) continue;
+            
+            // Only apply tint for KNOWN valid transparent block IDs:
+            // 200-218: Stained Glass, Honey, Slime, Ice, Glass, Glass Pane
+            // 254: Tinted Glass
+            if ((id >= 200u && id <= 218u) || id == 254u) {
+                int idx = int(id) - 200;
+                tint *= specialTintColorPT[idx];
+            }
+            // Any other ID (219-253, or invalid values) is ignored
+        }
+        return tint;
+    }
+#endif
+
 const float PHI = 1.618033988749895;
 const float PHI_INV = 0.618033988749895;
 const float PHI2_INV = 0.38196601125010515;
@@ -203,7 +310,9 @@ RayHit MarchRay(vec3 start, vec3 rayDir, sampler2D depthtex, vec2 screenEdge) {
         if (nextZ < currZ && (sampledDepth <= max(minZ, maxZ) && sampledDepth >= min(minZ, maxZ))) {
             vec3 hitPos = rayPos - rayDir * stepSize * 0.5;
             vec4 hitClip = gbufferProjection * vec4(hitPos, 1.0);
-            result.screenPos = hitClip.xyz / hitClip.w * 0.5 + 0.5;
+            vec3 hitScreen = hitClip.xyz / hitClip.w * 0.5 + 0.5;
+            
+            result.screenPos = hitScreen;
             result.worldPos = hitPos;
             result.hitDist = length(hitPos - start);
             
@@ -292,12 +401,22 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
                 vec3 hitAlbedo = texture2DLod(colortex0, jitteredUV, 0.0).rgb;
                 float hitSmoothness = texture2DLod(colortex6, jitteredUV, 0.0).r;
 
+                // Calculate voxel tint for light passing through stained glass
+                #if COLORED_LIGHTING_INTERNAL > 0
+                    vec3 voxelTint = CheckVoxelTint(currentPos, hit.worldPos);
+                #endif
+
                 vec3 brdf = EvaluateBRDF(hitAlbedo, currentNormal, rayDir, -normalize(currentPos));
                 float pdf = CosinePDF(NdotL);
                 
                 // Apply softer energy falloff (sqrt to reduce harshness)
                 vec3 throughputMult = brdf * NdotL / max(pdf, 0.0001);
                 pathThroughput *= sqrt(throughputMult + 0.01);
+
+                // Apply voxel tint to throughput for light traveling through glass
+                #if COLORED_LIGHTING_INTERNAL > 0
+                    pathThroughput *= voxelTint;
+                #endif
                 
                 #ifdef PT_USE_DIRECT_LIGHT_SAMPLING
                     vec3 hitWorldPos = mat3(gbufferModelViewInverse) * hit.worldPos + cameraPosition;
@@ -330,6 +449,10 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
                     vec4 blockLightColor = GetSpecialBlocklightColor(voxelID);
                     vec3 boostedColor = blockLightColor.rgb;
                     vec3 emissiveColor = pow(boostedColor, vec3(1.0/2.2));
+                    // Tint emissive light passing through stained glass
+                    #if COLORED_LIGHTING_INTERNAL > 0
+                        emissiveColor *= voxelTint;
+                    #endif
                     emissiveRadiance += pathThroughput * emissiveColor * hitAlbedo;
                 }
                 #endif

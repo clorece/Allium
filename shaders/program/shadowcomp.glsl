@@ -6,7 +6,7 @@
 #include "/lib/common.glsl"
 
 //////////Shadowcomp 1//////////Shadowcomp 1//////////Shadowcomp 1//////////
-#if defined SHADOWCOMP && COLORED_LIGHTING_INTERNAL > 0
+#if defined SHADOWCOMP && COLORED_LIGHTING_INTERNAL > 0 && COLORED_LIGHTING > 0
 
 #define OPTIMIZATION_ACL_HALF_RATE_UPDATES
 #define OPTIMIZATION_ACL_BEHIND_PLAYER

@@ -52,10 +52,19 @@
 
     #define COLORED_LIGHTING 0 //[0 128 256 512 768 1024]
     #if defined IRIS_FEATURE_CUSTOM_IMAGES && SHADOW_QUALITY > -1 && !defined MC_OS_MAC && !(defined DH_TERRAIN || defined DH_WATER)
-        #define COLORED_LIGHTING_INTERNAL COLORED_LIGHTING
+        #if COLORED_LIGHTING > 0
+            #define COLORED_LIGHTING_INTERNAL COLORED_LIGHTING
+        #elif GLOBAL_ILLUMINATION >= 2
+            #define COLORED_LIGHTING_INTERNAL 256
+        #else
+            #define COLORED_LIGHTING_INTERNAL 0
+        #endif
+
         #if COLORED_LIGHTING_INTERNAL > 0
             #define COLORED_LIGHT_SATURATION 100 //[50 55 60 65 70 75 80 85 90 95 100 105 110 115 120 125]
+        #endif
 
+        #if COLORED_LIGHTING > 0
             #define COLORED_LIGHT_FOG
             #define COLORED_LIGHT_FOG_I 0.65 //[0.15 0.20 0.25 0.30 0.35 0.40 0.45 0.50 0.55 0.60 0.65 0.70 0.75 0.80 0.85 0.90 0.95 1.00 1.05 1.10 1.15 1.20 1.25 1.30 1.35 1.40 1.45 1.50]
             
