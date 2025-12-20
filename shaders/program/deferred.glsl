@@ -172,26 +172,12 @@ void main() {
             
             float prevAo = texture2D(colortex9, prevUV * RENDER_SCALE).a;
             
-            // Velocity rejection
-            float velocity = length(cameraOffset);
-            float movementFactor = clamp(velocity * 10.0, 0.0, 1.0);
-            
-            // Bias blend weight towards new frame (0.2) when moving
-            float blendWeight = clamp(BLEND_WEIGHT * 50.0, 0.01, 0.5);
-            blendWeight = mix(blendWeight, 0.2, movementFactor); 
-            
-            float blendFactor = 1.0 - blendWeight;
-            
+            float blendFactor = 1.0 - clamp(BLEND_WEIGHT * 50.0, 0.01, 0.5);
             finalGI = mix(gi, historyGI, blendFactor);
             
             vec3 prevEmissive = texture2D(colortex9, prevUV * RENDER_SCALE).rgb;
             finalEmissive = mix(emissive, prevEmissive, blendFactor);
-            
-            // Faster AO convergence on movement
-            float aoBlend = blendFactor * 0.95; 
-            if (movementFactor > 0.1) aoBlend *= 0.8; 
-            
-            ao.r = mix(ao.r, prevAo, aoBlend);
+            ao.r = mix(ao.r, prevAo, blendFactor);
         } else {
             finalGI = gi;
             finalEmissive = emissive;
