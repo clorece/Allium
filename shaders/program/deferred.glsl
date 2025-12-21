@@ -134,7 +134,7 @@ void main() {
     roughNoise = noiseMult * (roughNoise - 0.5);
     normalG += roughNoise;
 
-    gi = min(GetGI(ao, emissive, normalG, viewPos.xyz, nViewPos, depthtex0, dither, skyLightFactor, 1.0, VdotU, VdotS, entityOrHand).rgb, vec3(4.0));
+    gi = min(GetGI(emissive, normalG, viewPos.xyz, nViewPos, depthtex0, dither, skyLightFactor, 1.0, VdotU, VdotS, entityOrHand).rgb, vec3(4.0));
     gi = max(gi, vec3(0.0));
     
     // Temporal Accumulation

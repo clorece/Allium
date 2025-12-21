@@ -362,7 +362,7 @@ float CosinePDF(float NdotL) {
 
 vec3 giScreenPos = vec3(0.0);
 
-vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 viewPos, vec3 nViewPos, sampler2D depthtex, 
+vec4 GetGI(inout vec3 emissiveOut, vec3 normalM, vec3 viewPos, vec3 nViewPos, sampler2D depthtex, 
            float dither, float skyLightFactor, float smoothness, float VdotU, float VdotS, bool entityOrHand) {
     vec2 screenEdge = vec2(0.6, 0.55);
     vec3 normalMR = normalM;
@@ -493,19 +493,20 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
         
         totalRadiance += pathRadiance;
         
-        // AO calculation
-        RayHit firstHit = MarchRay(startPos, RayDirection(normalMR, dither, i), depthtex, screenEdge);
-        if (firstHit.hit) {
-            float aoRadius = AO_RADIUS;
-            float curve = 1.0 - clamp(firstHit.hitDist / aoRadius, 0.0, 1.0);
-            curve = pow(curve, 2.0);
-            occlusion += curve * AO_I * 3.0 * max(skyLightFactor, 0.5) - nightFactor * 1.5;
-        }
+        // AO calculation - Removed for Natural Occlusion
+        // RayHit firstHit = MarchRay(startPos, RayDirection(normalMR, dither, i), depthtex, screenEdge);
+        // if (firstHit.hit) {
+        //     float aoRadius = AO_RADIUS;
+        //     float curve = 1.0 - clamp(firstHit.hitDist / aoRadius, 0.0, 1.0);
+        //     curve = pow(curve, 2.0);
+        //     occlusion += curve * AO_I * 3.0 * max(skyLightFactor, 0.5) - nightFactor * 1.5;
+        // }
+        // occlusion = vec3(0.0); // Placeholder for natural occlusion
     }
     
     totalRadiance /= float(numPaths);
     emissiveRadiance /= float(numPaths);
-    occlusion /= float(numPaths);
+    //occlusion /= float(numPaths);
     
     #if defined DEFERRED1 && defined TEMPORAL_FILTER
         giScreenPos = vec3(texCoord, 1.0);
@@ -513,7 +514,7 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
     
     emissiveOut = emissiveRadiance;
     
-    gi.rgb = max(totalRadiance - occlusion, 0.0);
+    gi.rgb = max(totalRadiance, 0.0);
     gi.rgb = max(gi.rgb, vec3(0.0));
     
     return gi;
