@@ -1,0 +1,68 @@
+{
+    "unusedString": "
+        #include "/lib/misc/voxy_settings.glsl"
+    ","version": 1,
+    "excludeLodsFromVanillaDepth": true,
+    "opaqueDrawBuffers": [
+        0
+    ],
+    "translucentDrawBuffers": [
+        0
+    ],
+    "blending": {
+        "-1": "off",
+        "0": "SRC_ALPHA ONE_MINUS_SRC_ALPHA ONE ONE_MINUS_SRC_ALPHA"
+    }, 
+#ifdef TAA 
+    "taaOffset": "{ 
+        return taa_offset;
+}","useViewportDims": true,
+"renderScale": [RENDER_SCALE, RENDER_SCALE
+],
+#endif
+    "uniforms": [
+    "gbufferModelView",
+    "gbufferModelViewInverse",
+    "gbufferProjection",
+    "gbufferProjectionInverse",
+    "gbufferPreviousModelView",
+    "gbufferPreviousProjection",
+    "shadowModelView",
+    "shadowModelViewInverse",
+    "shadowProjection",
+    "shadowProjectionInverse",
+    "cameraPosition",
+    "previousCameraPosition",
+    "near",
+    "far",
+    "frameTimeCounter",
+    "sunAngle",
+    "rainStrength",
+    "wetness",
+    "worldTime",
+    "moonPhase",
+    "frameCounter",
+    "isEyeInWater",
+    "blindness",
+    "nightVision",
+    "darknessFactor",
+    "eyeAltitude",
+    "view_res",
+    "viewWidth",
+    "viewHeight",
+    "view_pixel_size",
+    "taa_offset",
+    "eye_skylight",
+    "biome_cave",
+    "biome_may_rain",
+    "biome_may_snow",
+    "time_sunrise",
+    "time_noon",
+    "time_sunset",
+    "time_midnight"
+],
+"samplers": [
+    "noisetex",
+    "colortex4"
+]
+}
