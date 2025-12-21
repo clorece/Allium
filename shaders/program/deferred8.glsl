@@ -512,15 +512,15 @@ void main() {
                 }
                 #endif
                 
-                color += gi * albedo - rtao;
+                vec3 colorAdd = mix(color, (gi * albedo - rtao) * 1.0, 0.5);
                 
                 float refIntensity = 2.0;
                 float intensityRatio = refIntensity / max(PT_EMISSIVE_I, 0.01);
-                float pureAdditive = 0.3 * intensityRatio;
+                float pureAdditive = 0.1 * intensityRatio;
                 float albedoMod = 1.0 - pureAdditive;
-                color += emissiveColor * (pureAdditive + albedoMod * albedo) * PT_EMISSIVE_I;
+                colorAdd += emissiveColor * (pureAdditive + albedoMod * albedo) * PT_EMISSIVE_I;
                 
-                vec3 colorAdd = color * 0.5;
+                //vec3 colorAdd = color * 0.5;
             #endif
             //if (z0 > 0.56) {
                 #ifdef TEMPORAL_FILTER

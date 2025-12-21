@@ -39,7 +39,7 @@
         #else
             vec3 nightClearLightColor = vec3(0.12, 0.14, 0.17); //light shaft color
         #endif
-        vec3 nightClearAmbientColor   = vec3(0.47, 0.58, 0.925) * 0.185 * (1.55 + vsBrightness * 0.77);
+        vec3 nightClearAmbientColor   = vec3(0.47, 0.58, 0.975) * 0.1 * (1.55 + vsBrightness * 0.77);
 
         #ifdef SPECIAL_BIOME_WEATHER
             vec3 drlcSnowM = inSnowy * vec3(-0.06, 0.0, 0.04);
@@ -64,8 +64,8 @@
         vec3 dayRainAmbientColor = vec3(0.21, 0.215, 0.225) * (1.8 + 0.5 * vsBrightness);
 
         // night rain colors
-        vec3 nightRainLightColor   = vec3(0.01, 0.02, 0.03) * 3.75 * (0.5 + 0.5 * vsBrightness);
-        vec3 nightRainAmbientColor = vec3(0.053, 0.0575, 0.060) * 5.0 * (0.75 + 0.6 * vsBrightness);
+        vec3 nightRainLightColor   = vec3(0.015, 0.0185, 0.025) * 1.75 * (0.5 + 0.5 * vsBrightness);
+        vec3 nightRainAmbientColor = vec3(0.047, 0.058, 0.0975) * 2.5 * (0.75 + 0.6 * vsBrightness);
 
         #ifndef COMPOSITE
             float noonFactorDM = noonFactor; //ground and cloud factor
