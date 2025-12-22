@@ -165,6 +165,27 @@ vec3 Tonemap_Lottes(vec3 x) {
     return pow(x, vec3(a)) / (pow(x, vec3(a * d)) * b + c);
 }
 
+vec3 Hable_Partial(vec3 x) {
+    const float A = 0.27;  // Shoulder Strength
+    const float B = 0.50;  // Linear Strength
+    const float C = 0.12;  // Linear Angle
+    const float D = 0.22;  // Toe Strength
+    const float E = 0.02;  // Toe Numerator
+    const float F = 0.30;  // Toe Denominator
+    
+    return ((x * (A * x + C * B) + D * E) / (x * (A * x + B) + D * F)) - E / F;
+}
+
+vec3 Tonemap_Hable(vec3 color) {
+    const float exposureBias = 2.0;  // Exposure multiplier
+    const float W = 11.2;            // Linear White Point
+
+    vec3 curr = Hable_Partial(color * exposureBias);
+    vec3 whiteScale = vec3(1.0) / Hable_Partial(vec3(W));
+    
+    return pow(curr * whiteScale, vec3(1.0 / 2.2));
+}
+
 #define clamp01(x) clamp(x, 0.0, 1.0)
 
 // thanks to Query's for their AWESOME LUTs
@@ -406,7 +427,7 @@ void main() {
     //DoBSLTonemap(color);
     float ignored = dot(color * vec3(0.15, 0.50, 0.35), vec3(0.1, 0.65, 0.6));
     float desaturated = dot(color, vec3(0.15, 0.50, 0.35));
-    //color = mix(color, vec3(ignored), exp2((-32) * desaturated));
+    color = mix(color, vec3(ignored), exp2((-192) * desaturated));
 
      // Get auto exposure value (reads from colortex4)
     float exposure = GetAutoExposure(colortex0, dither);
@@ -418,7 +439,7 @@ void main() {
         color *= 1.5;
     #endif
 
-    color = Tonemap_Lottes(color);
+    color = Tonemap_Hable(color);
 
     float luminance = dot(color, vec3(0.2126, 0.7152, 0.0722));
     color = mix(vec3(luminance), color, 1.0);

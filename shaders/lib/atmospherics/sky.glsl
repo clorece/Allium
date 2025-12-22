@@ -129,6 +129,6 @@
         #endif
         finalSky += max((dither - 0.5), 0.0)/32.0;
         finalSky = max(finalSky, 0.0);
-        return pow(finalSky * 1.4, vec3(1.0 / 1.3));
+        return pow(finalSky * 0.9, vec3(1.3));
     }
 #endif //INCLUDE_SKY
