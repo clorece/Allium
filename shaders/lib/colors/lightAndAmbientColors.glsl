@@ -13,7 +13,7 @@
 
         // noonAmbientColor
         //vec3 noonClearAmbientColor = pow(skyColor, vec3(0.65)) * 0.85;
-        vec3 noonClearAmbientColor = vec3(0.63, 0.68, 0.88);
+        vec3 noonClearAmbientColor = vec3(0.63, 0.68, 0.78);
 
 
 
@@ -29,7 +29,7 @@
 
 
         // sunset ambient
-        vec3 sunsetClearAmbientColor   = vec3(0.63, 0.68, 0.88);
+        vec3 sunsetClearAmbientColor   = vec3(0.63, 0.68, 0.78);
 
 
         #if !defined COMPOSITE && !defined DEFERRED1 //ground color

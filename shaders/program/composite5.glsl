@@ -11,7 +11,7 @@
 #define Lut_Set                     1           //[1] // technically there should be a 2 for raspberry but ill keep it off for now :3
 
 
-#define Overworld_Lut                2          //[0 1 2 3 4 5 6 7 8 9]
+#define Overworld_Lut                5          //[0 1 2 3 4 5 6 7 8 9]
 #define Nether_Lut                2          //[0 1 2 3 4 5 6 7 8 9]
 #define End_Lut                 1          //[0 1 2 3 4 5 6 7 8 9]
 
@@ -48,6 +48,14 @@ void DoBSLTonemap(inout vec3 color) {
     color = pow(color, mix(vec3(T_LOWER_CURVE), vec3(T_UPPER_CURVE), sqrt(color)));
 
     color = pow(color, vec3(1.0 / 2.2));
+}
+
+
+vec3 reinhard_jodie(vec3 v)
+{
+    float l = luminance(v);
+    vec3 tv = v / (1.0f + v);
+    return lerp(v / (1.0f + l), tv, tv);
 }
 
 void DoBSLColorSaturation(inout vec3 color) {

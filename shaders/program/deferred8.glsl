@@ -194,7 +194,7 @@ vec3 textureCatmullRom(sampler2D colortex, vec2 texcoord, vec2 view) {
     return color.rgb / color.a;
 }
 
-#if GLOBAL_ILLUMINATION == 1
+#if GLOBAL_ILLUMINATION >= 1
     vec2 OffsetDist(float x, int s) {
         float n = fract(x * 1.414) * 3.1415;
         return pow2(vec2(cos(n), sin(n)) * x / s);
@@ -204,13 +204,8 @@ vec3 textureCatmullRom(sampler2D colortex, vec2 texcoord, vec2 view) {
         if (z0 < 0.56) return 1.0;
         float ao = 0.0;
 
-        #if SSAO_QUALI_DEFINE == 2
-            int samples = 4;
-            float scm = 0.4;
-        #elif SSAO_QUALI_DEFINE == 3
-            int samples = 12;
-            float scm = 0.6;
-        #endif
+        int samples = 4;
+        float scm = 0.4;
 
         #define SSAO_I_FACTOR 0.3
 
@@ -477,14 +472,18 @@ void main() {
             ao = 1.0;
             if (!entityOrHand) color.rgb *= ao;
         #elif GLOBAL_ILLUMINATION == 1
-            ao = DoAmbientOcclusion(z0, linearZ0, dither, playerPos);
-            if (!entityOrHand) color.rgb *= ao;
+            float ssao = DoAmbientOcclusion(z0, linearZ0, dither, playerPos);
+            if (!entityOrHand) color.rgb *= ssao;
         #else
             //#ifdef EXCLUDE_ENTITIES
             //#endif
             vec4 packedEmissive = texture2D(colortex9, ScaleToViewport(texCoord));
             vec3 emissiveColor = packedEmissive.rgb;
             vec3 rtao = vec3(packedEmissive.a);
+            
+            // Hybrid AO: Combine full-res SSAO with path-traced RTAO
+            float ssao = DoAmbientOcclusion(z0, linearZ0, dither, playerPos);
+            color *= ssao;
             
             vec4 packedGI = texture2D(colortex11, ScaleToViewport(texCoord));
             vec3 gi = packedGI.rgb;

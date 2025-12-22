@@ -499,7 +499,7 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
             float aoRadius = AO_RADIUS;
             float curve = 1.0 - clamp(firstHit.hitDist / aoRadius, 0.0, 1.0);
             curve = pow(curve, 2.0);
-            occlusion += curve * AO_I * 3.0 * max(skyLightFactor, 0.5) - nightFactor * 1.5;
+            occlusion += curve * AO_I * 3.0 * max(skyLightFactor, 0.1) - nightFactor * 1.5;
         }
     }
     
