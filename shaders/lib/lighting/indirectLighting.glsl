@@ -377,6 +377,11 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
     float distanceScale = clamp(1.0 - startPos.z / far, 0.1, 1.0);
     int numPaths = int(PT_MAX_BOUNCES * distanceScale);
     
+    vec3 startPlayerPos = ViewToPlayer(viewPos);
+    vec3 startPlayerNormal = mat3(gbufferModelViewInverse) * normalM;
+    bool startShadowed = GetShadow(startPlayerPos + startPlayerNormal * 0.1, vec3(0.0));
+    bool receiverLit = !startShadowed;
+
     for (int i = 0; i < numPaths; i++) {
         vec3 pathRadiance = vec3(0.0);
         vec3 pathThroughput = vec3(1.0);
@@ -408,40 +413,16 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
                 vec3 hitAlbedo = texture2DLod(colortex0, jitteredUV, 0.0).rgb;
                 float hitSmoothness = texture2DLod(colortex6, jitteredUV, 0.0).r;
 
-                // Calculate voxel tint for light passing through stained glass
                 vec3 voxelTint = CheckVoxelTint(currentPos, hit.worldPos);
 
                 vec3 brdf = EvaluateBRDF(hitAlbedo, currentNormal, rayDir, -normalize(currentPos));
                 float pdf = CosinePDF(NdotL);
-                
-                // Apply softer energy falloff (sqrt to reduce harshness)
+
                 vec3 throughputMult = brdf * NdotL / max(pdf, 0.0001);
                 pathThroughput *= sqrt(throughputMult + 0.01);
 
-                // Apply voxel tint to throughput for light traveling through glass
                 #if defined (PT_TRANSPARENT_TINTS) && defined (PT_USE_VOXEL_LIGHT)
                     pathThroughput *= voxelTint;
-                #endif
-                
-                #ifdef PT_USE_DIRECT_LIGHT_SAMPLING
-                    vec3 hitWorldPos = mat3(gbufferModelViewInverse) * hit.worldPos + cameraPosition;
-                    vec3 hitWorldNormal = mat3(gbufferModelViewInverse) * hitNormal;
-
-                    float shadowWeight = GetShadowWeight(hitWorldPos, normalize(cameraPosition), hitWorldNormal);
-                    
-                    if (shadowWeight > 0.0) {
-                        #ifdef OVERWORLD
-                            vec3 directLightColor = normalizelightColor * shadowWeight;
-                        #else
-                            vec3 directLightColor = vec3(0.0);
-                        #endif
-                        
-                        vec3 sunDir = normalize(sunPosition);
-                        vec3 worldHitNormal = mat3(gbufferModelViewInverse) * hitNormal;
-                        float sunAlignment = max(dot(worldHitNormal, sunDir), 0.0);
-
-                        pathRadiance += pathThroughput * hitAlbedo * directLightColor * sunAlignment;
-                    }
                 #endif
                 
                 // Voxel ID based emissive detection
@@ -453,7 +434,7 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
                 if (voxelID > 1 && voxelID < 100) {
                     vec4 blockLightColor = GetSpecialBlocklightColor(voxelID);
                     vec3 boostedColor = blockLightColor.rgb;
-                    vec3 emissiveColor = pow(boostedColor, vec3(1.0/2.2));
+                    vec3 emissiveColor = pow(boostedColor, vec3(1.0 / 8.0)) * PT_EMISSIVE_I;
                     // Tint emissive light passing through stained glass
                     #ifdef PT_TRANSPARENT_TINTS
                         emissiveColor *= voxelTint;
@@ -472,11 +453,25 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
                 }
                 #endif
                 
+                // Hit Point Shadow Check (Prevent GI from Lit Surfaces)
+                // If Receiver is Lit AND Hit Surface is Lit -> Suppress (Double Illumination)
+                // If Receiver is Shaded -> ALLOW (Shaded areas need light from Lit surfaces)
+                // We use a larger bias (0.2) to ensure we reliably detect Lit Hit surfaces.
+                bool hitLit = !GetShadow(normalize(hit.worldPos) + hitNormal * 0.2, vec3(0.0));
+                
+                if (receiverLit && hitLit) {
+                    break;
+                }
+
                 currentPos = hit.worldPos + rayDir * 0.01;
                 currentNormal = hitNormal;
                 
+                // Check if hit surface is exposed to sky/sun - reduce GI contribution to prevent double-illumination
+                float hitSkyLightFactor = texture2DLod(colortex6, jitteredUV, 0.0).b;
+                float directLightMask = 1.0 - pow2(hitSkyLightFactor) * 0.85; // Sun-exposed = less GI
+                
                //if (bounce == PT_MAX_BOUNCES - 1) {
-                    pathRadiance += pathThroughput * hitColor * 0.5;
+                    pathRadiance += pathThroughput * hitColor * 0.5 * directLightMask;
                 //}
                 
             } else {

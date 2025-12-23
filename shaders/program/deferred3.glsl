@@ -45,7 +45,8 @@ void main() {
         vec3 texture5 = texelFetch(colortex5, texelCoord, 0).rgb;
         vec3 centerNormal = mat3(gbufferModelView) * texture5;
 
-        const int stepSize = 4;
+        #ifdef DENOISER_ENABLED
+        int stepSize = 4 * DENOISER_STEP_SIZE;
         float totalWeight = 0.0;
 
         const float kernel[3] = float[3](1.0, 2.0, 1.0);
@@ -81,9 +82,20 @@ void main() {
             }
         }
         
-        emissiveFiltered /= totalWeight;
-        giFiltered /= totalWeight;
-        aoFiltered /= totalWeight;
+        if (totalWeight > 0.0001) {
+            emissiveFiltered /= totalWeight;
+            giFiltered /= totalWeight;
+            aoFiltered /= totalWeight;
+        } else {
+            emissiveFiltered = prevEmissive;
+            giFiltered = prevGI;
+            aoFiltered = prevAO;
+        }
+        #else
+            emissiveFiltered = prevEmissive;
+            giFiltered = prevGI;
+            aoFiltered = prevAO;
+        #endif
     #endif
 
     emissiveFiltered = max(emissiveFiltered, 0.0);

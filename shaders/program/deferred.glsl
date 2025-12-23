@@ -102,6 +102,8 @@ void main() {
     vec3 ao = vec3(0.0);
     vec3 emissive = vec3(0.0); // New: separate emissive output
 
+    // Use unscaled texCoord for projection (gbufferProjectionInverse expects full 0..1 screen range)
+    // This gives correct 3D positions for shadow lookups at any render scale
     vec4 screenPos = vec4(scaledCoord, z0, 1.0);
     vec4 viewPos = gbufferProjectionInverse * (screenPos * 2.0 - 1.0);
     viewPos /= viewPos.w;

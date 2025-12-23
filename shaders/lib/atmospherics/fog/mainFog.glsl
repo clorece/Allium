@@ -48,7 +48,7 @@
             fog = clamp(fog, 0.0, 1.0);
 
             #ifdef OVERWORLD
-                vec3 fogColorM = GetSky(VdotU, VdotS, dither, true, true);
+                vec3 fogColorM = GetSky(VdotU, VdotS, dither, true, false);
             #elif defined NETHER
                 vec3 fogColorM = netherColor;
             #else
@@ -182,7 +182,7 @@
 
             #ifdef OVERWORLD
                 //vec3 fogColorM = GetAtmFogColor(altitudeFactorRaw, VdotS);
-                vec3 fogColorM = pow(GetSky(VdotU, VdotS, dither, true, true), vec3(1.0 / 2.2)) - nightFactor * 0.35;
+                vec3 fogColorM = GetSky(VdotU, VdotS, dither, true, false);
             #else
                 vec3 fogColorM = endSkyColor * 1.5;
             #endif

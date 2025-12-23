@@ -218,8 +218,8 @@ vec3 textureCatmullRom(sampler2D colortex, vec2 texcoord, vec2 view) {
             vec2 offset = OffsetDist(i + dither, samples) * scale;
             if (i % 2 == 0) offset.y = -offset.y;
 
-            vec2 coord1 = texCoord + offset;
-            vec2 coord2 = texCoord - offset;
+            vec2 coord1 = (texCoord + offset) * RENDER_SCALE;
+            vec2 coord2 = (texCoord - offset) * RENDER_SCALE;
 
             sampleDepth = GetLinearDepth(texture2D(depthtex0, coord1).r);
             float aosample = farMinusNear * (linearZ0 - sampleDepth) * 2.0;
@@ -245,8 +245,8 @@ void main() {
 
     vec2 scaledUV = (texCoord) * RENDER_SCALE;
     
-    vec3 color = texelFetch(colortex0, texelCoord, 0).rgb;
-    float z0 = texelFetch(depthtex0, texelCoord, 0).r;
+    vec3 color = texture2D(colortex0, scaledUV).rgb;
+    float z0 = texture2D(depthtex0, scaledUV).r;
 
     // texCoord in deferred pass is [0,1] (from fullscreen quad), which is correct for unprojection
     vec4 screenPos = vec4(texCoord, z0, 1.0);
@@ -486,7 +486,7 @@ void main() {
             color *= ssao;
             
             vec4 packedGI = texture2D(colortex11, ScaleToViewport(texCoord));
-            vec3 gi = packedGI.rgb * 4.0 * GI_I;
+            vec3 gi = packedGI.rgb * 20.0 * GI_I;
 
             
             #ifdef PT_VIEW
@@ -519,7 +519,15 @@ void main() {
                 float intensityRatio = refIntensity / max(PT_EMISSIVE_I, 0.01);
                 float pureAdditive = 0.1 * intensityRatio;
                 float albedoMod = 1.0 - pureAdditive;
-                colorAdd += emissiveColor * (pureAdditive + albedoMod * albedo) * PT_EMISSIVE_I;
+                
+                // Apply soft bloom knee to emissive - preserves brightness perception while reducing bloom
+                vec3 emissiveForBloom = emissiveColor * (pureAdditive + albedoMod * albedo) * PT_EMISSIVE_I;
+                float emissiveLum = dot(emissiveForBloom, vec3(0.2126, 0.7152, 0.0722));
+                float bloomKnee = 0.5; // Aggressive: compress values above this threshold
+                float compressedLum = emissiveLum < bloomKnee ? emissiveLum : bloomKnee + (emissiveLum - bloomKnee) / (1.0 + (emissiveLum - bloomKnee) * 2.0);
+                emissiveForBloom *= emissiveLum > 0.001 ? compressedLum / emissiveLum : 1.0;
+                
+                colorAdd += emissiveForBloom;
                 
                 //vec3 colorAdd = color * 0.5;
             #endif
