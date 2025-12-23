@@ -207,7 +207,7 @@ vec3 textureCatmullRom(sampler2D colortex, vec2 texcoord, vec2 view) {
         int samples = 4;
         float scm = 0.4;
 
-        #define SSAO_I_FACTOR 0.3
+        #define SSAO_I_FACTOR 0.5
 
         float sampleDepth = 0.0, angle = 0.0, dist = 0.0;
         float fovScale = gbufferProjection[1][1];
@@ -486,7 +486,7 @@ void main() {
             color *= ssao;
             
             vec4 packedGI = texture2D(colortex11, ScaleToViewport(texCoord));
-            vec3 gi = packedGI.rgb;
+            vec3 gi = packedGI.rgb * 4.0 * GI_I;
 
             
             #ifdef PT_VIEW
@@ -511,7 +511,9 @@ void main() {
                 }
                 #endif
                 
-                vec3 colorAdd = mix(color, (gi * albedo - rtao) * 1.0, 0.5);
+                // Combine SSAO with RTAO for natural occlusion
+                vec3 finalAO = (1.0 - clamp(rtao, 0.0, 1.0)) * vec3(ssao);
+                vec3 colorAdd = mix(color, (gi * albedo * finalAO) * 1.0, 0.5);
                 
                 float refIntensity = 2.0;
                 float intensityRatio = refIntensity / max(PT_EMISSIVE_I, 0.01);

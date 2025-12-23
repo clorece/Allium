@@ -18,7 +18,7 @@
 
 
         #ifndef COMPOSITE //ground and cloud color
-            vec3 sunsetClearLightColor = pow(vec3(0.65, 0.59, 0.48), vec3(1.5 + invNoonFactor)) * 3.0;
+            vec3 sunsetClearLightColor = pow(vec3(0.65, 0.53, 0.38) * 0.85, vec3(1.5 + invNoonFactor)) * 3.0;
 
 
 

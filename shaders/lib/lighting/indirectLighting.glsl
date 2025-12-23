@@ -400,7 +400,7 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
                 float lod = log2(hit.hitDist * 0.5) * 0.5;
                 lod = max(lod, 0.0);
                 
-                vec3 hitColor = pow(texture2DLod(colortex0, jitteredUV, lod).rgb, vec3(1.2)) * 1.5 * GI_I - nightFactor * 0.2;;
+                vec3 hitColor = pow(texture2DLod(colortex0, jitteredUV, lod).rgb, vec3(1.0)) * 1.0 - nightFactor * 0.2;;
                 float hitFoliage = texture2D(colortex10, jitteredUV).a;
                 
                 vec3 hitNormalEncoded = texture2DLod(colortex5, jitteredUV, 0.0).rgb;
@@ -475,9 +475,9 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
                 currentPos = hit.worldPos + rayDir * 0.01;
                 currentNormal = hitNormal;
                 
-                if (bounce == PT_MAX_BOUNCES - 1) {
-                    pathRadiance += pathThroughput * hitColor * 0.5 * GI_I;
-                }
+               //if (bounce == PT_MAX_BOUNCES - 1) {
+                    pathRadiance += pathThroughput * hitColor * 0.5;
+                //}
                 
             } else {
                 // Sky contribution
@@ -513,7 +513,7 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
     
     emissiveOut = emissiveRadiance;
     
-    gi.rgb = max(totalRadiance - occlusion, 0.0);
+    gi.rgb = totalRadiance;
     gi.rgb = max(gi.rgb, vec3(0.0));
     
     return gi;
