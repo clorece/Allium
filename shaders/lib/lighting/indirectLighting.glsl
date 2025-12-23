@@ -51,8 +51,6 @@
 
 vec2 texelSize = 1.0 / vec2(viewWidth, viewHeight);
 
-// Colored block light emission for path tracer
-// Uses voxel IDs stored in colortex10.g from gbuffers_terrain
 #include "/lib/colors/blocklightColors.glsl"
 
 //#define PT_USE_DIRECT_LIGHT_SAMPLING
@@ -125,8 +123,7 @@ vec2 texelSize = 1.0 / vec2(viewWidth, viewHeight);
 
     vec3 CheckVoxelTint(vec3 startViewPos, vec3 endViewPos) {
         vec3 tint = vec3(1.0);
-        
-        // Correct View -> World (Player) Space transform using vec4/mat4
+
         vec4 startWorld4 = gbufferModelViewInverse * vec4(startViewPos, 1.0);
         vec4 endWorld4 = gbufferModelViewInverse * vec4(endViewPos, 1.0);
         vec3 startWorld = startWorld4.xyz;
@@ -146,24 +143,17 @@ vec2 texelSize = 1.0 / vec2(viewWidth, viewHeight);
 
         for(int i = 0; i < steps; i++) {
             pos += stepDir;
-            
-            // Safety margin bounds check to avoid edge sampling issues
+
             if (any(lessThan(pos, vec3(0.5))) || any(greaterThanEqual(pos, volumeSize - 0.5))) continue;
 
-            // Use texelFetch for precise integer grid sampling
             uint id = texelFetch(voxel_sampler, ivec3(pos), 0).r;
-            
-            // Skip air (0), solid blocks (1), and non-transparent blocks
+
             if (id <= 1u) continue;
             
-            // Only apply tint for KNOWN valid transparent block IDs:
-            // 200-218: Stained Glass, Honey, Slime, Ice, Glass, Glass Pane
-            // 254: Tinted Glass
             if ((id >= 200u && id <= 218u) || id == 254u) {
                 int idx = int(id) - 200;
                 tint *= specialTintColorPT[idx];
             }
-            // Any other ID (219-253, or invalid values) is ignored
         }
         return tint;
     }
@@ -424,18 +414,14 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
                 #if defined (PT_TRANSPARENT_TINTS) && defined (PT_USE_VOXEL_LIGHT)
                     pathThroughput *= voxelTint;
                 #endif
-                
-                // Voxel ID based emissive detection
-                // Read voxel blocklight ID from gbuffer (stored as voxelID / 255.0)
+
                 #ifdef PT_USE_VOXEL_LIGHT
                 int voxelID = int(texture2DLod(colortex10, jitteredUV, 0.0).g * 255.0 + 0.5);
-                
-                // Check if this is an emissive block (voxelID 2-100 are light sources, 1 = solid block)
+
                 if (voxelID > 1 && voxelID < 100) {
                     vec4 blockLightColor = GetSpecialBlocklightColor(voxelID);
                     vec3 boostedColor = blockLightColor.rgb;
                     vec3 emissiveColor = pow(boostedColor, vec3(1.0 / 8.0)) * PT_EMISSIVE_I;
-                    // Tint emissive light passing through stained glass
                     #ifdef PT_TRANSPARENT_TINTS
                         emissiveColor *= voxelTint;
                     #endif
@@ -452,12 +438,8 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
                     pathThroughput /= continueProbability;
                 }
                 #endif
-                
-                // Hit Point Shadow Check (Prevent GI from Lit Surfaces)
-                // If Receiver is Lit AND Hit Surface is Lit -> Suppress (Double Illumination)
-                // If Receiver is Shaded -> ALLOW (Shaded areas need light from Lit surfaces)
-                // We use a larger bias (0.2) to ensure we reliably detect Lit Hit surfaces.
-                bool hitLit = !GetShadow(normalize(hit.worldPos) + hitNormal * 0.2, vec3(0.0)) && NdotL > 0.9;
+
+                bool hitLit = !GetShadow(normalize(hit.worldPos) + hitNormal * 0.2, vec3(0.0)) && NdotL > 0.5;
                 
                 if (receiverLit && hitLit) {
                     break;
@@ -465,14 +447,13 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
 
                 currentPos = hit.worldPos + rayDir * 0.01;
                 currentNormal = hitNormal;
-                
-                // Check if hit surface is exposed to sky/sun - reduce GI contribution to prevent double-illumination
+
                 float hitSkyLightFactor = texture2DLod(colortex6, jitteredUV, 0.0).b;
-                float directLightMask = 1.0 - pow2(hitSkyLightFactor) * 0.85; // Sun-exposed = less GI
+                float directLightMask = 1.0 - pow2(hitSkyLightFactor) * 0.85;
                 
-               //if (bounce == PT_MAX_BOUNCES - 1) {
+               if (bounce == PT_MAX_BOUNCES - 1) {
                     pathRadiance += pathThroughput * hitColor * 0.5 * directLightMask;
-                //}
+                }
                 
             } else {
                 // Sky contribution
