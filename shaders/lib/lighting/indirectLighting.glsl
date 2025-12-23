@@ -457,7 +457,7 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
                 // If Receiver is Lit AND Hit Surface is Lit -> Suppress (Double Illumination)
                 // If Receiver is Shaded -> ALLOW (Shaded areas need light from Lit surfaces)
                 // We use a larger bias (0.2) to ensure we reliably detect Lit Hit surfaces.
-                bool hitLit = !GetShadow(normalize(hit.worldPos) + hitNormal * 0.2, vec3(0.0));
+                bool hitLit = !GetShadow(normalize(hit.worldPos) + hitNormal * 0.2, vec3(0.0)) && NdotL > 0.9;
                 
                 if (receiverLit && hitLit) {
                     break;
