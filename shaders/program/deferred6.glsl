@@ -1,5 +1,6 @@
 /////////////////////////////////////
 // Complementary Shaders by EminGT //
+// Cloud Blur & Reconstruction     //
 /////////////////////////////////////
 
 //Common//
@@ -17,100 +18,88 @@ flat in vec3 upVec, sunVec;
 #include "/lib/commonVariables.glsl"
 #include "/lib/commonFunctions.glsl"
 
-//Common Functions//
-float GetLinearDepth2(float depth) {
-    return (2.0 * near) / (far + near - depth * (far - near));
-}
-
 //Includes//
 #include "/lib/util/spaceConversion.glsl"
 
-// Smart Blur: Fills holes but softens edges to prevent "Lego" look
-vec4 SmartBlurHorizontal(sampler2D cloudTex, vec2 coord, float centerDepth) {
-    vec4 sum = vec4(0.0);
-    float validWeightSum = 0.0;
-    float totalKernelWeight = 0.0;
+// Check if a pixel was rendered (not a checkerboard hole)
+// Must match deferred5.glsl IsActivePixel exactly
+bool IsActivePixel(ivec2 p) {
+    #if CLOUD_RENDER_RESOLUTION == 3
+        return true;
+    #elif CLOUD_RENDER_RESOLUTION == 2
+        return !((p.x & 1) != 0 && (p.y & 1) != 0); // 3/4 resolution: skip bottom-right of each 2x2
+    #elif CLOUD_RENDER_RESOLUTION == 1
+        return ((p.x + p.y) & 1) == 0; // Checkerboard: every other pixel
+    #else
+        return true;
+    #endif
+}
+
+// Reconstruct checkerboard and apply blur
+vec4 ReconstructAndBlur(vec2 uv) {
+    vec2 viewRes = vec2(viewWidth, viewHeight);
+    vec2 pixelSize = 1.0 / viewRes;
     
-    // Standard Gaussian Weights
-    float weights[5] = float[5](0.153170, 0.144893, 0.122649, 0.092902, 0.062970);
-    vec2 pixelSize = vec2(1.0 / viewWidth, 1.0 / viewHeight);
-
-    // 1. Center Sample
-    vec4 centerSample = texture2D(cloudTex, coord);
-    float centerW = weights[0];
-    totalKernelWeight += centerW;
-
-    if (centerSample.a > 0.001) {
-        sum += centerSample * centerW;
-        validWeightSum += centerW;
-    }
-
-    // 2. Loop Neighbors
-    for (int i = 1; i <= 2; i++) {
-        vec2 offset = vec2(float(i) * pixelSize.x, 0.0);
-        float w = weights[i];
-
-        // Right Sample
-        vec2 posR = coord + offset;
-        vec4 sampleR = texture2D(cloudTex, posR);
-        float depthR = texture2D(depthtex0, posR).r;
+    ivec2 centerPixel = ivec2(uv * viewRes);
+    bool centerActive = IsActivePixel(centerPixel);
+    
+    // Sample the 4 cardinal neighbors
+    vec4 samples[5];
+    float weights[5];
+    float totalWeight = 0.0;
+    
+    // Offsets: center, right, left, up, down
+    ivec2 offsets[5] = ivec2[5](
+        ivec2(0, 0),
+        ivec2(1, 0),
+        ivec2(-1, 0),
+        ivec2(0, 1),
+        ivec2(0, -1)
+    );
+    
+    // Gaussian-ish weights
+    float baseWeights[5] = float[5](0.4, 0.15, 0.15, 0.15, 0.15);
+    
+    for (int i = 0; i < 5; i++) {
+        ivec2 samplePixel = centerPixel + offsets[i];
+        vec2 sampleUV = (vec2(samplePixel) + 0.5) * pixelSize;
         
-        // Depth Safety (prevent clouds bleeding into mountains)
-        float depthDiffR = abs(centerDepth - depthR);
-        float depthWeightR = depthDiffR < 0.01 ? 1.0 : 0.0;
+        // Check if this sample position was rendered
+        bool sampleActive = IsActivePixel(samplePixel);
         
-        // Accumulate max potential weight for density calculation
-        totalKernelWeight += w * depthWeightR;
-
-        if (sampleR.a > 0.001) {
-            sum += sampleR * w * depthWeightR;
-            validWeightSum += w * depthWeightR;
-        }
-
-        // Left Sample
-        vec2 posL = coord - offset;
-        vec4 sampleL = texture2D(cloudTex, posL);
-        float depthL = texture2D(depthtex0, posL).r;
-        
-        float depthDiffL = abs(centerDepth - depthL);
-        float depthWeightL = depthDiffL < 0.01 ? 1.0 : 0.0;
-
-        totalKernelWeight += w * depthWeightL;
-
-        if (sampleL.a > 0.001) {
-            sum += sampleL * w * depthWeightL;
-            validWeightSum += w * depthWeightL;
+        if (sampleActive) {
+            samples[i] = texture2D(colortex12, sampleUV);
+            weights[i] = baseWeights[i];
+            totalWeight += weights[i];
+        } else {
+            samples[i] = vec4(0.0);
+            weights[i] = 0.0;
         }
     }
-
-    if (validWeightSum < 0.0001) return vec4(0.0);
-
-    // 3. Reconstruct Pixel
-    vec4 result = sum / validWeightSum;
-
-    // 4. Density Softening (Fixes Blockiness)
-    // If we found only a few neighbors (edge of cloud), fade it out.
-    // If we found many neighbors (checkerboard hole), keep it opaque.
-    float density = validWeightSum / max(totalKernelWeight, 0.0001);
     
-    // Lower threshold to preventing flickering at low resolutions (checkerboard pattern reduces density)
-    float fadeFactor = smoothstep(0.05, 0.2, density); 
+    // If no valid samples found (shouldn't happen), return black
+    if (totalWeight < 0.001) {
+        return vec4(0.0);
+    }
     
-    result.a *= fadeFactor;
-
+    // Weighted average
+    vec4 result = vec4(0.0);
+    for (int i = 0; i < 5; i++) {
+        result += samples[i] * weights[i];
+    }
+    result /= totalWeight;
+    
     return result;
 }
 
 //Program//
 void main() {
-    vec2 actualTexCoord = texCoord;
-    float sceneDepth = texture2D(depthtex0, actualTexCoord).r;
+    // Reconstruct the checkerboard clouds and apply blur
+    vec4 blurredClouds = ReconstructAndBlur(texCoord);
     
-    vec4 blurredClouds = SmartBlurHorizontal(colortex12, actualTexCoord, sceneDepth);
-
-    /* RENDERTARGETS:14,15 */
+    // Output to colortex14 (blurred clouds, read by deferred7)
+    /* RENDERTARGETS:14 */
     gl_FragData[0] = blurredClouds;
-    gl_FragData[1] = vec4(sceneDepth, 0.0, 0.0, 1.0);
 }
 
 #endif

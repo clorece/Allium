@@ -102,11 +102,16 @@ void main() {
     vec3 ao = vec3(0.0);
     vec3 emissive = vec3(0.0); // New: separate emissive output
 
-    // Use unscaled texCoord for projection (gbufferProjectionInverse expects full 0..1 screen range)
-    // This gives correct 3D positions for shadow lookups at any render scale
+    // Use scaledCoord for ray marching (viewPos must project back to scaled buffer)
     vec4 screenPos = vec4(scaledCoord, z0, 1.0);
     vec4 viewPos = gbufferProjectionInverse * (screenPos * 2.0 - 1.0);
     viewPos /= viewPos.w;
+    
+    // Use unscaled texCoord for shadow lookups (correct world position at any render scale)
+    vec4 unscaledScreenPos = vec4(texCoord, z0, 1.0);
+    vec4 unscaledViewPos = gbufferProjectionInverse * (unscaledScreenPos * 2.0 - 1.0);
+    unscaledViewPos /= unscaledViewPos.w;
+    
     vec3 nViewPos = normalize(viewPos.xyz);
     vec3 playerPos = ViewToPlayer(viewPos.xyz);
     
@@ -136,7 +141,7 @@ void main() {
     roughNoise = noiseMult * (roughNoise - 0.5);
     normalG += roughNoise;
 
-    gi = min(GetGI(ao, emissive, normalG, viewPos.xyz, nViewPos, depthtex0, dither, skyLightFactor, 1.0, VdotU, VdotS, entityOrHand).rgb, vec3(4.0));
+    gi = min(GetGI(ao, emissive, normalG, viewPos.xyz, unscaledViewPos.xyz, nViewPos, depthtex0, dither, skyLightFactor, 1.0, VdotU, VdotS, entityOrHand).rgb, vec3(4.0));
     gi = max(gi, vec3(0.0));
     
     // Temporal Accumulation

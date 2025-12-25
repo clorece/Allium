@@ -57,7 +57,7 @@ noperspective in vec2 texCoord;
     // Program
     void main() {
         #if defined TAA && RENDER_SCALE < 1.0
-            vec2 texCoordM = texCoord * RENDER_SCALE; // Use screen coords for upscaling logic (0-1)
+            vec2 texCoordM = texCoord;
         #else
             vec2 texCoordM = texCoord;
         #endif
@@ -73,54 +73,30 @@ noperspective in vec2 texCoord;
             if (texCoordM.x > 1.0 || texCoordM.y > 1.0) {
                 color = vec3(0.0);
             } else {
-                // Calculate source pixel size roughly
                 vec2 sourcePixelSize = 1.0 / (vec2(viewWidth, viewHeight) * RENDER_SCALE);
-            float sharpness = IMAGE_SHARPENING;
-            // Limit sharpness to 1.2 to prevent negative lobe inversion (RCAS singularity at ~1.25)
-            sharpness = clamp(sharpness, 0.0, 1.2);
+                float sharpness = IMAGE_SHARPENING;
+                sharpness = clamp(sharpness, 0.0, 1.2);
 
-            if (sharpness > 0.001) {
-                // FSR RCAS (Upscaling or Native Sharpening)
-                color = FsrRcas(colortex3, texCoordM, sourcePixelSize, sharpness);
-            } else {
-                #if RENDER_SCALE < 1.0
-                    // FSR EASU Upscaling (High Quality, softer)
-                    vec2 sourceRes = vec2(viewWidth, viewHeight) * RENDER_SCALE;
-                    color = textureEASU(colortex3, texCoordM, sourceRes);
-                #endif
+                if (sharpness > 0.001) {
+                    color = FsrRcas(colortex3, texCoordM, sourcePixelSize, sharpness);
+                } else {
+                    #if RENDER_SCALE < 1.0
+                        vec2 sourceRes = vec2(viewWidth, viewHeight) * RENDER_SCALE;
+                        color = textureEASU(colortex3, texCoordM, sourceRes);
+                    #endif
+                }
             }
-        }
         #else
             color = texture2D(colortex3, texCoordM).rgb;
         #endif
 
 
         #if CHROMA_ABERRATION > 0
-            // Calculate aberration relative to the scaled viewport center
             vec2 scaledCenter = vec2(RENDER_SCALE * 0.5);
             vec2 scale = vec2(1.0, viewHeight / viewWidth);
-            // Scale the aberration offset by RENDER_SCALE to match the reduced viewport
             vec2 aberration = (texCoordM - scaledCenter) * (2.0 / vec2(viewWidth, viewHeight)) * scale * CHROMA_ABERRATION * RENDER_SCALE;
-            // texCoordM is already in scaled coordinates, don't multiply by RENDER_SCALE again
             color.rb = vec2(texture2D(colortex3, texCoordM + aberration).r, texture2D(colortex3, texCoordM - aberration).b);
         #endif
-
-        // Old sharpening loop removed/conditional above
-
-    /*ivec2 boxOffsets[8] = ivec2[8](
-        ivec2( 1, 0),
-        ivec2( 0, 1),
-        ivec2(-1, 0),
-        ivec2( 0,-1),
-        ivec2( 1, 1),
-        ivec2( 1,-1),
-        ivec2(-1, 1),
-        ivec2(-1,-1)
-    );
-
-    for (int i = 0; i < 8; i++) {
-        color = max(color, texelFetch(colortex3, texelCoord + boxOffsets[i], 0).rgb);
-    }*/
 
     #ifdef OPTIFINE_AF_ERROR
         #include "/lib/textRendering/error_optifine_af.glsl"

@@ -11,10 +11,10 @@ const int colortex8Format = RGBA8;          //smoothnessD & materialMask & skyLi
 const int colortex9Format = RGBA16F;        //global illumination
 const int colortex10Format = RGBA8; 
 const int colortex11Format = RGBA16F;       //rtao
-const int colortex12Format = RGBA16F;       //cloud render (raw -> filtered)
-const int colortex13Format = R32F;          //cloud depth pass 1
-const int colortex14Format = RGBA16F;       //horizontally blurred clouds
-const int colortex15Format = R32F;          //cloud depth pass 2
+const int colortex12Format = RGBA16F;       //cloud render (combined blur)
+const int colortex13Format = R32F;          //cloud depth
+const int colortex14Format = RGBA16F;       //blurred cloud data (from deferred6)
+const int colortex15Format = RGB16F;        //TAA neighborhood max bounds
 */
 const bool colortex0Clear = true;
 const bool colortex1Clear = false;

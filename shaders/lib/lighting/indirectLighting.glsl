@@ -53,8 +53,8 @@ vec2 texelSize = 1.0 / vec2(viewWidth, viewHeight);
 
 #include "/lib/colors/blocklightColors.glsl"
 
-//#define PT_USE_DIRECT_LIGHT_SAMPLING
 #define PT_USE_RUSSIAN_ROULETTE
+//#define DEBUG_SHADOW_VIEW
 #if COLORED_LIGHTING_INTERNAL > 0
     #define PT_USE_VOXEL_LIGHT
 #endif
@@ -248,21 +248,6 @@ bool GetShadow(vec3 tracePos, vec3 cameraPos) {
     return false;
 }
 
-float GetShadowWeight(vec3 worldPos, vec3 cameraPos, vec3 normal) {
-    vec3 shadowPosition = GetShadowPosition(worldPos, cameraPos);
-
-    if (length(shadowPosition.xy * 2.0 - 1.0) >= 1.0) {
-        return 1.0;
-    }
-
-    float shadowDepth = shadow2D(shadowtex0, shadowPosition).z;
-
-    if (shadowDepth == 0.0) return 0.0;
-    
-    return 1.0;
-}
-
-
 vec3 toClipSpace3(vec3 viewSpacePosition) {
     vec4 clipSpace = gbufferProjection * vec4(viewSpacePosition, 1.0);
     return clipSpace.xyz / clipSpace.w * 0.5 + 0.5;
@@ -352,7 +337,7 @@ float CosinePDF(float NdotL) {
 
 vec3 giScreenPos = vec3(0.0);
 
-vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 viewPos, vec3 nViewPos, sampler2D depthtex, 
+vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 viewPos, vec3 unscaledViewPos, vec3 nViewPos, sampler2D depthtex, 
            float dither, float skyLightFactor, float smoothness, float VdotU, float VdotS, bool entityOrHand) {
     vec2 screenEdge = vec2(0.6, 0.55);
     vec3 normalMR = normalM;
@@ -366,11 +351,17 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
     
     float distanceScale = clamp(1.0 - startPos.z / far, 0.1, 1.0);
     int numPaths = int(PT_MAX_BOUNCES * distanceScale);
+
+    vec3 receiverScenePos = (gbufferModelViewInverse * vec4(unscaledViewPos, 1.0)).xyz;
+    vec3 receiverWorldPos = receiverScenePos + cameraPosition;
+    bool receiverInShadow = GetShadow(receiverWorldPos, cameraPosition);
+    float receiverShadowMask = receiverInShadow ? 0.5 : 0.25; // default is 0.5
     
-    vec3 startPlayerPos = ViewToPlayer(viewPos);
-    vec3 startPlayerNormal = mat3(gbufferModelViewInverse) * normalM;
-    bool startShadowed = GetShadow(startPlayerPos + startPlayerNormal * 0.1, vec3(0.0));
-    bool receiverLit = !startShadowed;
+    // visualize shadow map for the starting pixel
+    #ifdef DEBUG_SHADOW_VIEW
+        gi.rgb = receiverInShadow ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0);
+        return gi;
+    #endif
 
     for (int i = 0; i < numPaths; i++) {
         vec3 pathRadiance = vec3(0.0);
@@ -402,6 +393,8 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
                 vec3 hitNormal = normalize(hitNormalEncoded * 2.0 - 1.0);
                 vec3 hitAlbedo = texture2DLod(colortex0, jitteredUV, 0.0).rgb;
                 float hitSmoothness = texture2DLod(colortex6, jitteredUV, 0.0).r;
+
+
 
                 vec3 voxelTint = CheckVoxelTint(currentPos, hit.worldPos);
 
@@ -438,12 +431,6 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
                     pathThroughput /= continueProbability;
                 }
                 #endif
-
-                bool hitLit = !GetShadow(normalize(hit.worldPos) + hitNormal * 0.2, vec3(0.0)) && NdotL > 0.5;
-                
-                if (receiverLit && hitLit) {
-                    break;
-                }
 
                 currentPos = hit.worldPos + rayDir * 0.01;
                 currentNormal = hitNormal;
@@ -489,7 +476,7 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
     
     emissiveOut = emissiveRadiance;
     
-    gi.rgb = totalRadiance;
+    gi.rgb = totalRadiance * receiverShadowMask;
     gi.rgb = max(gi.rgb, vec3(0.0));
     
     return gi;

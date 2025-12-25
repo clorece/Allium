@@ -211,14 +211,9 @@ void OverworldLookup(inout vec3 color) {
 
     vec3 newColor1, newColor2;
     
-    #if Lut_Set == 1
     newColor1 = texture2D(colortex7, texPos.xy * correctGrid[0] + correctGrid[1]).rgb;
     newColor2 = texture2D(colortex7, texPos.zw * correctGrid[0] + correctGrid[1]).rgb;
-    #elif Lut_Set == 2
-    newColor1 = texture2D(colortex8, texPos.xy * correctGrid[0] + correctGrid[1]).rgb;
-    newColor2 = texture2D(colortex8, texPos.zw * correctGrid[0] + correctGrid[1]).rgb;
-    #endif
-    
+
     color = mix(newColor1, newColor2, fract(blueColor));
 }
 
@@ -243,13 +238,8 @@ void NetherLookup(inout vec3 color) {
 
     vec3 newColor1, newColor2;
     
-    #if Lut_Set == 1
     newColor1 = texture2D(colortex7, texPos.xy * correctGrid[0] + correctGrid[1]).rgb;
     newColor2 = texture2D(colortex7, texPos.zw * correctGrid[0] + correctGrid[1]).rgb;
-    #elif Lut_Set == 2
-    newColor1 = texture2D(colortex8, texPos.xy * correctGrid[0] + correctGrid[1]).rgb;
-    newColor2 = texture2D(colortex8, texPos.zw * correctGrid[0] + correctGrid[1]).rgb;
-    #endif
     
     color = mix(newColor1, newColor2, fract(blueColor));
 }
@@ -275,13 +265,8 @@ void EndLookup(inout vec3 color) {
 
     vec3 newColor1, newColor2;
     
-    #if Lut_Set == 1
     newColor1 = texture2D(colortex7, texPos.xy * correctGrid[0] + correctGrid[1]).rgb;
     newColor2 = texture2D(colortex7, texPos.zw * correctGrid[0] + correctGrid[1]).rgb;
-    #elif Lut_Set == 2
-    newColor1 = texture2D(colortex8, texPos.xy * correctGrid[0] + correctGrid[1]).rgb;
-    newColor2 = texture2D(colortex8, texPos.zw * correctGrid[0] + correctGrid[1]).rgb;
-    #endif
     
     color = mix(newColor1, newColor2, fract(blueColor));
 }
@@ -355,13 +340,6 @@ void EndLookup(inout vec3 color) {
 //Program//
 void main() {
     /*#if defined TAA
-        // The viewport is CENTERED on screen
-        // Full screen UV (0,1) needs to map to centered viewport
-        
-        // For RENDER_SCALE = 0.5:
-        // The viewport goes from 0.25 to 0.75 (centered)
-        
-        // Transform: scale around center point (0.5, 0.5)
         vec2 scaledUV = (texCoord) * RENDER_SCALE;
         
         vec3 color = texture2D(colortex0, scaledUV).rgb;
