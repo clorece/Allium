@@ -46,7 +46,7 @@ void main() {
         vec3 centerNormal = mat3(gbufferModelView) * texture5;
 
         #ifdef DENOISER_ENABLED
-        int stepSize = 4 * DENOISER_STEP_SIZE;
+        int stepSize = 3 * DENOISER_STEP_SIZE;
         float totalWeight = 0.0;
 
         const float kernel[3] = float[3](1.0, 2.0, 1.0);

@@ -152,10 +152,8 @@ void main() {
         vec3 cameraOffset = cameraPosition - previousCameraPosition;
         vec2 prevUV = Reprojection(vec3(texCoord, z0), cameraOffset);
         
-        // 1. Validate Reprojection Bounds
         bool validReprojection = prevUV.x >= 0.0 && prevUV.x <= 1.0 && prevUV.y >= 0.0 && prevUV.y <= 1.0;
-        
-        // 2. Depth Rejection (Disabled by user request)
+
         /*
         if (validReprojection) {
             // Note: colortex1 contains previous depth. 
@@ -174,17 +172,15 @@ void main() {
         */
 
         if (validReprojection) {
-            vec4 history = texture2D(colortex11, prevUV * RENDER_SCALE);
-            vec3 historyGI = history.rgb;
-            
-            float prevAo = texture2D(colortex9, prevUV * RENDER_SCALE).a;
-            
+            vec3 historyGI = texture2D(colortex11, prevUV * RENDER_SCALE).rgb;
+            vec3 historyEmissive = texture2D(colortex9, prevUV * RENDER_SCALE).rgb;
+            float historyAO = texture2D(colortex9, prevUV * RENDER_SCALE).a;
+
             float blendFactor = 1.0 - clamp(BLEND_WEIGHT * 50.0, 0.01, 0.5);
-            finalGI = mix(gi, historyGI, blendFactor);
             
-            vec3 prevEmissive = texture2D(colortex9, prevUV * RENDER_SCALE).rgb;
-            finalEmissive = mix(emissive, prevEmissive, blendFactor);
-            ao.r = mix(ao.r, prevAo, blendFactor);
+            finalGI = mix(gi, historyGI, blendFactor);
+            finalEmissive = mix(emissive, historyEmissive, blendFactor);
+            ao.r = mix(ao.r, historyAO, blendFactor);
         } else {
             finalGI = gi;
             finalEmissive = emissive;

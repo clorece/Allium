@@ -386,7 +386,7 @@ void main() {
                 #endif
                 noiseMult *= pow2(1.0 - smoothnessD);
 
-                vec2 roughCoord = gl_FragCoord.xy / 128.0;
+                vec2 roughCoord = gl_FragCoord.xy * RENDER_SCALE / 128.0;
                 vec3 roughNoise = vec3(
                     texture2D(noisetex, roughCoord).r,
                     texture2D(noisetex, roughCoord + 0.09375).r,
@@ -571,7 +571,8 @@ void main() {
 
                 // Reduce blending if depth changed
                 float linearZDif = abs(GetLinearDepth(texture2D(colortex1, oppositePreCoord).r) - linearZ0) * far;
-                    blendFactor *= max0(1.0 - linearZDif * BLEND_WEIGHT);
+                    //blendFactor *= max0(1.0 - linearZDif * BLEND_WEIGHT);
+                    blendFactor *= max0(2.0 - linearZDif) * 0.5;
                 //color = mix(vec3(1,1,0), color, max0(2.0 - linearZDif) * 0.5);
 
                 //blendFactor *= float(prvCoord.x > 0.0 && prvCoord.x < 1.0 && prvCoord.y > 0.0 && prvCoord.y < 1.0);

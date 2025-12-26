@@ -351,7 +351,7 @@ void main() {
     vec2 uv = texCoord * view;
 
     // Calculate noise and sample texture
-    float noise = (fract(sin(dot(texCoord * sin(frameTimeCounter) + 1.0, vec2(12.9898,78.233) * 2.0)) * 43758.5453));
+    float noise = (fract(sin(dot((texCoord * RENDER_SCALE) * sin(frameTimeCounter) + 1.0, vec2(12.9898,78.233) * 2.0)) * 43758.5453));
 
     #define FILM_GRAIN_I 2  // [0 1 2 3 4 5 6 7 8 9 10]
     

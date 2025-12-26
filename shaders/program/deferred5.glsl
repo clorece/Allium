@@ -33,9 +33,6 @@ flat in vec3 upVec, sunVec;
     #include "/lib/atmospherics/nightNebula.glsl"
 #endif
 
-
-
-// Include cloud rendering - this is needed for GetClouds() function
 #ifdef VL_CLOUDS_ACTIVE
     #include "/lib/atmospherics/clouds/mainClouds.glsl"
 #endif
@@ -64,10 +61,9 @@ void main() {
         gl_FragData[1] = vec4(0.0);
         return;
     }
-    // Calculate actual texture coordinate for downscaled buffer
+
     vec2 actualTexCoord = texCoord;
     
-    // Sample depth at downscaled resolution
     float z0 = texture2D(depthtex0, actualTexCoord * RENDER_SCALE).r;
     
     vec4 screenPos = vec4(actualTexCoord, z0, 1.0);
@@ -76,9 +72,7 @@ void main() {
     float lViewPos = length(viewPos.xyz);
     vec3 nViewPos = normalize(viewPos.xyz);
     vec3 playerPos = ViewToPlayer(viewPos.xyz);
-    
-    // Dither for temporal stability
-    // Use texCoord directly to map 1:1 with screen pixels (preventing noise aliasing)
+
     vec2 scaledDither = texCoord;
     float dither = texture2D(noisetex, scaledDither * vec2(viewWidth, viewHeight) / 128.0).b;
     #ifdef TAA
