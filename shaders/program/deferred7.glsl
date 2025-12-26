@@ -314,11 +314,7 @@ void main() {
         vec3 texture5 = texelFetch(colortex5, texelCoord, 0).rgb;
         vec3 normalM = mat3(gbufferModelView) * texture5;
 
-        float albedoS = texelFetch(colortex10, texelCoord, 0).a;
-
         float foliage = texelFetch(colortex6, texelCoord, 0).a;
-        float entityFlag = texelFetch(colortex10, texelCoord, 0).r;
-        bool isAnEntity = entityFlag > 0.4;
         bool isFoliage = foliage > 0.5;
         
         

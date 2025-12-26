@@ -360,13 +360,13 @@ void main() {
     int voxelID = GetVoxelIDs(mat); // Small blocklight ID (2=torch, 10=glowstone, etc.)
     gl_FragData[0] = color;
     gl_FragData[1] = vec4(smoothnessD, materialMask, skyLightFactor, subsurfaceMode);
-    gl_FragData[2] = vec4(0.0, float(voxelID) / 255.0, 0.0, lmCoord.x); // .g = voxel blocklight ID for path tracer
+    gl_FragData[2] = vec4(0.0, 0.0, 0.0, float(voxelID) / 255.0); // .a = voxel blocklight ID for path tracer
 
     #if BLOCK_REFLECT_QUALITY >= 2 && RP_MODE != 0
         /* RENDERTARGETS: 0,6,10,5 */
         gl_FragData[0] = color;
         gl_FragData[1] = vec4(smoothnessD, materialMask, skyLightFactor, subsurfaceMode);
-        gl_FragData[2] = vec4(0.0, float(voxelID) / 255.0, 0.0, lmCoord.x); // .g = voxel blocklight ID for path tracer
+        gl_FragData[2] = vec4(0.0, 0.0, 0.0, float(voxelID) / 255.0); // .a = voxel blocklight ID for path tracer
         gl_FragData[3] = vec4(mat3(gbufferModelViewInverse) * normalM, 1.0);
     #endif
 }

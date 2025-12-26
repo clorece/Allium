@@ -387,7 +387,6 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
                 lod = max(lod, 0.0);
                 
                 vec3 hitColor = pow(texture2DLod(colortex0, jitteredUV, lod).rgb, vec3(1.0)) * 1.0 - nightFactor * 0.2;;
-                float hitFoliage = texture2D(colortex10, jitteredUV).a;
                 
                 vec3 hitNormalEncoded = texture2DLod(colortex5, jitteredUV, 0.0).rgb;
                 vec3 hitNormal = normalize(hitNormalEncoded * 2.0 - 1.0);
@@ -409,7 +408,7 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
                 #endif
 
                 #ifdef PT_USE_VOXEL_LIGHT
-                int voxelID = int(texture2DLod(colortex10, jitteredUV, 0.0).g * 255.0 + 0.5);
+                int voxelID = int(texture2DLod(colortex10, jitteredUV, 0.0).a * 255.0 + 0.5);
 
                 if (voxelID > 1 && voxelID < 100) {
                     vec4 blockLightColor = GetSpecialBlocklightColor(voxelID);
