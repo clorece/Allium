@@ -642,6 +642,9 @@ void main() {
         skyFade = 1.0;
 
         #ifdef OVERWORLD
+            // Read precomputed sky from colortex10.rgb (computed in deferred.glsl)
+            color.rgb = texture2D(colortex10, texCoord * RENDER_SCALE).rgb;
+            
             #if AURORA_STYLE > 0
                 auroraBorealis = GetAuroraBorealis(viewPos.xyz, VdotU, dither);
                 color.rgb += auroraBorealis;
