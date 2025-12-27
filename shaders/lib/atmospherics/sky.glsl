@@ -44,6 +44,27 @@
             vec3 scatteredGroundMixer = vec3(VdotUM3 * VdotUM3, sqrt1(VdotUM3), sqrt3(VdotUM3));
                  scatteredGroundMixer = mix(vec3(VdotUM3), scatteredGroundMixer, 0.75 - 0.5 * rainFactor);
             finalSky = mix(finalSky, downColor, scatteredGroundMixer);
+            
+            // Planet Shadow (Earth Shadow / Belt of Venus)
+            // Appears opposite the sun during sunrise/sunset
+            float twilightFactor = invNoonFactor * sunFactor; // Only during twilight
+            float antiSunFactor = max(-VdotS, 0.0); // Opposite sun direction
+            float horizonFactor = 1.0 - abs(VdotU); // Strongest at horizon
+            horizonFactor = pow(horizonFactor, 2.0);
+            
+            // Dark band (Earth's shadow on atmosphere)
+            float shadowBand = antiSunFactor * horizonFactor * twilightFactor;
+            shadowBand *= smoothstep(-0.1, 0.15, -VdotU); // Only below/near horizon
+            vec3 shadowColor = vec3(0.15, 0.18, 0.25) * nightMiddleSkyColor; // Dark blue-grey
+            
+            // Belt of Venus (pink glow above shadow)
+            float beltHeight = smoothstep(-0.05, 0.1, VdotU) * smoothstep(0.25, 0.05, VdotU);
+            float beltFactor = antiSunFactor * beltHeight * twilightFactor;
+            vec3 beltColor = vec3(1.0, 0.6, 0.7) * dayMiddleSkyColor; // Pinkish glow
+            
+            // Apply planet shadow effects
+            finalSky = mix(finalSky, shadowColor, shadowBand * 0.6 * invRainFactor);
+            finalSky += beltColor * beltFactor * 0.3 * invRainFactor;
         //
 
         // Sky Ground

@@ -261,13 +261,14 @@ struct RayHit {
     float border;
 };
 
-RayHit MarchRay(vec3 start, vec3 rayDir, sampler2D depthtex, vec2 screenEdge) {
+RayHit MarchRay(vec3 start, vec3 rayDir, sampler2D depthtex, vec2 screenEdge, float dither) {
     RayHit result;
     result.hit = false;
     result.hitDist = 0.0;
     result.border = 0.0;
     
-    float stepSize = 0.05;
+    // Jitter initial step size to break ring patterns from exponential step growth
+    float stepSize = 0.05 * (0.5 + dither);
     vec3 rayPos = start;
     
     vec4 initialClip = gbufferProjection * vec4(rayPos, 1.0);
@@ -355,7 +356,7 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
     vec3 receiverScenePos = (gbufferModelViewInverse * vec4(unscaledViewPos, 1.0)).xyz;
     vec3 receiverWorldPos = receiverScenePos + cameraPosition;
     bool receiverInShadow = GetShadow(receiverWorldPos, cameraPosition);
-    float receiverShadowMask = receiverInShadow ? 0.5 : 0.25; // default is 0.5
+    float receiverShadowMask = receiverInShadow ? 0.5 : 0.1; // default is 0.5
     
     // visualize shadow map for the starting pixel
     #ifdef DEBUG_SHADOW_VIEW
@@ -376,7 +377,9 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
             vec3 rayDir = RayDirection(currentNormal, dither, seed);
             float NdotL = max(dot(currentNormal, rayDir), 0.0);
             
-            RayHit hit = MarchRay(currentPos, rayDir, depthtex, screenEdge);
+            // Per-bounce dither variation to decorrelate ray patterns
+            float rayDither = fract(dither + float(seed) * PHI_INV);
+            RayHit hit = MarchRay(currentPos, rayDir, depthtex, screenEdge, rayDither);
             
             if (hit.hit && hit.screenPos.z < 0.99997 && hit.border > 0.001) {
                 vec2 edgeFactor = pow2(pow2(pow2(abs(hit.screenPos.xy - 0.5) / screenEdge)));
@@ -456,7 +459,8 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
         totalRadiance += pathRadiance;
         
         // AO calculation
-        RayHit firstHit = MarchRay(startPos, RayDirection(normalMR, dither, i), depthtex, screenEdge);
+        float aoDither = fract(dither + float(i) * PHI_INV);
+        RayHit firstHit = MarchRay(startPos, RayDirection(normalMR, dither, i), depthtex, screenEdge, aoDither);
         if (firstHit.hit) {
             float aoRadius = AO_RADIUS;
             float curve = 1.0 - clamp(firstHit.hitDist / aoRadius, 0.0, 1.0);

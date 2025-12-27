@@ -11,7 +11,7 @@
 #define Lut_Set                     1           //[1] // technically there should be a 2 for raspberry but ill keep it off for now :3
 
 
-#define Overworld_Lut                5          //[0 1 2 3 4 5 6 7 8 9]
+#define Overworld_Lut                2          //[0 1 2 3 4 5 6 7 8 9]
 #define Nether_Lut                2          //[0 1 2 3 4 5 6 7 8 9]
 #define End_Lut                 1          //[0 1 2 3 4 5 6 7 8 9]
 
@@ -420,7 +420,7 @@ void main() {
     color = Tonemap_Hable(color);
 
     float luminance = dot(color, vec3(0.2126, 0.7152, 0.0722));
-    color = mix(vec3(luminance), color, 1.0);
+    color = mix(vec3(luminance), color, 1.1);
 
     #if defined GREEN_SCREEN_LIME || SELECT_OUTLINE == 4
         int materialMaskInt = int(texelFetch(colortex6, texelCoord, 0).g * 255.1);

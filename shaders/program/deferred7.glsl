@@ -481,7 +481,7 @@ void main() {
             color *= ssao;
             
             vec4 packedGI = texture2D(colortex11, ScaleToViewport(texCoord));
-            vec3 gi = packedGI.rgb * 20.0 * GI_I;
+            vec3 gi = packedGI.rgb * 30.0 * GI_I;
 
             
             #ifdef PT_VIEW
@@ -642,9 +642,6 @@ void main() {
         skyFade = 1.0;
 
         #ifdef OVERWORLD
-            // Read precomputed sky from colortex10.rgb (computed in deferred.glsl)
-            color.rgb = texture2D(colortex10, texCoord * RENDER_SCALE).rgb;
-            
             #if AURORA_STYLE > 0
                 auroraBorealis = GetAuroraBorealis(viewPos.xyz, VdotU, dither);
                 color.rgb += auroraBorealis;
@@ -692,7 +689,7 @@ void main() {
         
         // Only composite clouds where depth is sky
         if (isSky) {
-            // Read the filtered clouds from colortex12 (output of deferred7)
+            // Read the filtered clouds from colortex14 (output of deferred6)
             vec4 clouds = texture2D(colortex14, texCoord);
             
             // Apply atmospheric effects if needed

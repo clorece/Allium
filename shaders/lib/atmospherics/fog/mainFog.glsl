@@ -181,7 +181,7 @@
             fog = clamp(fog, 0.0, 1.0);
 
             #ifdef OVERWORLD
-                //vec3 fogColorM = GetAtmFogColor(altitudeFactorRaw, VdotS);
+                //ec3 fogColorM = GetAtmFogColor(altitudeFactorRaw, VdotS);
                 vec3 fogColorM = GetSky(VdotU, VdotS, dither, true, false);
             #else
                 vec3 fogColorM = endSkyColor * 1.5;
