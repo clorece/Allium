@@ -198,7 +198,7 @@ void main() {
     vec3 flux = albedo * lightColor * max(dot(normal, lightVec), 0.0);
 
     vec3 screenPos = vec3(gl_FragCoord.xy / vec2(viewWidth, viewHeight) / RENDER_SCALE, gl_FragCoord.z);
-    #if defined TAA && RENDER_SCALE == 1.0
+    #if defined TAA
         vec3 viewPos = ScreenToView(vec3(TAAJitter(screenPos.xy, -0.5), screenPos.z));
     #else
         vec3 viewPos = ScreenToView(screenPos);
@@ -360,13 +360,13 @@ void main() {
     int voxelID = GetVoxelIDs(mat); // Small blocklight ID (2=torch, 10=glowstone, etc.)
     gl_FragData[0] = color;
     gl_FragData[1] = vec4(smoothnessD, materialMask, skyLightFactor, subsurfaceMode);
-    gl_FragData[2] = vec4(0.0, float(voxelID) / 255.0, 0.0, lmCoord.x); // .g = voxel blocklight ID for path tracer
+    gl_FragData[2] = vec4(0.0, 0.0, 0.0, float(voxelID) / 255.0); // .a = voxel blocklight ID for path tracer
 
     #if BLOCK_REFLECT_QUALITY >= 2 && RP_MODE != 0
         /* RENDERTARGETS: 0,6,10,5 */
         gl_FragData[0] = color;
         gl_FragData[1] = vec4(smoothnessD, materialMask, skyLightFactor, subsurfaceMode);
-        gl_FragData[2] = vec4(0.0, float(voxelID) / 255.0, 0.0, lmCoord.x); // .g = voxel blocklight ID for path tracer
+        gl_FragData[2] = vec4(0.0, 0.0, 0.0, float(voxelID) / 255.0); // .a = voxel blocklight ID for path tracer
         gl_FragData[3] = vec4(mat3(gbufferModelViewInverse) * normalM, 1.0);
     #endif
 }
@@ -471,7 +471,7 @@ void main() {
     #endif
     
     
-    #if defined TAA && RENDER_SCALE == 1.0
+    #if defined TAA
         gl_Position.xy = TAAJitter(gl_Position.xy, gl_Position.w);
     #endif
 

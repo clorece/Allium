@@ -157,13 +157,13 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
     #endif
 
     float lightmapY2 = pow2(lightmap.y);
-    float lightmapYM = pow(lightmap.y, 1.5);
+    float lightmapYM = pow(lightmap.y, 3.5);
     float subsurfaceHighlight = 0.0;
     float ambientMult = 1.0;
     #ifndef CLOUD_SHADOWS
-    vec3 lightColorM = lightColor * 4.0 * SUNLIGHT_AMOUNT;
+    vec3 lightColorM = lightColor * 2.0 * SUNLIGHT_AMOUNT;
     #else
-    vec3 lightColorM = lightColor * 5.5 * SUNLIGHT_AMOUNT;
+    vec3 lightColorM = lightColor * 3.5 * SUNLIGHT_AMOUNT;
     #endif
 
     #if GLOBAL_ILLUMINATION == 2
@@ -437,7 +437,7 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
         lightmapXM *= mix(1.0, min1(max(flickerNoise.r, flickerNoise.g) * 1.7), pow2(BLOCKLIGHT_FLICKERING * 0.1));
     #endif
 
-    vec3 blockLighting = lightmapXM * blocklightCol;
+    vec3 blockLighting = lightmapXM * blocklightCol * BLOCK_LIGHTMAP_MIX;
 
     #if COLORED_LIGHTING_INTERNAL > 0 && COLORED_LIGHTING > 0
         // Prepare
@@ -475,7 +475,7 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
 
         
         #if GLOBAL_ILLUMINATION == 2
-            specialLighting *= 0.5;
+            specialLighting *= 0.5 * BLOCK_LIGHTMAP_MIX;
         #endif
 
         // Serve with distance fade
@@ -718,7 +718,7 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
     #endif
 
     // Mix Colors
-    vec3 finalDiffuse = pow2(directionShade * vanillaAO) * (blockLighting + pow2(sceneLighting) + minLighting) + pow2(emission * 3.0);
+    vec3 finalDiffuse = pow2(directionShade * vanillaAO) * (blockLighting + pow2(sceneLighting) + minLighting) + pow2(emission);
 
 
     finalDiffuse = sqrt(max(finalDiffuse, vec3(0.0))); // sqrt() for a bit more realistic light mix, max() to prevent NaNs

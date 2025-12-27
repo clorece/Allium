@@ -51,12 +51,10 @@
 
 vec2 texelSize = 1.0 / vec2(viewWidth, viewHeight);
 
-// Colored block light emission for path tracer
-// Uses voxel IDs stored in colortex10.g from gbuffers_terrain
 #include "/lib/colors/blocklightColors.glsl"
 
-//#define PT_USE_DIRECT_LIGHT_SAMPLING
 #define PT_USE_RUSSIAN_ROULETTE
+//#define DEBUG_SHADOW_VIEW
 #if COLORED_LIGHTING_INTERNAL > 0
     #define PT_USE_VOXEL_LIGHT
 #endif
@@ -125,8 +123,7 @@ vec2 texelSize = 1.0 / vec2(viewWidth, viewHeight);
 
     vec3 CheckVoxelTint(vec3 startViewPos, vec3 endViewPos) {
         vec3 tint = vec3(1.0);
-        
-        // Correct View -> World (Player) Space transform using vec4/mat4
+
         vec4 startWorld4 = gbufferModelViewInverse * vec4(startViewPos, 1.0);
         vec4 endWorld4 = gbufferModelViewInverse * vec4(endViewPos, 1.0);
         vec3 startWorld = startWorld4.xyz;
@@ -146,24 +143,17 @@ vec2 texelSize = 1.0 / vec2(viewWidth, viewHeight);
 
         for(int i = 0; i < steps; i++) {
             pos += stepDir;
-            
-            // Safety margin bounds check to avoid edge sampling issues
+
             if (any(lessThan(pos, vec3(0.5))) || any(greaterThanEqual(pos, volumeSize - 0.5))) continue;
 
-            // Use texelFetch for precise integer grid sampling
             uint id = texelFetch(voxel_sampler, ivec3(pos), 0).r;
-            
-            // Skip air (0), solid blocks (1), and non-transparent blocks
+
             if (id <= 1u) continue;
             
-            // Only apply tint for KNOWN valid transparent block IDs:
-            // 200-218: Stained Glass, Honey, Slime, Ice, Glass, Glass Pane
-            // 254: Tinted Glass
             if ((id >= 200u && id <= 218u) || id == 254u) {
                 int idx = int(id) - 200;
                 tint *= specialTintColorPT[idx];
             }
-            // Any other ID (219-253, or invalid values) is ignored
         }
         return tint;
     }
@@ -258,21 +248,6 @@ bool GetShadow(vec3 tracePos, vec3 cameraPos) {
     return false;
 }
 
-float GetShadowWeight(vec3 worldPos, vec3 cameraPos, vec3 normal) {
-    vec3 shadowPosition = GetShadowPosition(worldPos, cameraPos);
-
-    if (length(shadowPosition.xy * 2.0 - 1.0) >= 1.0) {
-        return 1.0;
-    }
-
-    float shadowDepth = shadow2D(shadowtex0, shadowPosition).z;
-
-    if (shadowDepth == 0.0) return 0.0;
-    
-    return 1.0;
-}
-
-
 vec3 toClipSpace3(vec3 viewSpacePosition) {
     vec4 clipSpace = gbufferProjection * vec4(viewSpacePosition, 1.0);
     return clipSpace.xyz / clipSpace.w * 0.5 + 0.5;
@@ -286,13 +261,14 @@ struct RayHit {
     float border;
 };
 
-RayHit MarchRay(vec3 start, vec3 rayDir, sampler2D depthtex, vec2 screenEdge) {
+RayHit MarchRay(vec3 start, vec3 rayDir, sampler2D depthtex, vec2 screenEdge, float dither) {
     RayHit result;
     result.hit = false;
     result.hitDist = 0.0;
     result.border = 0.0;
     
-    float stepSize = 0.05;
+    // Jitter initial step size to break ring patterns from exponential step growth
+    float stepSize = 0.05 * (0.5 + dither);
     vec3 rayPos = start;
     
     vec4 initialClip = gbufferProjection * vec4(rayPos, 1.0);
@@ -362,7 +338,7 @@ float CosinePDF(float NdotL) {
 
 vec3 giScreenPos = vec3(0.0);
 
-vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 viewPos, vec3 nViewPos, sampler2D depthtex, 
+vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 viewPos, vec3 unscaledViewPos, vec3 nViewPos, sampler2D depthtex, 
            float dither, float skyLightFactor, float smoothness, float VdotU, float VdotS, bool entityOrHand) {
     vec2 screenEdge = vec2(0.6, 0.55);
     vec3 normalMR = normalM;
@@ -376,7 +352,18 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
     
     float distanceScale = clamp(1.0 - startPos.z / far, 0.1, 1.0);
     int numPaths = int(PT_MAX_BOUNCES * distanceScale);
+
+    vec3 receiverScenePos = (gbufferModelViewInverse * vec4(unscaledViewPos, 1.0)).xyz;
+    vec3 receiverWorldPos = receiverScenePos + cameraPosition;
+    bool receiverInShadow = GetShadow(receiverWorldPos, cameraPosition);
+    float receiverShadowMask = receiverInShadow ? 0.5 : 0.1; // default is 0.5
     
+    // visualize shadow map for the starting pixel
+    #ifdef DEBUG_SHADOW_VIEW
+        gi.rgb = receiverInShadow ? vec3(0.0, 1.0, 0.0) : vec3(1.0, 0.0, 0.0);
+        return gi;
+    #endif
+
     for (int i = 0; i < numPaths; i++) {
         vec3 pathRadiance = vec3(0.0);
         vec3 pathThroughput = vec3(1.0);
@@ -390,7 +377,9 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
             vec3 rayDir = RayDirection(currentNormal, dither, seed);
             float NdotL = max(dot(currentNormal, rayDir), 0.0);
             
-            RayHit hit = MarchRay(currentPos, rayDir, depthtex, screenEdge);
+            // Per-bounce dither variation to decorrelate ray patterns
+            float rayDither = fract(dither + float(seed) * PHI_INV);
+            RayHit hit = MarchRay(currentPos, rayDir, depthtex, screenEdge, rayDither);
             
             if (hit.hit && hit.screenPos.z < 0.99997 && hit.border > 0.001) {
                 vec2 edgeFactor = pow2(pow2(pow2(abs(hit.screenPos.xy - 0.5) / screenEdge)));
@@ -400,61 +389,34 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
                 float lod = log2(hit.hitDist * 0.5) * 0.5;
                 lod = max(lod, 0.0);
                 
-                vec3 hitColor = pow(texture2DLod(colortex0, jitteredUV, lod).rgb, vec3(1.2)) * 1.5 * GI_I - nightFactor * 0.2;;
-                float hitFoliage = texture2D(colortex10, jitteredUV).a;
+                vec3 hitColor = pow(texture2DLod(colortex0, jitteredUV, lod).rgb, vec3(1.0)) * 1.0 - nightFactor * 0.2;;
                 
                 vec3 hitNormalEncoded = texture2DLod(colortex5, jitteredUV, 0.0).rgb;
                 vec3 hitNormal = normalize(hitNormalEncoded * 2.0 - 1.0);
                 vec3 hitAlbedo = texture2DLod(colortex0, jitteredUV, 0.0).rgb;
                 float hitSmoothness = texture2DLod(colortex6, jitteredUV, 0.0).r;
 
-                // Calculate voxel tint for light passing through stained glass
+
+
                 vec3 voxelTint = CheckVoxelTint(currentPos, hit.worldPos);
 
                 vec3 brdf = EvaluateBRDF(hitAlbedo, currentNormal, rayDir, -normalize(currentPos));
                 float pdf = CosinePDF(NdotL);
-                
-                // Apply softer energy falloff (sqrt to reduce harshness)
+
                 vec3 throughputMult = brdf * NdotL / max(pdf, 0.0001);
                 pathThroughput *= sqrt(throughputMult + 0.01);
 
-                // Apply voxel tint to throughput for light traveling through glass
                 #if defined (PT_TRANSPARENT_TINTS) && defined (PT_USE_VOXEL_LIGHT)
                     pathThroughput *= voxelTint;
                 #endif
-                
-                #ifdef PT_USE_DIRECT_LIGHT_SAMPLING
-                    vec3 hitWorldPos = mat3(gbufferModelViewInverse) * hit.worldPos + cameraPosition;
-                    vec3 hitWorldNormal = mat3(gbufferModelViewInverse) * hitNormal;
 
-                    float shadowWeight = GetShadowWeight(hitWorldPos, normalize(cameraPosition), hitWorldNormal);
-                    
-                    if (shadowWeight > 0.0) {
-                        #ifdef OVERWORLD
-                            vec3 directLightColor = normalizelightColor * shadowWeight;
-                        #else
-                            vec3 directLightColor = vec3(0.0);
-                        #endif
-                        
-                        vec3 sunDir = normalize(sunPosition);
-                        vec3 worldHitNormal = mat3(gbufferModelViewInverse) * hitNormal;
-                        float sunAlignment = max(dot(worldHitNormal, sunDir), 0.0);
-
-                        pathRadiance += pathThroughput * hitAlbedo * directLightColor * sunAlignment;
-                    }
-                #endif
-                
-                // Voxel ID based emissive detection
-                // Read voxel blocklight ID from gbuffer (stored as voxelID / 255.0)
                 #ifdef PT_USE_VOXEL_LIGHT
-                int voxelID = int(texture2DLod(colortex10, jitteredUV, 0.0).g * 255.0 + 0.5);
-                
-                // Check if this is an emissive block (voxelID 2-100 are light sources, 1 = solid block)
+                int voxelID = int(texture2DLod(colortex10, jitteredUV, 0.0).a * 255.0 + 0.5);
+
                 if (voxelID > 1 && voxelID < 100) {
                     vec4 blockLightColor = GetSpecialBlocklightColor(voxelID);
                     vec3 boostedColor = blockLightColor.rgb;
-                    vec3 emissiveColor = pow(boostedColor, vec3(1.0/2.2));
-                    // Tint emissive light passing through stained glass
+                    vec3 emissiveColor = pow(boostedColor, vec3(1.0 / 8.0)) * PT_EMISSIVE_I;
                     #ifdef PT_TRANSPARENT_TINTS
                         emissiveColor *= voxelTint;
                     #endif
@@ -471,12 +433,15 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
                     pathThroughput /= continueProbability;
                 }
                 #endif
-                
+
                 currentPos = hit.worldPos + rayDir * 0.01;
                 currentNormal = hitNormal;
+
+                float hitSkyLightFactor = texture2DLod(colortex6, jitteredUV, 0.0).b;
+                float directLightMask = 1.0 - pow2(hitSkyLightFactor) * 0.85;
                 
-                if (bounce == PT_MAX_BOUNCES - 1) {
-                    pathRadiance += pathThroughput * hitColor * 0.5 * GI_I;
+               if (bounce == PT_MAX_BOUNCES - 1) {
+                    pathRadiance += pathThroughput * hitColor * 0.5 * directLightMask;
                 }
                 
             } else {
@@ -494,12 +459,13 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
         totalRadiance += pathRadiance;
         
         // AO calculation
-        RayHit firstHit = MarchRay(startPos, RayDirection(normalMR, dither, i), depthtex, screenEdge);
+        float aoDither = fract(dither + float(i) * PHI_INV);
+        RayHit firstHit = MarchRay(startPos, RayDirection(normalMR, dither, i), depthtex, screenEdge, aoDither);
         if (firstHit.hit) {
             float aoRadius = AO_RADIUS;
             float curve = 1.0 - clamp(firstHit.hitDist / aoRadius, 0.0, 1.0);
             curve = pow(curve, 2.0);
-            occlusion += curve * AO_I * 3.0 * max(skyLightFactor, 0.5) - nightFactor * 1.5;
+            occlusion += curve * AO_I * 1.5 * max(skyLightFactor, 0.1) - (nightFactor * 1.5 + invNoonFactor * 1.0);
         }
     }
     
@@ -513,7 +479,7 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
     
     emissiveOut = emissiveRadiance;
     
-    gi.rgb = max(totalRadiance - occlusion, 0.0);
+    gi.rgb = totalRadiance * receiverShadowMask;
     gi.rgb = max(gi.rgb, vec3(0.0));
     
     return gi;

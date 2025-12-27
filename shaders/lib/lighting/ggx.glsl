@@ -1,3 +1,6 @@
+#ifndef INCLUDE_GGX
+#define INCLUDE_GGX
+
 // GGX area light approximation from Horizon Zero Dawn
 float GetNoHSquared(float radiusTan, float NoL, float NoV, float VoL) {
     float radiusCos = 1.0 / sqrt(1.0 + radiusTan * radiusTan);
@@ -63,3 +66,5 @@ float GGX(vec3 normalM, vec3 viewPos, vec3 lightVec, float NdotLmax0, float smoo
 
     return specular;
 }
+
+#endif

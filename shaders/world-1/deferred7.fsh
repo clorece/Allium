@@ -2,6 +2,6 @@
 
 #define FRAGMENT_SHADER
 #define NETHER
-#define DEFERRED7
+#define DEFERRED1
 
 #include "/program/deferred7.glsl"

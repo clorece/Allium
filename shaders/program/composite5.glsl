@@ -50,6 +50,14 @@ void DoBSLTonemap(inout vec3 color) {
     color = pow(color, vec3(1.0 / 2.2));
 }
 
+
+vec3 reinhard_jodie(vec3 v)
+{
+    float l = luminance(v);
+    vec3 tv = v / (1.0f + v);
+    return lerp(v / (1.0f + l), tv, tv);
+}
+
 void DoBSLColorSaturation(inout vec3 color) {
     float grayVibrance = (color.r + color.g + color.b) / 3.0;
     float graySaturation = grayVibrance;
@@ -157,6 +165,27 @@ vec3 Tonemap_Lottes(vec3 x) {
     return pow(x, vec3(a)) / (pow(x, vec3(a * d)) * b + c);
 }
 
+vec3 Hable_Partial(vec3 x) {
+    const float A = 0.27;  // Shoulder Strength
+    const float B = 0.50;  // Linear Strength
+    const float C = 0.12;  // Linear Angle
+    const float D = 0.22;  // Toe Strength
+    const float E = 0.02;  // Toe Numerator
+    const float F = 0.30;  // Toe Denominator
+    
+    return ((x * (A * x + C * B) + D * E) / (x * (A * x + B) + D * F)) - E / F;
+}
+
+vec3 Tonemap_Hable(vec3 color) {
+    const float exposureBias = 2.0;  // Exposure multiplier
+    const float W = 11.2;            // Linear White Point
+
+    vec3 curr = Hable_Partial(color * exposureBias);
+    vec3 whiteScale = vec3(1.0) / Hable_Partial(vec3(W));
+    
+    return pow(curr * whiteScale, vec3(1.0 / 2.2));
+}
+
 #define clamp01(x) clamp(x, 0.0, 1.0)
 
 // thanks to Query's for their AWESOME LUTs
@@ -182,14 +211,9 @@ void OverworldLookup(inout vec3 color) {
 
     vec3 newColor1, newColor2;
     
-    #if Lut_Set == 1
     newColor1 = texture2D(colortex7, texPos.xy * correctGrid[0] + correctGrid[1]).rgb;
     newColor2 = texture2D(colortex7, texPos.zw * correctGrid[0] + correctGrid[1]).rgb;
-    #elif Lut_Set == 2
-    newColor1 = texture2D(colortex8, texPos.xy * correctGrid[0] + correctGrid[1]).rgb;
-    newColor2 = texture2D(colortex8, texPos.zw * correctGrid[0] + correctGrid[1]).rgb;
-    #endif
-    
+
     color = mix(newColor1, newColor2, fract(blueColor));
 }
 
@@ -214,13 +238,8 @@ void NetherLookup(inout vec3 color) {
 
     vec3 newColor1, newColor2;
     
-    #if Lut_Set == 1
     newColor1 = texture2D(colortex7, texPos.xy * correctGrid[0] + correctGrid[1]).rgb;
     newColor2 = texture2D(colortex7, texPos.zw * correctGrid[0] + correctGrid[1]).rgb;
-    #elif Lut_Set == 2
-    newColor1 = texture2D(colortex8, texPos.xy * correctGrid[0] + correctGrid[1]).rgb;
-    newColor2 = texture2D(colortex8, texPos.zw * correctGrid[0] + correctGrid[1]).rgb;
-    #endif
     
     color = mix(newColor1, newColor2, fract(blueColor));
 }
@@ -246,13 +265,8 @@ void EndLookup(inout vec3 color) {
 
     vec3 newColor1, newColor2;
     
-    #if Lut_Set == 1
     newColor1 = texture2D(colortex7, texPos.xy * correctGrid[0] + correctGrid[1]).rgb;
     newColor2 = texture2D(colortex7, texPos.zw * correctGrid[0] + correctGrid[1]).rgb;
-    #elif Lut_Set == 2
-    newColor1 = texture2D(colortex8, texPos.xy * correctGrid[0] + correctGrid[1]).rgb;
-    newColor2 = texture2D(colortex8, texPos.zw * correctGrid[0] + correctGrid[1]).rgb;
-    #endif
     
     color = mix(newColor1, newColor2, fract(blueColor));
 }
@@ -326,13 +340,6 @@ void EndLookup(inout vec3 color) {
 //Program//
 void main() {
     /*#if defined TAA
-        // The viewport is CENTERED on screen
-        // Full screen UV (0,1) needs to map to centered viewport
-        
-        // For RENDER_SCALE = 0.5:
-        // The viewport goes from 0.25 to 0.75 (centered)
-        
-        // Transform: scale around center point (0.5, 0.5)
         vec2 scaledUV = (texCoord) * RENDER_SCALE;
         
         vec3 color = texture2D(colortex0, scaledUV).rgb;
@@ -344,7 +351,7 @@ void main() {
     vec2 uv = texCoord * view;
 
     // Calculate noise and sample texture
-    float noise = (fract(sin(dot(texCoord * sin(frameTimeCounter) + 1.0, vec2(12.9898,78.233) * 2.0)) * 43758.5453));
+    float noise = (fract(sin(dot((texCoord * RENDER_SCALE) * sin(frameTimeCounter) + 1.0, vec2(12.9898,78.233) * 2.0)) * 43758.5453));
 
     #define FILM_GRAIN_I 2  // [0 1 2 3 4 5 6 7 8 9 10]
     
@@ -398,7 +405,7 @@ void main() {
     //DoBSLTonemap(color);
     float ignored = dot(color * vec3(0.15, 0.50, 0.35), vec3(0.1, 0.65, 0.6));
     float desaturated = dot(color, vec3(0.15, 0.50, 0.35));
-    //color = mix(color, vec3(ignored), exp2((-32) * desaturated));
+    color = mix(color, vec3(ignored), exp2((-192) * desaturated));
 
      // Get auto exposure value (reads from colortex4)
     float exposure = GetAutoExposure(colortex0, dither);
@@ -410,10 +417,10 @@ void main() {
         color *= 1.5;
     #endif
 
-    color = Tonemap_Lottes(color);
+    color = Tonemap_Hable(color);
 
     float luminance = dot(color, vec3(0.2126, 0.7152, 0.0722));
-    color = mix(vec3(luminance), color, 1.0);
+    color = mix(vec3(luminance), color, 1.1);
 
     #if defined GREEN_SCREEN_LIME || SELECT_OUTLINE == 4
         int materialMaskInt = int(texelFetch(colortex6, texelCoord, 0).g * 255.1);
