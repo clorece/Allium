@@ -8,8 +8,7 @@
 #include "/lib/lighting/ggx.glsl"
 
 #ifndef NETHER
-#include "/lib/atmospherics/clouds/cloudCoord.glsl"
-#include "/lib/atmospherics/clouds/mainClouds.glsl"
+#include "/lib/atmospherics/clouds/cloudShadows.glsl"
 #endif
 
 #if SHADOW_QUALITY > -1 && (defined OVERWORLD || defined END)
@@ -34,99 +33,6 @@
 
 vec3 highlightColor = normalize(pow(lightColor, vec3(0.37))) * (0.3 + 1.5 * sunVisibility2) * (1.0 - 0.85 * rainFactor);
 
-// start of cloud shadow code, there should be more optimal/cheap ways to do this, if anyone wants to improve this, let me know.
-
-#ifndef NETHER
-#ifdef CLOUD_SHADOWS
-#define PI 3.141592653589793
-
-const float sunAngularSize = 0.533333;
-const float SUN_ANGULAR_RADIUS_RAD = (sunAngularSize * 0.5) * (PI / 180.0);
-
-// Precompute reciprocal to avoid division
-const float INV_SHADOW_DISTANCE = 1.0 / max(shadowDistance, 1.0);
-const float EPSILON = 1e-4;
-
-int CloudShadowStepsLOD(float distCamToPoint) {
-    // Branchless LOD selection using step function
-    float t = clamp(distCamToPoint * INV_SHADOW_DISTANCE, 0.0, 1.0);
-    return 3 + int(step(t, 0.66));
-}
-
-float LightRayCloudShadow(vec3 worldPos, vec3 cameraPos, vec3 sunDir, float dither)
-{
-    float distToCamera = distance(cameraPos, worldPos);
-    if (distToCamera > renderDistance * 0.5) return 0.0;
-    float y0 = float(cumulusLayerAlt);
-    float h  = cumulusLayerStretch;
-    float ry = sunDir.y;
-    
-    // Early exit with single comparison
-    if (abs(ry) < EPSILON) return 0.0;
-    
-    float invRy = 1.0 / ry;
-    float yTop = y0 + h;
-    float yBot = y0 - h;
-    
-    // Optimized intersection calculation
-    float tToTop    = (yTop - worldPos.y) * invRy;
-    float tToBottom = (yBot - worldPos.y) * invRy;
-    float tNear = min(tToTop, tToBottom);
-    float tFar  = max(tToTop, tToBottom);
-    
-    // Combined early exit
-    if (tFar <= 0.0) return 0.0;
-    
-    float tEnter = max(tNear, 0.0);
-    float thickness = tFar - tEnter;
-    if (thickness <= EPSILON) return 0.0;
-
-    int steps = CloudShadowStepsLOD(distance(cameraPos, worldPos));
-    float invSteps = 1.0 / float(steps);
-    float stepLen = thickness * invSteps;
-    
-    // Optimized starting position - fused multiply-add
-    vec3 stepVec = sunDir * stepLen;
-    vec3 p = worldPos + sunDir * tEnter + stepVec * (0.25 + 0.5 * dither);
-
-    float sum = 0.0;
-    vec2 xzOffset = p.xz - cameraPos.xz;
-    
-    // Manual loop unrolling for 4 iterations (max case)
-    // Iteration 0
-    for (int i = 0; i < 4; i++) {
-        float dist2D = length(xzOffset);
-        float dens = GetCumulusCloud(p, steps, cumulusLayerAlt, dist2D, 
-                                       p.y - y0, 0.4, 1.0, 
-                                       CUMULUS_CLOUD_SIZE_MULT);
-        sum += dens * step(0.05, dens);
-        p += stepVec;
-        xzOffset += stepVec.xz;
-    }
-
-    // Simplified occlusion calculation
-    return clamp(sum * invSteps + invNoonFactor * 0.2, 0.0, 1.0);
-}
-
-void ApplyCloudShadows(vec3 worldPos, vec3 cameraPos, float dither, 
-                       int subsurfaceMode, inout vec3 shadowMult)
-{
-    vec3 sunDir = normalize(mat3(gbufferModelViewInverse) * lightVec);
-    float occ = LightRayCloudShadow(worldPos, cameraPos, sunDir, dither) * 4.0 + noonFactor * 0.5;
-    
-    // Optimized shading calculation with branchless power
-    float k = clamp(100.0, 0.0, 1.0);
-    float lightMul = 1.0 - (occ * 0.5);
-    float powerFactor = 1.0 + min(max(k - 1.0, 0.0), 3.0);
-    
-    // Branchless: use mix to avoid branching on power computation
-    // When k <= 1.0, powerFactor = 1.0, so pow(x, 1.0) = x
-    lightMul = pow(lightMul, powerFactor);
-
-    shadowMult = max(shadowMult * lightMul, vec3(0.0));
-}
-#endif
-#endif
 //Lighting//
 void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 viewPos, float lViewPos, vec3 geoNormal, vec3 normalM, float dither,
                 vec3 worldGeoNormal, vec2 lightmap, bool noSmoothLighting, bool noDirectionalShading, bool noVanillaAO,
@@ -160,11 +66,7 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
     float lightmapYM = pow(lightmap.y, 3.5);
     float subsurfaceHighlight = 0.0;
     float ambientMult = 1.0;
-    #ifndef CLOUD_SHADOWS
     vec3 lightColorM = lightColor * 2.0 * SUNLIGHT_AMOUNT;
-    #else
-    vec3 lightColorM = lightColor * 3.5 * SUNLIGHT_AMOUNT;
-    #endif
 
     #if GLOBAL_ILLUMINATION == 2
     lightColorM *= 2.0;
@@ -403,16 +305,10 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
             #endif
             
             #ifndef NETHER
-            #ifdef CLOUD_SHADOWS
-                // world position of shaded point (you already compute this in your old block)
-                vec3 worldPos = playerPos + cameraPosition;
-
-                // Sun direction in world space (consistent with your volumetric code)
-                vec3 sunDir = normalize(mat3(gbufferModelViewInverse) * lightVec);
-
-                // Apply brand-new cloud shadows
-                ApplyCloudShadows(worldPos, cameraPosition, dither, subsurfaceMode, shadowMult);
-            #endif
+                #ifdef CLOUD_SHADOWS
+                    float cloudShadow = SampleCloudShadowMap(playerPos);
+                    shadowMult *= mix(1.0, cloudShadow, lightmapY2 * sunVisibility);
+                #endif
             #endif
 
             shadowMult *= max(NdotLM * shadowTime, 0.0);

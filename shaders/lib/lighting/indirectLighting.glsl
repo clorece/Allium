@@ -58,7 +58,7 @@ vec2 texelSize = 1.0 / vec2(viewWidth, viewHeight);
 #if COLORED_LIGHTING_INTERNAL > 0
     #define PT_USE_VOXEL_LIGHT
 #endif
-#define PT_TRANSPARENT_TINTS
+//#define PT_TRANSPARENT_TINTS
 
 #if COLORED_LIGHTING_INTERNAL > 0
     #include "/lib/misc/voxelization.glsl"
@@ -443,6 +443,8 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
                if (bounce == PT_MAX_BOUNCES - 1) {
                     pathRadiance += pathThroughput * hitColor * 0.5 * directLightMask;
                 }
+
+                pathRadiance *= receiverShadowMask;
                 
             } else {
                 // Sky contribution
@@ -479,7 +481,7 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
     
     emissiveOut = emissiveRadiance;
     
-    gi.rgb = totalRadiance * receiverShadowMask;
+    gi.rgb = totalRadiance;
     gi.rgb = max(gi.rgb, vec3(0.0));
     
     return gi;

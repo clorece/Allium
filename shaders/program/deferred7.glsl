@@ -482,6 +482,9 @@ void main() {
             
             vec4 packedGI = texture2D(colortex11, ScaleToViewport(texCoord));
             vec3 gi = packedGI.rgb * 30.0 * GI_I;
+                #ifdef END
+                    gi *= 0.1;
+                #endif
 
             
             #ifdef PT_VIEW
@@ -514,13 +517,13 @@ void main() {
                 float pureAdditive = 0.1 * intensityRatio;
                 float albedoMod = 1.0 - pureAdditive;
                 
-                vec3 emissiveForBloom = emissiveColor * (pureAdditive + albedoMod * albedo) * PT_EMISSIVE_I;
+                vec3 emissiveForBloom = emissiveColor * (pureAdditive + albedoMod * albedo);
                 float emissiveLum = dot(emissiveForBloom, vec3(0.2126, 0.7152, 0.0722));
-                float bloomKnee = 0.5; // Aggressive: compress values above this threshold
+                float bloomKnee = 2.0; // Aggressive: compress values above this threshold
                 float compressedLum = emissiveLum < bloomKnee ? emissiveLum : bloomKnee + (emissiveLum - bloomKnee) / (1.0 + (emissiveLum - bloomKnee) * 2.0);
                 emissiveForBloom *= emissiveLum > 0.001 ? compressedLum / emissiveLum : 1.0;
                 
-                colorAdd += emissiveForBloom;
+                colorAdd += emissiveForBloom *  PT_EMISSIVE_I;
                 
                 //vec3 colorAdd = color * 0.5;
             #endif
@@ -679,7 +682,13 @@ void main() {
     vec4 clouds = vec4(0.0);
 
     #ifdef VL_CLOUDS_ACTIVE
-        // Check both regular depth and DH depth
+        // Read the filtered clouds from colortex14 (output of deferred6)
+        clouds = texture2D(colortex14, texCoord);
+        
+        // Read cloud depth from colortex13 (written by deferred5)
+        float cloudDepthRaw = texture2D(colortex13, texCoord).r;
+        
+        // Check both regular depth and DH depth for sky detection
         #ifdef DISTANT_HORIZONS
             float dhDepth = texelFetch(dhDepthTex, texelCoord, 0).r;
             bool isSky = z0 >= 0.9999 && dhDepth >= 0.9999;
@@ -687,11 +696,33 @@ void main() {
             bool isSky = z0 >= 0.9999;
         #endif
         
-        // Only composite clouds where depth is sky
-        if (isSky) {
-            // Read the filtered clouds from colortex14 (output of deferred6)
-            vec4 clouds = texture2D(colortex14, texCoord);
+        // Calculate scene linear depth for comparison (regular terrain only)
+        float sceneLinearDepth = 1.0;
+        bool cloudIsCloser = false;
+        
+        #ifdef DISTANT_HORIZONS
+            // For DH chunks, just use the original sky check (simpler, more reliable)
+            bool isDHSky = dhDepth >= 0.9999;
+            bool isRegularSky = z0 >= 0.9999;
             
+            if (!isRegularSky) {
+                // Regular terrain visible - use depth comparison
+                sceneLinearDepth = lViewPos / far;
+                cloudIsCloser = cloudDepthRaw > 0.001 && cloudDepthRaw < sceneLinearDepth;
+            }
+            // For DH-only areas (isRegularSky && !isDHSky), don't use depth comparison
+            // Just let isSky handle it
+            
+            bool shouldRenderCloud = isSky || (!isRegularSky && clouds.a > 0.01 && cloudIsCloser);
+        #else
+            if (!isSky) {
+                sceneLinearDepth = lViewPos / far;
+                cloudIsCloser = cloudDepthRaw > 0.001 && cloudDepthRaw < sceneLinearDepth;
+            }
+            bool shouldRenderCloud = isSky || (clouds.a > 0.01 && cloudIsCloser);
+        #endif
+        
+        if (shouldRenderCloud) {
             // Apply atmospheric effects if needed
             #ifdef ATM_COLOR_MULTS
                 clouds.rgb *= sqrtAtmColorMult;
@@ -707,7 +738,6 @@ void main() {
             #endif
             
             clouds = max(clouds, vec4(0.0));
-            
 
             // Composite clouds over scene
             color = mix(color, clouds.rgb, clouds.a);

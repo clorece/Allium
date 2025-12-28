@@ -226,17 +226,16 @@ vec4 GetReflection(vec3 normalM, vec3 viewPos, vec3 nViewPos, vec3 playerPos, fl
                     #endif
 
                             #ifdef VL_CLOUDS_ACTIVE
-                                // Sample clouds from the filtered buffer (colortex12)
-                                // We need to calculate the reflection screen position
-                                vec3 worldNormalMR = normalize(mat3(gbufferModelViewInverse) * normalMR);
+                                // Sample clouds from the raw buffer (colortex12 - matches v2.1.1)
+                                // We project the reflection direction to screen coordinates
                                 vec4 clipPosCloud = gbufferProjection * vec4(nViewPosR, 1.0);
                                 vec2 cloudCoord = (clipPosCloud.xy / clipPosCloud.w) * 0.5 + 0.5;
                                 
                                 // Check if the reflection coordinate is valid
                                 if (cloudCoord.x >= 0.0 && cloudCoord.x <= 1.0 && 
                                     cloudCoord.y >= 0.0 && cloudCoord.y <= 1.0) {
-                                    // Read from the pre-rendered cloud buffer
-                                    vec4 clouds = texture2D(colortex12, cloudCoord);
+                                    // Read from the raw cloud buffer (colortex12)
+                                    vec4 clouds = texture2D(colortex14, cloudCoord);
                                     
                                     // Composite clouds into sky reflection
                                     skyReflection = mix(skyReflection, clouds.rgb, clouds.a);

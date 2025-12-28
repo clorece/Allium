@@ -39,7 +39,7 @@ vec4 textureAF(sampler2D texSampler, vec2 uv) {
              // Dynamic LOD based on Render Scale
              if (RENDER_SCALE < 0.99) {
                  // Low Res: Full smoothing to prevent pixelation artifacts
-                 lod = miplevel;
+                 lod = miplevel * 0.5;
              } else {
                  // Native Res: Reduced smoothing for sharpness and visibility of thin objects
                  lod = miplevel * 0.5;

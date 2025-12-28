@@ -2,7 +2,12 @@
 #define LQ_SKY
 
 #include "/lib/colors/lightAndAmbientColors.glsl"
-#include "/lib/atmospherics/sky.glsl"
+#ifdef OVERWORLD
+    #include "/lib/atmospherics/sky.glsl"
+#endif
+
+#include "/lib/atmospherics/clouds/cloudCoord.glsl"
+#include "/lib/atmospherics/clouds/cloudShadows.glsl"
 
 float GetDepth(float depth) {
     return 2.0 * near * far / (far + near - (2.0 * depth - 1.0) * (far - near));
@@ -18,77 +23,6 @@ vec4 DistortShadow(vec4 shadowpos, float distortFactor) {
     shadowpos = shadowpos * 0.5 + 0.5;
     return shadowpos;
 }
-
-#ifndef END
-#ifdef CLOUD_SHADOWS
-
-#include "/lib/colors/skyColors.glsl"
-#include "/lib/atmospherics/clouds/mainClouds.glsl"
-
-#define PI 3.141592653589793
-const float sunAngularSize = 0.533333;
-const float SUN_ANGULAR_RADIUS_RAD = (sunAngularSize * 0.5) * (PI / 180.0);
-const float INV_SHADOW_DISTANCE = 1.0 / max(shadowDistance, 1.0);
-const float EPSILON = 1e-4;
-
-int CloudShadowStepsLOD(float camDist) {
-    float t = clamp(camDist * INV_SHADOW_DISTANCE, 0.0, 1.0);
-    return 3 + int(step(t, 0.66));
-}
-
-bool RaySlabIntersectY(float yCenter, float halfThickness,
-                       vec3 ro, vec3 rd, out float tEnter, out float tExit)
-{
-    float yMin = yCenter - halfThickness;
-    float yMax = yCenter + halfThickness;
-    if (abs(rd.y) < EPSILON) {
-        tEnter = 0.0;
-        tExit  = 0.0;
-        return (ro.y >= yMin && ro.y <= yMax);
-    }
-    float invRy = 1.0 / rd.y;
-    float t0 = (yMin - ro.y) * invRy;
-    float t1 = (yMax - ro.y) * invRy;
-    tEnter = min(t0, t1);
-    tExit  = max(t0, t1);
-    return (tExit > 0.0 && tExit > max(tEnter, 0.0));
-}
-
-float LowerLayerDensityFast(vec3 p, int steps, vec3 cameraPos)
-{
-    float lTracePosXZ   = length((p - cameraPos).xz);
-    float cloudPlayerY  = p.y - float(cumulusLayerAlt);
-    float d = GetCumulusCloud(p, steps, cumulusLayerAlt, lTracePosXZ, cloudPlayerY, CUMULUS_CLOUD_GRANULARITY, 1.0, (200.0 * 0.01));
-    return max(d, 0.0);
-}
-
-float CloudVLTransmittanceAt(vec3 worldPos, vec3 sunDir_ws, vec3 cameraPos, float jitter)
-{
-    float yCenter = float(cumulusLayerAlt);
-    float halfH   = cumulusLayerStretch * 0.15;
-    float tEnter, tExit;
-    if (!RaySlabIntersectY(yCenter, halfH, worldPos, sunDir_ws, tEnter, tExit)) return 1.0;
-    float t0 = max(tEnter, 0.0);
-    float t1 = max(tExit,  0.0);
-    float lenInside = t1 - t0;
-    if (lenInside <= EPSILON) return 1.0;
-    float camDist = distance(cameraPos, worldPos);
-    float distThreshold = float(CLOUD_RENDER_DISTANCE) * 0.6;
-    int maxS = 2 + int(step(camDist, distThreshold));
-    maxS = min(maxS, 3);
-    float baseStep = (lenInside * 0.2) * mix(0.9, 1.1, fract(jitter * 43758.5453));
-    float stepLen  = max(baseStep, lenInside / float(maxS));
-    vec3 stepVec = sunDir_ws * stepLen;
-    vec3 p = worldPos + sunDir_ws * (t0 + stepLen * 0.5);
-    float dens = LowerLayerDensityFast(p, maxS, cameraPos);
-    float tau = dens * stepLen;
-    p += stepVec;
-    float T = exp(-1.6 * tau);
-    T = pow(T, 0.105); 
-    return clamp(T, 0.0, 1.0);
-}
-#endif
-#endif
 
 float GetMiePhase(float cosTheta, float g) {
     float g2 = g * g;
@@ -279,12 +213,9 @@ vec4 GetVolumetricLight(inout vec3 color, inout float vlFactor, vec3 translucent
         if (currentDist > depth0) vlSample *= translucentMult;
         
         #ifdef CLOUD_SHADOWS
-            if (isEyeInWater != 1) {
-                vec3 worldPos  = playerPos + cameraPosition;
-                vec3 sunDir_ws = normalize(mat3(gbufferModelViewInverse) * lightVec);
-                float cloudT   = CloudVLTransmittanceAt(worldPos, sunDir_ws, cameraPosition, dither);
-                vlSample     *= cloudT;
-            }
+            float cloudShadow = SampleCloudShadowMap(playerPos);
+            vlSample *= (1.0 - cloudShadow);
+            //shadowSample *= cloudShadow;
         #endif
 
         #ifdef OVERWORLD

@@ -10,7 +10,7 @@ vec2 jitterOffsets[8] = vec2[8](
                         vec2( 0.875, 0.875)
                         );
 vec2 TAAJitter(vec2 coord, float w) {
-    vec2 outputSize = vec2(viewWidth, viewHeight);
+    vec2 outputSize = vec2(viewWidth, viewHeight) * RENDER_SCALE;
     vec2 offset = jitterOffsets[int(framemod8)] * (w / outputSize);
 
     #if TAA_MODE == 1

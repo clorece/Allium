@@ -4,7 +4,9 @@
 /////////////////////////////////////
 
 //Common//
+//Common//
 #include "/lib/common.glsl"
+
 
 //////////Fragment Shader//////////Fragment Shader//////////Fragment Shader//////////
 #ifdef FRAGMENT_SHADER
@@ -18,8 +20,20 @@ flat in vec3 upVec, sunVec;
 #include "/lib/commonVariables.glsl"
 #include "/lib/commonFunctions.glsl"
 
-//Includes//
+// Color Includes (Required for mainClouds)
+#include "/lib/colors/lightAndAmbientColors.glsl"
+#include "/lib/colors/skyColors.glsl"
 #include "/lib/util/spaceConversion.glsl"
+
+// Cloud Map Generation (Top Down Density)
+#if defined CLOUD_SHADOWS && defined OVERWORLD
+    #include "/lib/atmospherics/clouds/cloudCoord.glsl"
+    #include "/lib/atmospherics/clouds/mainClouds.glsl"
+    #define CLOUD_SHADOW_GENERATION
+    //#include "/lib/atmospherics/clouds/cloudShadows.glsl"
+#endif
+
+
 
 // Check if a pixel was rendered (not a checkerboard hole)
 // Must match deferred5.glsl IsActivePixel exactly
@@ -35,71 +49,92 @@ bool IsActivePixel(ivec2 p) {
     #endif
 }
 
-// Reconstruct checkerboard and apply blur
-vec4 ReconstructAndBlur(vec2 uv) {
-    vec2 viewRes = vec2(viewWidth, viewHeight);
-    vec2 pixelSize = 1.0 / viewRes;
+// Smart Blur: Fills holes and softens edges (combined horizontal + vertical)
+vec4 SmartBlur(sampler2D cloudTex, vec2 coord) {
+    vec4 sum = vec4(0.0);
+    float validWeightSum = 0.0;
+    float totalKernelWeight = 0.0;
     
-    ivec2 centerPixel = ivec2(uv * viewRes);
-    bool centerActive = IsActivePixel(centerPixel);
+    // Gaussian Weights for blur - extended for softer clouds
+    float weights[4] = float[4](0.35, 0.25, 0.15, 0.08);
+    vec2 pixelSize = vec2(1.0 / viewWidth, 1.0 / viewHeight);
     
-    // Sample the 4 cardinal neighbors
-    vec4 samples[5];
-    float weights[5];
-    float totalWeight = 0.0;
+    float centerDepth = texture2D(depthtex0, coord).r;
     
-    // Offsets: center, right, left, up, down
-    ivec2 offsets[5] = ivec2[5](
-        ivec2(0, 0),
-        ivec2(1, 0),
-        ivec2(-1, 0),
-        ivec2(0, 1),
-        ivec2(0, -1)
-    );
+    // Center Sample
+    vec4 centerSample = texture2D(cloudTex, coord);
+    float centerW = weights[0];
+    totalKernelWeight += centerW;
     
-    // Gaussian-ish weights
-    float baseWeights[5] = float[5](0.4, 0.15, 0.15, 0.15, 0.15);
+    if (centerSample.a > 0.001) {
+        sum += centerSample * centerW;
+        validWeightSum += centerW;
+    }
     
-    for (int i = 0; i < 5; i++) {
-        ivec2 samplePixel = centerPixel + offsets[i];
-        vec2 sampleUV = (vec2(samplePixel) + 0.5) * pixelSize;
+    // Sample in a cross pattern (horizontal + vertical combined) - extended to 3 pixels
+    for (int i = 1; i <= 3; i++) {
+        float w = weights[i];
         
-        // Check if this sample position was rendered
-        bool sampleActive = IsActivePixel(samplePixel);
+        // Horizontal samples
+        vec2 posR = coord + vec2(float(i) * pixelSize.x, 0.0);
+        vec2 posL = coord - vec2(float(i) * pixelSize.x, 0.0);
         
-        if (sampleActive) {
-            samples[i] = texture2D(colortex12, sampleUV);
-            weights[i] = baseWeights[i];
-            totalWeight += weights[i];
-        } else {
-            samples[i] = vec4(0.0);
-            weights[i] = 0.0;
-        }
+        // Vertical samples  
+        vec2 posU = coord + vec2(0.0, float(i) * pixelSize.y);
+        vec2 posD = coord - vec2(0.0, float(i) * pixelSize.y);
+        
+        vec4 sampleR = texture2D(cloudTex, posR);
+        vec4 sampleL = texture2D(cloudTex, posL);
+        vec4 sampleU = texture2D(cloudTex, posU);
+        vec4 sampleD = texture2D(cloudTex, posD);
+        
+        // Depth safety for each sample
+        float depthR = texture2D(depthtex0, posR).r;
+        float depthL = texture2D(depthtex0, posL).r;
+        float depthU = texture2D(depthtex0, posU).r;
+        float depthD = texture2D(depthtex0, posD).r;
+        
+        float dwR = abs(centerDepth - depthR) < 0.01 ? 1.0 : 0.0;
+        float dwL = abs(centerDepth - depthL) < 0.01 ? 1.0 : 0.0;
+        float dwU = abs(centerDepth - depthU) < 0.01 ? 1.0 : 0.0;
+        float dwD = abs(centerDepth - depthD) < 0.01 ? 1.0 : 0.0;
+        
+        // Accumulate weights
+        totalKernelWeight += w * (dwR + dwL + dwU + dwD);
+        
+        if (sampleR.a > 0.001) { sum += sampleR * w * dwR; validWeightSum += w * dwR; }
+        if (sampleL.a > 0.001) { sum += sampleL * w * dwL; validWeightSum += w * dwL; }
+        if (sampleU.a > 0.001) { sum += sampleU * w * dwU; validWeightSum += w * dwU; }
+        if (sampleD.a > 0.001) { sum += sampleD * w * dwD; validWeightSum += w * dwD; }
     }
     
-    // If no valid samples found (shouldn't happen), return black
-    if (totalWeight < 0.001) {
-        return vec4(0.0);
-    }
+    if (validWeightSum < 0.0001) return vec4(0.0);
     
-    // Weighted average
-    vec4 result = vec4(0.0);
-    for (int i = 0; i < 5; i++) {
-        result += samples[i] * weights[i];
-    }
-    result /= totalWeight;
+    // Reconstruct pixel
+    vec4 result = sum / validWeightSum;
+    
+    // Density softening - prevents blockiness at cloud edges
+    float density = validWeightSum / max(totalKernelWeight, 0.0001);
+    float fadeFactor = smoothstep(0.1, 0.45, density);
+    
+    result.a *= fadeFactor;
     
     return result;
 }
 
 //Program//
 void main() {
-    // Reconstruct the checkerboard clouds and apply blur
-    vec4 blurredClouds = ReconstructAndBlur(texCoord);
+    // Apply smart blur
+    vec4 blurredClouds = SmartBlur(colortex12, texCoord);
     
-    // Output to colortex14 (blurred clouds, read by deferred7)
-    /* RENDERTARGETS:14 */
-    gl_FragData[0] = blurredClouds;
+    // Cloud shadow generation removed (using 2D Noise now)
+    float cloudShadow = 1.0;
+    
+    // Output: colortex10 = cloud shadow (RGB), colortex14 = blurred clouds
+    // Alpha of colortex10 is preserved via colormask in shaders.properties
+    /* RENDERTARGETS:10,14 */
+    gl_FragData[0] = vec4(cloudShadow, 0.0, 0.0, 0.0);
+    gl_FragData[1] = blurredClouds;
 }
 
 #endif

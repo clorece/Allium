@@ -151,7 +151,7 @@ void main() {
                centerShadowBias, subsurfaceMode, smoothnessG, highlightMult, emission);
 
     #if GLOBAL_ILLUMINATION == 2
-        color *= 0.5;
+        color *= 0.65;
     #endif
     /* DRAWBUFFERS:0 */
     gl_FragData[0] = color;

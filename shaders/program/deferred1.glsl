@@ -66,16 +66,39 @@ void main() {
         #ifdef DENOISER_ENABLED
         int stepSize = 1 * DENOISER_STEP_SIZE;
         float totalWeight = 0.0;
+        float totalWeightEmissive = 0.0;
         
         const float kernel[3] = float[3](1.0, 2.0, 1.0);
+        
+        // First pass: compute local mean for firefly detection
+        // Don't skip inactive pixels - texture filtering will pick up nearest valid data
+        vec3 localEmissiveMean = vec3(0.0);
+        float localMeanWeight = 0.0;
+        for (int y = -1; y <= 1; y++) {
+            for (int x = -1; x <= 1; x++) {
+                vec2 offset = vec2(x, y) * float(stepSize) / vec2(viewWidth, viewHeight);
+                vec2 sampleCoord = texCoord + offset;
+                vec3 sampleEmissive = texture2D(colortex9, sampleCoord).rgb;
+                float w = kernel[abs(x)] * kernel[abs(y)];
+                localEmissiveMean += sampleEmissive * w;
+                localMeanWeight += w;
+            }
+        }
+        localEmissiveMean /= max(localMeanWeight, 0.001);
+        
+        // Clamp the raw emissive to reject fireflies (soft clamp to local mean)
+        float rawLum = dot(rawEmissive, vec3(0.2126, 0.7152, 0.0722));
+        float meanLum = dot(localEmissiveMean, vec3(0.2126, 0.7152, 0.0722));
+        float maxAllowedLum = meanLum * 3.0 + 0.1; // Allow 3x the local mean before clamping
+        if (rawLum > maxAllowedLum && meanLum > 0.001) {
+            rawEmissive = rawEmissive * (maxAllowedLum / rawLum);
+        }
         
         for (int y = -1; y <= 1; y++) {
             for (int x = -1; x <= 1; x++) {
 
                 ivec2 samplePixel = ivec2(gl_FragCoord.xy) + ivec2(x, y) * stepSize;
-                
-                // --- NEW CHECK: Skip neighbor if it was one of the skipped pixels ---
-                if (!IsActivePixel(vec2(samplePixel))) continue;
+                bool isActive = IsActivePixel(vec2(samplePixel));
 
                 vec2 offset = vec2(x, y) * float(stepSize) / vec2(viewWidth, viewHeight);
                 vec2 sampleCoord = texCoord + offset;
@@ -89,31 +112,46 @@ void main() {
                 vec3 sampleTexture5 = texture2D(colortex5, sampleCoord).rgb;
                 vec3 sampleNormal = mat3(gbufferModelView) * sampleTexture5;
                 float normalDot = max(dot(centerNormal, sampleNormal), 0.0);
-                float normalWeight = pow(normalDot, 8.0);
-                // Sample emissive
+                float normalWeightGI = pow(normalDot, 8.0);
+                float normalWeightEmissive = pow(normalDot, 2.0); // Softer edge-stopping for noisy emissives
+                
+                // Sample emissive - from ALL pixels (texture filtering handles inactive)
                 vec4 sampleEmissiveData = texture2D(colortex9, sampleCoord);
                 vec3 sampleEmissive = sampleEmissiveData.rgb;
                 vec3 sampleAO = vec3(sampleEmissiveData.a);
-                // Sample GI
-                vec3 sampleGI = texture2D(colortex11, sampleCoord).rgb;
                 
-                float weight = spatialWeight * depthWeight * normalWeight;
+                // Clamp neighbor samples for firefly rejection
+                float sampleLum = dot(sampleEmissive, vec3(0.2126, 0.7152, 0.0722));
+                if (sampleLum > maxAllowedLum && meanLum > 0.001) {
+                    sampleEmissive = sampleEmissive * (maxAllowedLum / sampleLum);
+                }
                 
-                emissiveFiltered += sampleEmissive * weight;
-                giFiltered += sampleGI * weight;
-                aoFiltered += sampleAO * weight;
-                totalWeight += weight;
+                float weightEmissive = spatialWeight * depthWeight * normalWeightEmissive;
+                emissiveFiltered += sampleEmissive * weightEmissive;
+                totalWeightEmissive += weightEmissive;
+                
+                // GI/AO - only from active pixels
+                if (isActive) {
+                    vec3 sampleGI = texture2D(colortex11, sampleCoord).rgb;
+                    float weightGI = spatialWeight * depthWeight * normalWeightGI;
+                    giFiltered += sampleGI * weightGI;
+                    aoFiltered += sampleAO * weightGI;
+                    totalWeight += weightGI;
+                }
             }
         }
         
         if (totalWeight > 0.0001) {
-            emissiveFiltered /= totalWeight;
             giFiltered /= totalWeight;
             aoFiltered /= totalWeight;
         } else {
-            emissiveFiltered = rawEmissive;
             giFiltered = rawGI;
             aoFiltered = rawAO;
+        }
+        if (totalWeightEmissive > 0.0001) {
+            emissiveFiltered /= totalWeightEmissive;
+        } else {
+            emissiveFiltered = rawEmissive;
         }
         #else
             emissiveFiltered = rawEmissive;

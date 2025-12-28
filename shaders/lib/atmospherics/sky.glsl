@@ -1,6 +1,7 @@
 #ifndef INCLUDE_SKY
     #define INCLUDE_SKY
 
+    #ifdef OVERWORLD
     #include "/lib/colors/lightAndAmbientColors.glsl"
     #include "/lib/colors/skyColors.glsl"
 
@@ -154,5 +155,26 @@
 
         return finalSky;
     }
+
+    #endif // OVERWORLD
+
+    // Fallback functions for non-OVERWORLD dimensions
+    #ifndef OVERWORLD
+        vec3 GetSky(float VdotU, float VdotS, float dither, bool doGlare, bool doGround) {
+            #ifdef END
+                return endSkyColor;
+            #else
+                return vec3(0.0);
+            #endif
+        }
+        
+        vec3 GetLowQualitySky(float VdotU, float VdotS, float dither, bool doGlare, bool doGround) {
+            #ifdef END
+                return endSkyColor;
+            #else
+                return vec3(0.0);
+            #endif
+        }
+    #endif
 
 #endif //INCLUDE_SKY

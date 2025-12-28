@@ -412,12 +412,14 @@ void main() {
     
     // Apply exposure
     #ifdef OVERWORLD
-    color = ApplyExposure(color, exposure);
-    #elif defined NETHER
-        color *= 1.5;
+        color = ApplyExposure(color, exposure);
     #endif
 
-    color = Tonemap_Hable(color);
+    #if defined OVERWORLD
+        color = Tonemap_Hable(color);
+    #else
+        color = Tonemap_Lottes(color);
+    #endif
 
     float luminance = dot(color, vec3(0.2126, 0.7152, 0.0722));
     color = mix(vec3(luminance), color, 1.1);

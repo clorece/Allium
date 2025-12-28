@@ -48,6 +48,7 @@ void main() {
         #ifdef DENOISER_ENABLED
         int stepSize = 3 * DENOISER_STEP_SIZE;
         float totalWeight = 0.0;
+        float totalWeightEmissive = 0.0;
 
         const float kernel[3] = float[3](1.0, 2.0, 1.0);
         
@@ -65,7 +66,8 @@ void main() {
                 vec3 sampleTexture5 = texture2D(colortex5, sampleCoord).rgb;
                 vec3 sampleNormal = mat3(gbufferModelView) * sampleTexture5;
                 float normalDot = max(dot(centerNormal, sampleNormal), 0.0);
-                float normalWeight = pow(normalDot, 8.0);
+                float normalWeightGI = pow(normalDot, 8.0);
+                float normalWeightEmissive = pow(normalDot, 2.0); // Softer edge-stopping for noisy emissives
 
                 vec4 sampleEmissiveData = texture2D(colortex9, sampleCoord);
                 vec3 sampleEmissive = sampleEmissiveData.rgb;
@@ -73,23 +75,28 @@ void main() {
                 
                 vec3 sampleGI = texture2D(colortex11, sampleCoord).rgb;
 
-                float weight = spatialWeight * depthWeight * normalWeight;
+                float weightGI = spatialWeight * depthWeight * normalWeightGI;
+                float weightEmissive = spatialWeight * depthWeight * normalWeightEmissive;
                 
-                emissiveFiltered += sampleEmissive * weight;
-                giFiltered += sampleGI * weight;
-                aoFiltered += sampleAO * weight;
-                totalWeight += weight;
+                emissiveFiltered += sampleEmissive * weightEmissive;
+                giFiltered += sampleGI * weightGI;
+                aoFiltered += sampleAO * weightGI;
+                totalWeight += weightGI;
+                totalWeightEmissive += weightEmissive;
             }
         }
         
         if (totalWeight > 0.0001) {
-            emissiveFiltered /= totalWeight;
             giFiltered /= totalWeight;
             aoFiltered /= totalWeight;
         } else {
-            emissiveFiltered = prevEmissive;
             giFiltered = prevGI;
             aoFiltered = prevAO;
+        }
+        if (totalWeightEmissive > 0.0001) {
+            emissiveFiltered /= totalWeightEmissive;
+        } else {
+            emissiveFiltered = prevEmissive;
         }
         #else
             emissiveFiltered = prevEmissive;
