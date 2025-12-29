@@ -483,7 +483,7 @@ void main() {
             vec4 packedGI = texture2D(colortex11, ScaleToViewport(texCoord));
             vec3 gi = packedGI.rgb * 20.0 * GI_I;
                 #ifdef END
-                    gi *= 0.2;
+                    gi *= 0.1;
                 #endif
 
             

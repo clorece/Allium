@@ -76,17 +76,42 @@ void main() {
             const float kernel[3] = float[3](1.0, 2.0, 1.0);
             vec3 localEmissiveMean = vec3(0.0);
             float localMeanWeight = 0.0;
+            
+            // Variance calculation
+            float giLumSum = 0.0;
+            float giLumSqSum = 0.0;
+            float emLumSum = 0.0;
+            float emLumSqSum = 0.0;
+            
             for (int y = -1; y <= 1; y++) {
                 for (int x = -1; x <= 1; x++) {
                     vec2 offset = vec2(x, y) * float(stepSize) / vec2(viewWidth, viewHeight);
                     vec2 sampleCoord = texCoord + offset;
                     vec3 sampleEmissive = texture2D(colortex9, sampleCoord).rgb;
+                    vec3 sampleGI = texture2D(colortex11, sampleCoord).rgb;
                     float w = kernel[abs(x)] * kernel[abs(y)];
                     localEmissiveMean += sampleEmissive * w;
                     localMeanWeight += w;
+                    
+                    float giLum = dot(sampleGI, vec3(0.2126, 0.7152, 0.0722));
+                    float emLum = dot(sampleEmissive, vec3(0.2126, 0.7152, 0.0722));
+                    giLumSum += giLum * w;
+                    giLumSqSum += giLum * giLum * w;
+                    emLumSum += emLum * w;
+                    emLumSqSum += emLum * emLum * w;
                 }
             }
             localEmissiveMean /= max(localMeanWeight, 0.001);
+            
+            // Compute variance: E[X^2] - E[X]^2
+            float giMeanLum = giLumSum / max(localMeanWeight, 0.001);
+            float giVariance = max(giLumSqSum / max(localMeanWeight, 0.001) - giMeanLum * giMeanLum, 0.0);
+            float emMeanLum = emLumSum / max(localMeanWeight, 0.001);
+            float emVariance = max(emLumSqSum / max(localMeanWeight, 0.001) - emMeanLum * emMeanLum, 0.0);
+            
+            // Variance-guided scaling: high variance = relax edge stopping
+            float giVarScale = 1.0 / (1.0 + sqrt(giVariance) * 10.0);
+            float emVarScale = 1.0 / (1.0 + sqrt(emVariance) * 10.0);
             
             float rawLum = dot(rawEmissive, vec3(0.2126, 0.7152, 0.0722));
             float meanLum = dot(localEmissiveMean, vec3(0.2126, 0.7152, 0.0722));
@@ -113,8 +138,8 @@ void main() {
                     vec3 sampleTexture5 = texture2D(colortex5, sampleCoord).rgb;
                     vec3 sampleNormal = mat3(gbufferModelView) * sampleTexture5;
                     float normalDot = max(dot(centerNormal, sampleNormal), 0.0);
-                    float normalWeightGI = pow(normalDot, 8.0);
-                    float normalWeightEmissive = pow(normalDot, 2.0);
+                    float normalWeightGI = pow(normalDot, 8.0 * giVarScale);
+                    float normalWeightEmissive = pow(normalDot, 2.0 * emVarScale);
                     
                     vec4 sampleEmissiveData = texture2D(colortex9, sampleCoord);
                     vec3 sampleEmissive = sampleEmissiveData.rgb;

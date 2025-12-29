@@ -171,7 +171,7 @@ void main() {
         }
         */
 
-        if (validReprojection) {
+        //if (validReprojection) {
             vec3 historyGI = texture2D(colortex11, prevUV * RENDER_SCALE).rgb;
             vec3 historyEmissive = texture2D(colortex9, prevUV * RENDER_SCALE).rgb;
             float historyAO = texture2D(colortex9, prevUV * RENDER_SCALE).a;
@@ -181,10 +181,10 @@ void main() {
             finalGI = mix(gi, historyGI, blendFactor);
             finalEmissive = mix(emissive, historyEmissive, blendFactor);
             ao.r = mix(ao.r, historyAO, blendFactor);
-        } else {
-            finalGI = gi;
-            finalEmissive = emissive;
-        }
+        //} else {
+        //    finalGI = gi;
+        //    finalEmissive = emissive;
+        //}
     #endif
 
     /* RENDERTARGETS: 9,11 */

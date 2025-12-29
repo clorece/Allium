@@ -51,11 +51,44 @@ void main() {
             giFiltered = prevGI;
             aoFiltered = prevAO;
         } else {
-            int stepSize = 4 * DENOISER_STEP_SIZE;
+            int stepSize = 2 * DENOISER_STEP_SIZE;
             float totalWeight = 0.0;
             float totalWeightEmissive = 0.0;
     
             const float kernel[3] = float[3](1.0, 2.0, 1.0);
+            
+            // Variance calculation
+            float giLumSum = 0.0;
+            float giLumSqSum = 0.0;
+            float emLumSum = 0.0;
+            float emLumSqSum = 0.0;
+            float varWeight = 0.0;
+            
+            for (int y = -1; y <= 1; y++) {
+                for (int x = -1; x <= 1; x++) {
+                    vec2 offset = vec2(x, y) * float(stepSize) / vec2(viewWidth, viewHeight);
+                    vec2 sampleCoord = texCoord + offset;
+                    vec3 sampleGI = texture2D(colortex11, sampleCoord).rgb;
+                    vec3 sampleEmissive = texture2D(colortex8, sampleCoord).rgb;
+                    float w = kernel[abs(x)] * kernel[abs(y)];
+                    
+                    float giLum = dot(sampleGI, vec3(0.2126, 0.7152, 0.0722));
+                    float emLum = dot(sampleEmissive, vec3(0.2126, 0.7152, 0.0722));
+                    giLumSum += giLum * w;
+                    giLumSqSum += giLum * giLum * w;
+                    emLumSum += emLum * w;
+                    emLumSqSum += emLum * emLum * w;
+                    varWeight += w;
+                }
+            }
+            
+            float giMeanLum = giLumSum / max(varWeight, 0.001);
+            float giVariance = max(giLumSqSum / max(varWeight, 0.001) - giMeanLum * giMeanLum, 0.0);
+            float emMeanLum = emLumSum / max(varWeight, 0.001);
+            float emVariance = max(emLumSqSum / max(varWeight, 0.001) - emMeanLum * emMeanLum, 0.0);
+            
+            float giVarScale = 1.0 / (1.0 + sqrt(giVariance) * 10.0);
+            float emVarScale = 1.0 / (1.0 + sqrt(emVariance) * 10.0);
             
             for (int y = -1; y <= 1; y++) {
                 for (int x = -1; x <= 1; x++) {
@@ -71,8 +104,8 @@ void main() {
                     vec3 sampleTexture5 = texture2D(colortex5, sampleCoord).rgb;
                     vec3 sampleNormal = mat3(gbufferModelView) * sampleTexture5;
                     float normalDot = max(dot(centerNormal, sampleNormal), 0.0);
-                    float normalWeightGI = pow(normalDot, 8.0);
-                    float normalWeightEmissive = pow(normalDot, 2.0); // Softer edge-stopping for noisy emissives
+                    float normalWeightGI = pow(normalDot, 8.0 * giVarScale);
+                    float normalWeightEmissive = pow(normalDot, 2.0 * emVarScale);
     
                     vec4 sampleEmissiveData = texture2D(colortex8, sampleCoord);
                     vec3 sampleEmissive = sampleEmissiveData.rgb;

@@ -44,7 +44,7 @@
         #define PT_RENDER_DISTANCE 128 //[64 128 256 384 512]
         #define PT_EMISSIVE_I 1.0 //[0.1 0.25 0.5 0.75 1.0 1.5 2.0 3.0 4.0 5.0 7.5 10.0 15.0 20.0 50.0 100.0]
         //#define EXCLUDE_ENTITIES
-        #define PT_BLOCKLIGHT_MIX 0.2 //[0.0 0.05 0.1 0.15 0.2 0.25 0.3 0.35 0.4 0.45 0.5 0.55 0.6 0.65 0.7 0.75 0.8 0.85 0.9 0.95 1.0]
+        #define PT_BLOCKLIGHT_MIX 0.25 //[0.0 0.05 0.1 0.15 0.2 0.25 0.3 0.35 0.4 0.45 0.5 0.55 0.6 0.65 0.7 0.75 0.8 0.85 0.9 0.95 1.0]
         #define DENOISER_ENABLED
         #define DENOISER_STEP_SIZE 1 //[1 2 3 4 5]
         //#define PT_GI_NORMALS // Requires GENERATED_NORMALS
@@ -57,7 +57,7 @@
         #define GHOST_REDUCTION 0.0 //[0.0 1.0 2.0 4.0 6.0 8.0 10.0 12.0 16.0 24.0 32.0 48.0 64.0 92.0 128.0]
 
 
-    #define COLORED_LIGHTING 0 //[0 128 256 512 768 1024]
+    #define COLORED_LIGHTING 256 //[0 128 256 512 768 1024]
     #if defined IRIS_FEATURE_CUSTOM_IMAGES && SHADOW_QUALITY > -1 && !defined MC_OS_MAC && !(defined DH_TERRAIN || defined DH_WATER)
         #if COLORED_LIGHTING > 0
             #define COLORED_LIGHTING_INTERNAL COLORED_LIGHTING

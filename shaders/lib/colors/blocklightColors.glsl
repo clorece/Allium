@@ -15,7 +15,7 @@ void AddSpecialLightDetail(inout vec3 light, vec3 albedo, float emission) {
 //	vec3 fireSpecialLightColor = vec3(3.05, 0.13, 0.077); //3.05, 0.13, 0.077
 //	vec3 lavaSpecialLightColor = fireSpecialLightColor;
 //#else
-	vec3 fireSpecialLightColor = vec3(2.05, 0.83, 0.27) * 3.8;
+	vec3 fireSpecialLightColor = vec3(1.7, 0.9, 0.4) * 3.8;
 	vec3 lavaSpecialLightColor = vec3(3.0, 0.9, 0.2) * 4.0;
 //#endif
 
