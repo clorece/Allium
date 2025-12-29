@@ -74,15 +74,9 @@ void DoBSLColorSaturation(inout vec3 color) {
 }
 
 
-vec3 AcesTonemap(vec3 color) {
-    // === Adjustable parameters ===
-
-    float exposure = 0.35;   // >1.0 = brighter, <1.0 = darker
-    float saturation = 1.0; // >1.0 = more vibrant, <1.0 = more gray
-    float gamma = 2.2;      // sRGB standard gamma
-    float contrast = 0.998;   // >1.0 = higher contrast, <1.0 = flatter
-
-    color *= exposure;
+vec3 Tonemap_ACES(vec3 color) {
+    // Apply unified exposure
+    color *= TONEMAP_EXPOSURE * 0.175; // Scale factor to match original 0.35 at default 2.0
 
     const mat3 m1 = mat3(
         0.59719, 0.07600, 0.02840,
@@ -100,12 +94,16 @@ vec3 AcesTonemap(vec3 color) {
     vec3 b = v * (0.983729 * v + 0.4329510) + 0.238081;
     vec3 tonemapped = m2 * (a / b);
 
-    float luminance = dot(tonemapped, vec3(0.2126, 0.7152, 0.0722));
-    tonemapped = mix(vec3(luminance), tonemapped, saturation);
+    // Apply unified saturation
+    float lum = dot(tonemapped, vec3(0.2126, 0.7152, 0.0722));
+    tonemapped = mix(vec3(lum), tonemapped, TONEMAP_SATURATION);
 
-    tonemapped = mix(vec3(0.5), tonemapped, contrast);
+    // Apply unified contrast
+    tonemapped = mix(vec3(0.5), tonemapped, TONEMAP_CONTRAST);
 
-    return pow(clamp(tonemapped, 0.0, 1.0), vec3(1.0 / gamma));
+    // Apply unified gamma and black point
+    vec3 result = pow(clamp(tonemapped, 0.0, 1.0), vec3(1.0 / TONEMAP_GAMMA));
+    return mix(vec3(TONEMAP_BLACK_POINT), vec3(1.0), result);
 }
 
 vec3 Uchimura(vec3 x, float P, float a, float m, float l, float c, float b) {
@@ -138,23 +136,36 @@ vec3 Tonemap_Uchimura(vec3 color) {
     const float l = 0.4;  // linear section length
     const float c = 1.22; // black
     const float b = 0.0;  // pedestal
-    return Uchimura(color, P, a, m, l, c, b);
+
+    // Apply unified exposure
+    color *= TONEMAP_EXPOSURE;
+
+    vec3 tonemapped = Uchimura(color, P, a, m, l, c, b);
+
+    // Apply unified saturation
+    float lum = dot(tonemapped, vec3(0.2126, 0.7152, 0.0722));
+    tonemapped = mix(vec3(lum), tonemapped, TONEMAP_SATURATION);
+
+    // Apply unified contrast
+    tonemapped = mix(vec3(0.5), tonemapped, TONEMAP_CONTRAST);
+
+    // Apply unified gamma and black point
+    vec3 result = pow(clamp(tonemapped, 0.0, 1.0), vec3(1.0 / TONEMAP_GAMMA));
+    return mix(vec3(TONEMAP_BLACK_POINT), vec3(1.0), result);
 }
 
 vec3 Tonemap_Lottes(vec3 x) {
     // Lottes 2016, "Advanced Techniques and Optimization of HDR Color Pipelines"
-    const float exposure = 0.7; // Exposure multiplier - Higher values brighten the image, lower values darken it
-    const float a = 1.0;        // Contrast - Higher values increase contrast in highlights
-    const float d = 0.977;      // Toe adjustment - Controls the curve in dark regions (closer to 1.0 = harder toe)
-    const float hdrMax = 8.0;   // Maximum HDR input value - Defines the upper limit of the HDR range
-    const float midIn = 0.18;   // Input middle grey - The HDR value that represents middle grey (18% grey)
-    const float midOut = 0.267; // Output middle grey - Where middle grey maps to in the output (controls overall brightness)
-    
+    const float a = 1.0;        // Contrast curve power
+    const float d = 0.977;      // Toe adjustment
+    const float hdrMax = 8.0;   // Maximum HDR input value
+    const float midIn = 0.18;   // Input middle grey
+    const float midOut = 0.267; // Output middle grey
 
-    // Apply exposure
-    x *= exposure;
+    // Apply unified exposure
+    x *= TONEMAP_EXPOSURE * 0.35; // Scale factor to match original 0.7 at default 2.0
 
-    // Can be precomputed
+    // Precomputed curve parameters
     const float b =
         (-pow(midIn, a) + pow(hdrMax, a) * midOut) /
         ((pow(hdrMax, a * d) - pow(midIn, a * d)) * midOut);
@@ -162,7 +173,18 @@ vec3 Tonemap_Lottes(vec3 x) {
         (pow(hdrMax, a * d) * pow(midIn, a) - pow(hdrMax, a) * pow(midIn, a * d) * midOut) /
         ((pow(hdrMax, a * d) - pow(midIn, a * d)) * midOut);
 
-    return pow(x, vec3(a)) / (pow(x, vec3(a * d)) * b + c);
+    vec3 tonemapped = pow(x, vec3(a)) / (pow(x, vec3(a * d)) * b + c);
+
+    // Apply unified saturation
+    float lum = dot(tonemapped, vec3(0.2126, 0.7152, 0.0722));
+    tonemapped = mix(vec3(lum), tonemapped, TONEMAP_SATURATION);
+
+    // Apply unified contrast
+    tonemapped = mix(vec3(0.5), tonemapped, TONEMAP_CONTRAST);
+
+    // Apply unified gamma and black point
+    vec3 result = pow(clamp(tonemapped, 0.0, 1.0), vec3(1.0 / TONEMAP_GAMMA));
+    return mix(vec3(TONEMAP_BLACK_POINT), vec3(1.0), result);
 }
 
 vec3 Hable_Partial(vec3 x) {
@@ -177,13 +199,42 @@ vec3 Hable_Partial(vec3 x) {
 }
 
 vec3 Tonemap_Hable(vec3 color) {
-    const float exposureBias = 2.0;  // Exposure multiplier
-    const float W = 11.2;            // Linear White Point
+    // Apply unified exposure
+    vec3 curr = Hable_Partial(color * TONEMAP_EXPOSURE);
+    vec3 whiteScale = vec3(1.0) / Hable_Partial(vec3(TONEMAP_WHITE_POINT));
+    vec3 tonemapped = curr * whiteScale;
 
-    vec3 curr = Hable_Partial(color * exposureBias);
-    vec3 whiteScale = vec3(1.0) / Hable_Partial(vec3(W));
+    // Apply unified saturation
+    float lum = dot(tonemapped, vec3(0.2126, 0.7152, 0.0722));
+    tonemapped = mix(vec3(lum), tonemapped, TONEMAP_SATURATION);
+
+    // Apply unified contrast
+    tonemapped = mix(vec3(0.5), tonemapped, TONEMAP_CONTRAST);
     
-    return pow(curr * whiteScale, vec3(1.0 / 2.2));
+    // Apply unified gamma and black point
+    vec3 result = pow(clamp(tonemapped, 0.0, 1.0), vec3(1.0 / TONEMAP_GAMMA));
+    return mix(vec3(TONEMAP_BLACK_POINT), vec3(1.0), result);
+}
+
+// Reinhard-Jodie tonemapper
+vec3 Tonemap_Reinhard(vec3 color) {
+    // Apply unified exposure
+    color *= TONEMAP_EXPOSURE;
+
+    float lum = dot(color, vec3(0.2126, 0.7152, 0.0722));
+    vec3 tv = color / (1.0 + color);
+    vec3 tonemapped = mix(color / (1.0 + lum), tv, tv);
+
+    // Apply unified saturation
+    float lum2 = dot(tonemapped, vec3(0.2126, 0.7152, 0.0722));
+    tonemapped = mix(vec3(lum2), tonemapped, TONEMAP_SATURATION);
+
+    // Apply unified contrast
+    tonemapped = mix(vec3(0.5), tonemapped, TONEMAP_CONTRAST);
+
+    // Apply unified gamma and black point
+    vec3 result = pow(clamp(tonemapped, 0.0, 1.0), vec3(1.0 / TONEMAP_GAMMA));
+    return mix(vec3(TONEMAP_BLACK_POINT), vec3(1.0), result);
 }
 
 #define clamp01(x) clamp(x, 0.0, 1.0)
@@ -415,10 +466,21 @@ void main() {
         color = ApplyExposure(color, exposure);
     #endif
 
-    #if defined OVERWORLD
+    // Apply selected tonemapper
+    #if TONEMAP_OPERATOR == 0
         color = Tonemap_Hable(color);
-    #else
+    #elif TONEMAP_OPERATOR == 1
+        color = Tonemap_ACES(color);
+    #elif TONEMAP_OPERATOR == 2
         color = Tonemap_Lottes(color);
+    #elif TONEMAP_OPERATOR == 3
+        color = Tonemap_Uchimura(color);
+    #elif TONEMAP_OPERATOR == 4
+        color = Tonemap_Reinhard(color);
+    #elif TONEMAP_OPERATOR == 5
+        DoBSLTonemap(color);
+    #else
+        color = Tonemap_Hable(color); // Fallback to Hable
     #endif
 
     float luminance = dot(color, vec3(0.2126, 0.7152, 0.0722));

@@ -110,6 +110,42 @@ screen.CAMERA_SETTINGS.comment=Settings that relate to the view/camera.
 screen.TONEMAP_SETTINGS=Color Balance
 screen.TONEMAP_SETTINGS.comment=Settings that determine the color balance of the visuals.
 
+screen.TONEMAPPING=Tonemapping
+screen.TONEMAPPING.comment=Settings for the HDR to LDR tonemapping curve and color adjustments.
+
+screen.POST_PROCESSING_SETTINGS=Post Processing
+screen.POST_PROCESSING_SETTINGS.comment=Anti-aliasing, resolution scaling, tonemapping, and color grading settings.
+
+screen.MORE_WORLD_BLUR_SETTINGS=Distance Blur Intensities
+screen.MORE_WORLD_BLUR_SETTINGS.comment=Per-environment distance blur intensity settings.
+
+option.TONEMAP_OPERATOR=Tonemap Operator
+option.TONEMAP_OPERATOR.comment=Selects the tonemapping curve used to convert HDR to LDR. Each operator has a unique look and feel.
+value.TONEMAP_OPERATOR.0=Hable
+value.TONEMAP_OPERATOR.1=ACES
+value.TONEMAP_OPERATOR.2=Lottes
+value.TONEMAP_OPERATOR.3=Uchimura
+value.TONEMAP_OPERATOR.4=Reinhard-Jodie
+value.TONEMAP_OPERATOR.5=BSL (Legacy)
+
+option.TONEMAP_EXPOSURE=Exposure
+option.TONEMAP_EXPOSURE.comment=Controls the overall brightness of the image before tonemapping. Higher values = brighter image.
+
+option.TONEMAP_GAMMA=Gamma
+option.TONEMAP_GAMMA.comment=Controls the gamma correction applied to the final image. Standard sRGB displays use 2.2.
+
+option.TONEMAP_SATURATION=Saturation
+option.TONEMAP_SATURATION.comment=Controls the color intensity of the final image. 1.0 = normal, <1.0 = desaturated, >1.0 = oversaturated.
+
+option.TONEMAP_CONTRAST=Contrast
+option.TONEMAP_CONTRAST.comment=Controls the contrast of the final image. 1.0 = normal, <1.0 = flatter, >1.0 = more punchy.
+
+option.TONEMAP_WHITE_POINT=White Point
+option.TONEMAP_WHITE_POINT.comment=Controls the linear white point for the Hable tonemapper. Higher values allow brighter highlights before clipping.
+
+option.TONEMAP_BLACK_POINT=Black Point (Lift)
+option.TONEMAP_BLACK_POINT.comment=Raises the minimum brightness level of the image. 0.0 = pure black, higher values lift/wash out the shadows.
+
 screen.COLORGRADING_SETTINGS=Color Grading
 screen.COLORGRADING_SETTINGS.comment=Settings to mix up the final color channels.
 
