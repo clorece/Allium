@@ -88,9 +88,6 @@ float Noise3D(vec3 p) {
 
 //Program//
 void main() {
-    #if RENDER_SCALE >= 2
-        if (!ShouldRenderPixel(gl_FragCoord.xy)) discard;
-    #endif
 
     vec4 color = vec4(glColor.rgb, 1.0);
 

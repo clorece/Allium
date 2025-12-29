@@ -27,7 +27,7 @@
     #define FXAA_DEFINE 1 //[-1 1]
     #define DETAIL_QUALITY 3 //[0 2 3]
     #define CLOUD_QUALITY 3 //[0 1 2 3]
-    #define LIGHTSHAFT_QUALI_DEFINE 3 //[0 1 2 3 4]
+    #define LIGHTSHAFT_QUALI_DEFINE 1 //[0 1 2 3 4]
     #define WATER_REFLECT_QUALITY 2 //[-1 0 1 2]
     #define SKY_EFFECT_REFLECTION
     #define BLOCK_REFLECT_QUALITY 2 //[0 1 2]
