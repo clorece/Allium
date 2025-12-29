@@ -279,7 +279,7 @@
 
     // Tonemap Operator Selection
     // 0 = Hable (Uncharted 2), 1 = ACES, 2 = Lottes, 3 = Uchimura, 4 = Reinhard, 5 = BSL
-    #define TONEMAP_OPERATOR 5 //[0 1 2 3 4 5]
+    #define TONEMAP_OPERATOR 4 //[0 1 2 3 4 5]
     
     // Unified Tonemap Settings (used by all tonemappers)
     #define TONEMAP_EXPOSURE 1.00 //[0.50 0.60 0.70 0.80 0.90 1.00 1.10 1.20 1.30 1.40 1.50 1.60 1.70 1.80 1.90 2.00 2.20 2.40 2.60 2.80 3.00 3.50 4.00 5.00]
