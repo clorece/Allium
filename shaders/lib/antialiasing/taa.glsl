@@ -2,9 +2,9 @@
 #define TAA_MOVEMENT_IMPROVEMENT_FILTER
 
 #if TAA_MODE == 1
-    float blendMinimum = 0.7;
+    float blendMinimum = 0.6;
     float blendVariable = 0.2;
-    float blendConstant = 0.6;
+    float blendConstant = 0.7;
 
     float regularEdge = 10.0;
     float extraEdgeMult = 7.0;

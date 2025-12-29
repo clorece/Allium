@@ -14,7 +14,7 @@ vec2 TAAJitter(vec2 coord, float w) {
     vec2 offset = jitterOffsets[int(framemod8)] * (w / outputSize);
 
     #if TAA_MODE == 1
-        offset *= 0.125;
+        offset *= 0.25;
     #endif
 
     return coord + offset;

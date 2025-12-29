@@ -46,57 +46,63 @@ void main() {
         vec3 centerNormal = mat3(gbufferModelView) * texture5;
 
         #ifdef DENOISER_ENABLED
-        int stepSize = 2 * DENOISER_STEP_SIZE;
-        float totalWeight = 0.0;
-        float totalWeightEmissive = 0.0;
-
-        const float kernel[3] = float[3](1.0, 2.0, 1.0);
-        
-        for (int y = -1; y <= 1; y++) {
-            for (int x = -1; x <= 1; x++) {
-                vec2 offset = vec2(x, y) * float(stepSize) / vec2(viewWidth, viewHeight);
-                vec2 sampleCoord = texCoord + offset;
-
-                float spatialWeight = kernel[abs(x)] * kernel[abs(y)];
-
-                float sampleDepth = GetLinearDepth(texture2D(depthtex0, sampleCoord).r);
-                float depthDiff = abs(centerDepth - sampleDepth) * far;
-                float depthWeight = exp(-depthDiff * depthDiff * 1.0);
-
-                vec3 sampleTexture5 = texture2D(colortex5, sampleCoord).rgb;
-                vec3 sampleNormal = mat3(gbufferModelView) * sampleTexture5;
-                float normalDot = max(dot(centerNormal, sampleNormal), 0.0);
-                float normalWeightGI = pow(normalDot, 8.0);
-                float normalWeightEmissive = pow(normalDot, 2.0); // Softer edge-stopping for noisy emissives
-
-                vec4 sampleEmissiveData = texture2D(colortex8, sampleCoord);
-                vec3 sampleEmissive = sampleEmissiveData.rgb;
-                vec3 sampleAO = vec3(sampleEmissiveData.a);
-                
-                vec3 sampleGI = texture2D(colortex11, sampleCoord).rgb;
-
-                float weightGI = spatialWeight * depthWeight * normalWeightGI;
-                float weightEmissive = spatialWeight * depthWeight * normalWeightEmissive;
-                
-                emissiveFiltered += sampleEmissive * weightEmissive;
-                giFiltered += sampleGI * weightGI;
-                aoFiltered += sampleAO * weightGI;
-                totalWeight += weightGI;
-                totalWeightEmissive += weightEmissive;
-            }
-        }
-        
-        if (totalWeight > 0.0001) {
-            giFiltered /= totalWeight;
-            aoFiltered /= totalWeight;
-        } else {
+        if (GetLinearDepth(z0) * far > float(PT_RENDER_DISTANCE)) {
+            emissiveFiltered = prevEmissive;
             giFiltered = prevGI;
             aoFiltered = prevAO;
-        }
-        if (totalWeightEmissive > 0.0001) {
-            emissiveFiltered /= totalWeightEmissive;
         } else {
-            emissiveFiltered = prevEmissive;
+            int stepSize = 2 * DENOISER_STEP_SIZE;
+            float totalWeight = 0.0;
+            float totalWeightEmissive = 0.0;
+    
+            const float kernel[3] = float[3](1.0, 2.0, 1.0);
+            
+            for (int y = -1; y <= 1; y++) {
+                for (int x = -1; x <= 1; x++) {
+                    vec2 offset = vec2(x, y) * float(stepSize) / vec2(viewWidth, viewHeight);
+                    vec2 sampleCoord = texCoord + offset;
+    
+                    float spatialWeight = kernel[abs(x)] * kernel[abs(y)];
+    
+                    float sampleDepth = GetLinearDepth(texture2D(depthtex0, sampleCoord).r);
+                    float depthDiff = abs(centerDepth - sampleDepth) * far;
+                    float depthWeight = exp(-depthDiff * depthDiff * 1.0);
+    
+                    vec3 sampleTexture5 = texture2D(colortex5, sampleCoord).rgb;
+                    vec3 sampleNormal = mat3(gbufferModelView) * sampleTexture5;
+                    float normalDot = max(dot(centerNormal, sampleNormal), 0.0);
+                    float normalWeightGI = pow(normalDot, 8.0);
+                    float normalWeightEmissive = pow(normalDot, 2.0); // Softer edge-stopping for noisy emissives
+    
+                    vec4 sampleEmissiveData = texture2D(colortex8, sampleCoord);
+                    vec3 sampleEmissive = sampleEmissiveData.rgb;
+                    vec3 sampleAO = vec3(sampleEmissiveData.a);
+                    
+                    vec3 sampleGI = texture2D(colortex11, sampleCoord).rgb;
+    
+                    float weightGI = spatialWeight * depthWeight * normalWeightGI;
+                    float weightEmissive = spatialWeight * depthWeight * normalWeightEmissive;
+                    
+                    emissiveFiltered += sampleEmissive * weightEmissive;
+                    giFiltered += sampleGI * weightGI;
+                    aoFiltered += sampleAO * weightGI;
+                    totalWeight += weightGI;
+                    totalWeightEmissive += weightEmissive;
+                }
+            }
+            
+            if (totalWeight > 0.0001) {
+                giFiltered /= totalWeight;
+                aoFiltered /= totalWeight;
+            } else {
+                giFiltered = prevGI;
+                aoFiltered = prevAO;
+            }
+            if (totalWeightEmissive > 0.0001) {
+                emissiveFiltered /= totalWeightEmissive;
+            } else {
+                emissiveFiltered = prevEmissive;
+            }
         }
         #else
             emissiveFiltered = prevEmissive;

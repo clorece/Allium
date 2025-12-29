@@ -114,7 +114,7 @@
         // Dither to fix banding
         finalSky += (dither - 0.5) / 128.0;
 
-        return finalSky;
+        return finalSky * 0.9;
     }
 
     vec3 GetLowQualitySky(float VdotU, float VdotS, float dither, bool doGlare, bool doGround) {

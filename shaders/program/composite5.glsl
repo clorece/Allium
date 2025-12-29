@@ -456,15 +456,15 @@ void main() {
     //DoBSLTonemap(color);
     float ignored = dot(color * vec3(0.15, 0.50, 0.35), vec3(0.1, 0.65, 0.6));
     float desaturated = dot(color, vec3(0.15, 0.50, 0.35));
-    color = mix(color, vec3(ignored), exp2((-192) * desaturated));
+    //color = mix(color, vec3(ignored), exp2((-192) * desaturated));
 
      // Get auto exposure value (reads from colortex4)
-    float exposure = GetAutoExposure(colortex0, dither);
+    //float exposure = GetAutoExposure(colortex0, dither);
     
     // Apply exposure
-    #ifdef OVERWORLD
-        color = ApplyExposure(color, exposure);
-    #endif
+    //#ifdef OVERWORLD
+    //    color = ApplyExposure(color, exposure);
+    //#endif
 
     // Apply selected tonemapper
     #if TONEMAP_OPERATOR == 0
@@ -524,10 +524,10 @@ void main() {
     /* DRAWBUFFERS:3 */
     gl_FragData[0] = vec4(color, 1.0);
 
-    if (gl_FragCoord.x < 0.5 && gl_FragCoord.y < 0.5) {
-        /* DRAWBUFFERS:34 */
-        gl_FragData[1] = vec4(0.0, exposure, 0.0, 1.0);
-    }
+    //if (gl_FragCoord.x < 0.5 && gl_FragCoord.y < 0.5) {
+    //    /* DRAWBUFFERS:34 */
+    //    gl_FragData[1] = vec4(0.0, exposure, 0.0, 1.0);
+    //}
 }
 
 #endif

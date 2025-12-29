@@ -481,9 +481,9 @@ void main() {
             color *= ssao;
             
             vec4 packedGI = texture2D(colortex11, ScaleToViewport(texCoord));
-            vec3 gi = packedGI.rgb * 30.0 * GI_I;
+            vec3 gi = packedGI.rgb * 20.0 * GI_I;
                 #ifdef END
-                    gi *= 0.1;
+                    gi *= 0.2;
                 #endif
 
             
@@ -523,7 +523,7 @@ void main() {
                 float compressedLum = emissiveLum < bloomKnee ? emissiveLum : bloomKnee + (emissiveLum - bloomKnee) / (1.0 + (emissiveLum - bloomKnee) * 2.0);
                 emissiveForBloom *= emissiveLum > 0.001 ? compressedLum / emissiveLum : 1.0;
                 
-                colorAdd += emissiveForBloom *  PT_EMISSIVE_I;
+                colorAdd += emissiveForBloom * PT_EMISSIVE_I;
                 
                 //vec3 colorAdd = color * 0.5;
             #endif

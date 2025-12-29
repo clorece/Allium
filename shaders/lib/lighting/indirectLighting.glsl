@@ -56,7 +56,7 @@ vec2 texelSize = 1.0 / vec2(viewWidth, viewHeight);
 #define PT_USE_RUSSIAN_ROULETTE
 //#define DEBUG_SHADOW_VIEW
 #if COLORED_LIGHTING_INTERNAL > 0
-    #define PT_USE_VOXEL_LIGHT
+    //#define PT_USE_VOXEL_LIGHT
 #endif
 //#define PT_TRANSPARENT_TINTS
 
@@ -267,8 +267,11 @@ RayHit MarchRay(vec3 start, vec3 rayDir, sampler2D depthtex, vec2 screenEdge, fl
     result.hitDist = 0.0;
     result.border = 0.0;
     
-    // Jitter initial step size to break ring patterns from exponential step growth
-    float stepSize = 0.05 * (0.5 + dither);
+    float maxRayDistance = float(PT_RENDER_DISTANCE);
+
+    float baseStepSize = 0.05 * (0.5 + dither);
+    float stepSize = baseStepSize;
+    
     vec3 rayPos = start;
     
     vec4 initialClip = gbufferProjection * vec4(rayPos, 1.0);
@@ -282,8 +285,12 @@ RayHit MarchRay(vec3 start, vec3 rayDir, sampler2D depthtex, vec2 screenEdge, fl
         vec4 rayClip = gbufferProjection * vec4(rayPos, 1.0);
         vec3 rayScreen = rayClip.xyz / rayClip.w * 0.5 + 0.5;
         
+        float rayDistance = length(rayPos - start);
+        
+        if (rayDistance > maxRayDistance) break;
         if (rayScreen.x < 0.0 || rayScreen.x > 1.0 || 
-            rayScreen.y < 0.0 || rayScreen.y > 1.0) break;
+            rayScreen.y < 0.0 || rayScreen.y > 1.0 ||
+            rayScreen.z < 0.0 || rayScreen.z > 1.0) break;
         
         float sampledDepth = texture2D(depthtex, rayScreen.xy).r;
         
@@ -292,12 +299,19 @@ RayHit MarchRay(vec3 start, vec3 rayDir, sampler2D depthtex, vec2 screenEdge, fl
         
         if (nextZ < currZ && (sampledDepth <= max(minZ, maxZ) && sampledDepth >= min(minZ, maxZ))) {
             vec3 hitPos = rayPos - rayDir * stepSize * 0.5;
+            float hitDist = length(hitPos - start);
+            
+            // Reject hit if beyond max ray distance
+            if (hitDist > maxRayDistance) {
+                return result; // Return no hit
+            }
+            
             vec4 hitClip = gbufferProjection * vec4(hitPos, 1.0);
             vec3 hitScreen = hitClip.xyz / hitClip.w * 0.5 + 0.5;
             
             result.screenPos = hitScreen;
             result.worldPos = hitPos;
-            result.hitDist = length(hitPos - start);
+            result.hitDist = hitDist;
             
             vec2 absPos = abs(result.screenPos.xy - 0.5);
             vec2 cdist = absPos / screenEdge;
@@ -311,6 +325,7 @@ RayHit MarchRay(vec3 start, vec3 rayDir, sampler2D depthtex, vec2 screenEdge, fl
         minZ = maxZ - biasamount / currZ;
         maxZ = rayScreen.z;
         
+        // Standard step growth
         stepSize = min(stepSize, 0.1) * 2.5;
     }
     
@@ -348,6 +363,10 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
     vec3 emissiveRadiance = vec3(0.0);
     
     vec3 startPos = viewPos + normalMR * 0.01;
+    
+    // GI Render Distance Cutoff: Stop rendering GI on blocks beyond the set distance
+    if (length(viewPos) > float(PT_RENDER_DISTANCE)) return vec4(0.0);
+
     vec3 startWorldPos = mat3(gbufferModelViewInverse) * startPos;
     
     float distanceScale = clamp(1.0 - startPos.z / far, 0.1, 1.0);
