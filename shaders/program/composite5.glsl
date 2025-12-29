@@ -5,15 +5,26 @@
 //Common//
 #include "/lib/common.glsl"
 
+#define OVERWORLD_LUT                2          //[0 1 2 3 4 5 6 7 8 9]
+#define NETHER_LUT                2          //[0 1 2 3 4 5 6 7 8 9]
+#define END_LUT                 1          //[0 1 2 3 4 5 6 7 8 9]
 
-// Query's AWESOME LUTs
-// LUT DEFAULT SHOULD BE 2
-#define Lut_Set                     1           //[1] // technically there should be a 2 for raspberry but ill keep it off for now :3
+#define OVERWORLD_LUT_I            1.0          //[0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0]
+#define NETHER_LUT_I               1.0          //[0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0]
+#define END_LUT_I                  1.0          //[0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0]
 
-
-#define Overworld_Lut                2          //[0 1 2 3 4 5 6 7 8 9]
-#define Nether_Lut                2          //[0 1 2 3 4 5 6 7 8 9]
-#define End_Lut                 1          //[0 1 2 3 4 5 6 7 8 9]
+#ifdef OVERWORLD
+    #define SELECTED_LUT OVERWORLD_LUT
+    #define SELECTED_LUT_I OVERWORLD_LUT_I
+#endif
+#ifdef NETHER
+    #define SELECTED_LUT NETHER_LUT
+    #define SELECTED_LUT_I NETHER_LUT_I
+#endif
+#ifdef END
+    #define SELECTED_LUT END_LUT
+    #define SELECTED_LUT_I END_LUT_I
+#endif
 
 #define GBPreset 18 // [1 2 3 4 5 6 7 8 9 10 11 12 13 14 15 16 17 18 19 20 21 22 23 24 25 26 27 28 29 30 31 32]
 
@@ -75,7 +86,6 @@ void DoBSLColorSaturation(inout vec3 color) {
 
 
 vec3 Tonemap_ACES(vec3 color) {
-    // Apply unified exposure
     color *= TONEMAP_EXPOSURE * 0.175; // Scale factor to match original 0.35 at default 2.0
 
     const mat3 m1 = mat3(
@@ -131,7 +141,7 @@ vec3 Uchimura(vec3 x, float P, float a, float m, float l, float c, float b) {
 
 vec3 Tonemap_Uchimura(vec3 color) {
     const float P = 1.0;  // max display brightness
-    const float a = 0.5;  // contrast
+    const float a = 0.8;  // contrast
     const float m = 0.22; // linear section start
     const float l = 0.4;  // linear section length
     const float c = 1.22; // black
@@ -241,13 +251,14 @@ vec3 Tonemap_Reinhard(vec3 color) {
 
 // thanks to Query's for their AWESOME LUTs
 
-void OverworldLookup(inout vec3 color) {
+void LookupTable(inout vec3 color) {
     const vec2 inverseSize = vec2(1.0 / 512, 1.0 / 5120);
 
     const mat2 correctGrid = mat2(
-            vec2(1.0, inverseSize.y * 512), vec2(0.0, Overworld_Lut * inverseSize.y * 512)
+            vec2(1.0, inverseSize.y * 512), vec2(0.0, SELECTED_LUT * inverseSize.y * 512)
     );
     
+    vec3 originalColor = color;
     color = clamp01(color);
 
     float blueColor = color.b * 63.0;
@@ -265,61 +276,8 @@ void OverworldLookup(inout vec3 color) {
     newColor1 = texture2D(colortex7, texPos.xy * correctGrid[0] + correctGrid[1]).rgb;
     newColor2 = texture2D(colortex7, texPos.zw * correctGrid[0] + correctGrid[1]).rgb;
 
-    color = mix(newColor1, newColor2, fract(blueColor));
-}
-
-void NetherLookup(inout vec3 color) {
-    const vec2 inverseSize = vec2(1.0 / 512, 1.0 / 5120);
-
-    const mat2 correctGrid = mat2(
-            vec2(1.0, inverseSize.y * 512), vec2(0.0, Nether_Lut * inverseSize.y * 512)
-    );
-    
-    color = clamp01(color);
-
-    float blueColor = color.b * 63.0;
-
-    vec4 quad = vec4(0.0);
-    quad.y = floor(floor(blueColor) * 0.125);
-    quad.x = floor(blueColor) - (quad.y * 8.0);
-    quad.w = floor(ceil(blueColor) * 0.125);
-    quad.z = ceil(blueColor) - (quad.w * 8.0);
-
-    vec4 texPos = (quad * 0.125) + (0.123046875 * color.rg).xyxy + 0.0009765625;
-
-    vec3 newColor1, newColor2;
-    
-    newColor1 = texture2D(colortex7, texPos.xy * correctGrid[0] + correctGrid[1]).rgb;
-    newColor2 = texture2D(colortex7, texPos.zw * correctGrid[0] + correctGrid[1]).rgb;
-    
-    color = mix(newColor1, newColor2, fract(blueColor));
-}
-
-void EndLookup(inout vec3 color) {
-    const vec2 inverseSize = vec2(1.0 / 512, 1.0 / 5120);
-
-    const mat2 correctGrid = mat2(
-            vec2(1.0, inverseSize.y * 512), vec2(0.0, End_Lut * inverseSize.y * 512)
-    );
-    
-    color = clamp01(color);
-
-    float blueColor = color.b * 63.0;
-
-    vec4 quad = vec4(0.0);
-    quad.y = floor(floor(blueColor) * 0.125);
-    quad.x = floor(blueColor) - (quad.y * 8.0);
-    quad.w = floor(ceil(blueColor) * 0.125);
-    quad.z = ceil(blueColor) - (quad.w * 8.0);
-
-    vec4 texPos = (quad * 0.125) + (0.123046875 * color.rg).xyxy + 0.0009765625;
-
-    vec3 newColor1, newColor2;
-    
-    newColor1 = texture2D(colortex7, texPos.xy * correctGrid[0] + correctGrid[1]).rgb;
-    newColor2 = texture2D(colortex7, texPos.zw * correctGrid[0] + correctGrid[1]).rgb;
-    
-    color = mix(newColor1, newColor2, fract(blueColor));
+    vec3 lutColor = mix(newColor1, newColor2, fract(blueColor));
+    color = mix(originalColor, lutColor, SELECTED_LUT_I);
 }
 
 #ifdef BLOOM
@@ -483,9 +441,6 @@ void main() {
         color = Tonemap_Hable(color); // Fallback to Hable
     #endif
 
-    float luminance = dot(color, vec3(0.2126, 0.7152, 0.0722));
-    color = mix(vec3(luminance), color, 1.1);
-
     #if defined GREEN_SCREEN_LIME || SELECT_OUTLINE == 4
         int materialMaskInt = int(texelFetch(colortex6, texelCoord, 0).g * 255.1);
     #endif
@@ -510,15 +465,7 @@ void main() {
 
 
     #ifdef OVERWORLD
-        OverworldLookup(color);
-    #endif
-
-    #ifdef NETHER
-        NetherLookup(color);
-    #endif
-
-    #ifdef END
-        EndLookup(color);
+        LookupTable(color);
     #endif
 
     /* DRAWBUFFERS:3 */

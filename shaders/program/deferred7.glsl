@@ -481,9 +481,9 @@ void main() {
             color *= ssao;
             
             vec4 packedGI = texture2D(colortex11, ScaleToViewport(texCoord));
-            vec3 gi = packedGI.rgb * 20.0 * GI_I;
+            vec3 gi = packedGI.rgb * 15.0 * GI_I;
                 #ifdef END
-                    gi *= 0.1;
+                    gi *= 0.15;
                 #endif
 
             
@@ -510,20 +510,16 @@ void main() {
                 #endif
                 
                 vec3 finalAO = (1.0 - clamp(rtao, 0.0, 1.0)) * vec3(ssao);
-                vec3 colorAdd = mix(color, (gi * albedo * finalAO) * 1.0, 0.5);
                 
                 float refIntensity = 2.0;
                 float intensityRatio = refIntensity / max(PT_EMISSIVE_I, 0.01);
-                float pureAdditive = 0.1 * intensityRatio;
+                float pureAdditive = 0.3 * intensityRatio;
                 float albedoMod = 1.0 - pureAdditive;
+
+                //vec3 colorAdd = mix(color, (gi * albedo * finalAO) * 1.0, 0.5);
+                vec3 colorAdd = color * 0.5 + (gi * albedo * finalAO) + emissiveColor * albedo * PT_EMISSIVE_I;
                 
-                vec3 emissiveForBloom = emissiveColor * (pureAdditive + albedoMod * albedo);
-                float emissiveLum = dot(emissiveForBloom, vec3(0.2126, 0.7152, 0.0722));
-                float bloomKnee = 2.0; // Aggressive: compress values above this threshold
-                float compressedLum = emissiveLum < bloomKnee ? emissiveLum : bloomKnee + (emissiveLum - bloomKnee) / (1.0 + (emissiveLum - bloomKnee) * 2.0);
-                emissiveForBloom *= emissiveLum > 0.001 ? compressedLum / emissiveLum : 1.0;
-                
-                colorAdd += emissiveForBloom * PT_EMISSIVE_I;
+                //colorAdd += emissiveColor * albedo * PT_EMISSIVE_I;
                 
                 //vec3 colorAdd = color * 0.5;
             #endif
