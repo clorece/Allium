@@ -488,7 +488,7 @@ void main() {
 
             
             #ifdef PT_VIEW
-                vec3 colorAdd = gi + emissiveColor - rtao;
+                vec3 colorAdd = gi + (emissiveColor * PT_EMISSIVE_I) - rtao;
             #else
                 vec3 albedo = color;
                 
@@ -516,10 +516,10 @@ void main() {
                 float pureAdditive = 0.3 * intensityRatio;
                 float albedoMod = 1.0 - pureAdditive;
 
-                //vec3 colorAdd = mix(color, (gi * albedo * finalAO) * 1.0, 0.5);
-                vec3 colorAdd = color * 0.5 + (gi * albedo * finalAO) + emissiveColor * albedo * PT_EMISSIVE_I;
+                vec3 colorAdd = mix(color, (gi * albedo * finalAO) * 1.0, 0.5);
+                //vec3 colorAdd = color * 0.5 + (gi * albedo * finalAO) + emissiveColor * PT_EMISSIVE_I;
                 
-                //colorAdd += emissiveColor * albedo * PT_EMISSIVE_I;
+                colorAdd += (emissiveColor * albedo * albedoMod) * PT_EMISSIVE_I;
                 
                 //vec3 colorAdd = color * 0.5;
             #endif

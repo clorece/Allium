@@ -77,7 +77,6 @@ void main() {
             vec3 localEmissiveMean = vec3(0.0);
             float localMeanWeight = 0.0;
             
-            // Variance calculation
             float giLumSum = 0.0;
             float giLumSqSum = 0.0;
             float emLumSum = 0.0;
@@ -188,7 +187,7 @@ void main() {
     giFiltered = max(giFiltered, 0.0);
     aoFiltered = max(aoFiltered, 0.0);
     
-    /* RENDERTARGETS: 8,11 */
+    /* RENDERTARGETS: 9,11 */
     gl_FragData[0] = vec4(emissiveFiltered, aoFiltered.r);
     gl_FragData[1] = vec4(giFiltered, 1.0);
 }

@@ -35,7 +35,7 @@ void main() {
     vec3 aoFiltered = vec3(0.0);
     
     #if GLOBAL_ILLUMINATION == 2
-        vec4 prevEmissiveData = texture2D(colortex8, texCoord);
+        vec4 prevEmissiveData = texture2D(colortex9, texCoord);
         vec3 prevEmissive = prevEmissiveData.rgb;
         vec3 prevAO = vec3(prevEmissiveData.a);
         
@@ -107,7 +107,7 @@ void main() {
                     float normalWeightGI = pow(normalDot, 8.0 * giVarScale);
                     float normalWeightEmissive = pow(normalDot, 2.0 * emVarScale);
     
-                    vec4 sampleEmissiveData = texture2D(colortex8, sampleCoord);
+                    vec4 sampleEmissiveData = texture2D(colortex9, sampleCoord);
                     vec3 sampleEmissive = sampleEmissiveData.rgb;
                     vec3 sampleAO = vec3(sampleEmissiveData.a);
                     

@@ -211,11 +211,11 @@ vec4 GetVolumetricClouds(int cloudAltitude,
             shadow -= rainFactor * 0.05;
 
             #if CLOUD_LIGHTING_QUALITY == 7
-                float shadowMult = 2.5;
+                float shadowMult = 3.0;
             #elif CLOUD_LIGHTING_QUALITY == 14
-                float shadowMult = 6.15;
+                float shadowMult = 6.55;
             #elif CLOUD_LIGHTING_QUALITY == 30
-                float shadowMult = 11.65;
+                float shadowMult = 12.15;
             #else
                 float shadowMult = 1.0;
             #endif
@@ -273,7 +273,7 @@ vec4 GetVolumetricClouds(int cloudAltitude,
 
         float skyMult1 = 1.0 - 0.2 * max(sunVisibility2, nightFactor);
         float skyMult2 = 1.0 - 0.33333;
-        vec3 finalColor = mix(skyColor, cloudCol * skyMult1, cloudFogFactor * skyMult2 * 0.175);
+        vec3 finalColor = mix(skyColor, cloudCol * skyMult1, cloudFogFactor * skyMult2 * 0.15);
 
         finalColor *= pow2(1.0 - maxBlindnessDarkness);
 

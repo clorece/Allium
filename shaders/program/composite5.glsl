@@ -86,7 +86,7 @@ void DoBSLColorSaturation(inout vec3 color) {
 
 
 vec3 Tonemap_ACES(vec3 color) {
-    color *= TONEMAP_EXPOSURE * 0.175; // Scale factor to match original 0.35 at default 2.0
+    color *= TONEMAP_EXPOSURE; // Scale factor to match original 0.35 at default 2.0
 
     const mat3 m1 = mat3(
         0.59719, 0.07600, 0.02840,
@@ -109,7 +109,7 @@ vec3 Tonemap_ACES(vec3 color) {
     tonemapped = mix(vec3(lum), tonemapped, TONEMAP_SATURATION);
 
     // Apply unified contrast
-    tonemapped = mix(vec3(0.5), tonemapped, TONEMAP_CONTRAST);
+    tonemapped = mix(vec3(0.5), tonemapped, TONEMAP_CONTRAST * 0.999);
 
     // Apply unified gamma and black point
     vec3 result = pow(clamp(tonemapped, 0.0, 1.0), vec3(1.0 / TONEMAP_GAMMA));
@@ -210,7 +210,7 @@ vec3 Hable_Partial(vec3 x) {
 
 vec3 Tonemap_Hable(vec3 color) {
     // Apply unified exposure
-    vec3 curr = Hable_Partial(color * TONEMAP_EXPOSURE);
+    vec3 curr = Hable_Partial(color * TONEMAP_EXPOSURE * 2.0);
     vec3 whiteScale = vec3(1.0) / Hable_Partial(vec3(TONEMAP_WHITE_POINT));
     vec3 tonemapped = curr * whiteScale;
 
@@ -219,7 +219,7 @@ vec3 Tonemap_Hable(vec3 color) {
     tonemapped = mix(vec3(lum), tonemapped, TONEMAP_SATURATION);
 
     // Apply unified contrast
-    tonemapped = mix(vec3(0.5), tonemapped, TONEMAP_CONTRAST);
+    tonemapped = mix(vec3(0.5), tonemapped, TONEMAP_CONTRAST * 1.0);
     
     // Apply unified gamma and black point
     vec3 result = pow(clamp(tonemapped, 0.0, 1.0), vec3(1.0 / TONEMAP_GAMMA));
