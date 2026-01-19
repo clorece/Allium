@@ -66,7 +66,7 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
     float lightmapYM = pow(lightmap.y, 4.0);
     float subsurfaceHighlight = 0.0;
     float ambientMult = 1.0;
-    vec3 lightColorM = lightColor * 1.0 * SUNLIGHT_AMOUNT;
+    vec3 lightColorM = lightColor * 1.2 * SUNLIGHT_AMOUNT;
 
     #if GLOBAL_ILLUMINATION == 2
     lightColorM *= 2.0;
