@@ -554,7 +554,7 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
     vec3 receiverScenePos = (gbufferModelViewInverse * vec4(unscaledViewPos, 1.0)).xyz;
     vec3 receiverWorldPos = receiverScenePos + cameraPosition;
     bool receiverInShadow = GetShadow(receiverWorldPos, cameraPosition);
-    float receiverShadowMask = receiverInShadow ? 0.75 : 0.1;
+    float receiverShadowMask = receiverInShadow ? 1.0 : 0.1;
     float receiverShadowMask2 = receiverInShadow ? 0.2 : 0.1;
     
     vec3 receiverVoxelPos = SceneToVoxel(receiverScenePos);
