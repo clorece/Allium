@@ -64,7 +64,7 @@ vec4 GetSpecialBlocklightColor(int mat) {
 					if (mat == 15) return vec4(fireSpecialLightColor, 0.0); // Campfire:Lit
 					if (mat == 16) return vec4(vec3(1.7, 0.9, 0.4) * 4.0, 0.0); // Redstone Lamp:Lit
 					if (mat == 17) return vec4(vec3(1.7, 0.9, 0.4) * 2.0, 0.0); // Respawn Anchor:Lit
-					if (mat == 18) return vec4(vec3(1.0, 1.25, 1.5) * 2.5, 0.0); // Sea Lantern
+					if (mat == 18) return vec4(vec3(1.0, 1.25, 1.5) * 3.4, 0.0); // Sea Lantern
 					if (mat == 19) return vec4(vec3(3.0, 0.9, 0.2) * 3.0, 0.0); // Shroomlight
 				} else {
 					if (mat == 20) return vec4(vec3(1.4, 0.9, 0.4) * 3.4, 0.0); // Cave Vines:With Glow Berries
