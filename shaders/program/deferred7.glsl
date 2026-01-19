@@ -207,7 +207,7 @@ vec3 textureCatmullRom(sampler2D colortex, vec2 texcoord, vec2 view) {
         int samples = 4;
         float scm = 0.4;
 
-        #define SSAO_I_FACTOR 0.5
+        #define SSAO_I_FACTOR 0.25
 
         float sampleDepth = 0.0, angle = 0.0, dist = 0.0;
         float fovScale = gbufferProjection[1][1];

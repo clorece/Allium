@@ -141,7 +141,7 @@ void main() {
     roughNoise = noiseMult * (roughNoise - 0.5);
     normalG += roughNoise;
 
-    gi = min(GetGI(ao, emissive, normalG, viewPos.xyz, unscaledViewPos.xyz, nViewPos, depthtex0, dither, skyLightFactor, 1.0, VdotU, VdotS, entityOrHand).rgb, vec3(4.0));
+    gi = min(GetGI(ao, emissive, normalG, unscaledViewPos.xyz, unscaledViewPos.xyz, nViewPos, depthtex0, dither, skyLightFactor, 1.0, VdotU, VdotS, entityOrHand).rgb, vec3(4.0));
     gi = max(gi, vec3(0.0));
     
     // Temporal Accumulation
@@ -176,10 +176,19 @@ void main() {
             vec3 historyEmissive = texture2D(colortex9, prevUV * RENDER_SCALE).rgb;
             float historyAO = texture2D(colortex9, prevUV * RENDER_SCALE).a;
 
+            float currentLuma = dot(emissive, vec3(0.2126, 0.7152, 0.0722));
+            float historyLuma = dot(historyEmissive, vec3(0.2126, 0.7152, 0.0722));
+            
             float blendFactor = 1.0 - clamp(BLEND_WEIGHT * 50.0, 0.01, 0.5);
             
+            // Firefly rejection: if current is much brighter than history, trust history more
+            float emissiveBlend = blendFactor;
+            if (currentLuma > historyLuma + 0.5) {
+                emissiveBlend = mix(emissiveBlend, 1.0, 0.9); // Push towards 1.0 (pure history)
+            }
+            
             finalGI = mix(gi, historyGI, blendFactor);
-            finalEmissive = mix(emissive, historyEmissive, blendFactor);
+            finalEmissive = mix(emissive, historyEmissive, emissiveBlend);
             ao.r = mix(ao.r, historyAO, blendFactor);
         //} else {
         //    finalGI = gi;

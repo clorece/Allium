@@ -183,8 +183,66 @@ void main() {
 			vec3 tint = specialTintColor[min(voxel - 200u, specialTintColor.length() - 1u)];
 			light.rgb *= tint;
 		}
+		
+		// ============ SKYLIGHT INJECTION ============
+		// Trace upward to check if this voxel can see the sky
+		#if defined OVERWORLD
+			bool canSeeSky = true;
+			int maxTraceHeight = min(voxelVolumeSize.y - pos.y - 1, 64);
+			
+			for (int i = 1; i <= maxTraceHeight; i++) {
+				ivec3 checkPos = pos + ivec3(0, i, 0);
+				if (checkPos.y >= voxelVolumeSize.y) break;
+				
+				uint checkVoxel = texelFetch(voxel_sampler, checkPos, 0).x;
+				// If we hit a solid block, no sky visibility
+				if (checkVoxel == 1u) {
+					canSeeSky = false;
+					break;
+				}
+				// Transparent blocks reduce but don't block
+				if (checkVoxel >= 200u && checkVoxel < 254u) {
+					// Continue but sky will be tinted
+				}
+			}
+			
+			if (canSeeSky) {
+				// Inject skylight - use a sky blue color that matches ambient
+				vec3 skylightColor = vec3(0.6, 0.75, 1.0) * 0.8; // Daylight blue-white (reduced)
+				
+				// Lower intensity at direct injection points
+				float heightFactor = float(pos.y) / float(voxelVolumeSize.y);
+				float skylightIntensity = 0.25 * (0.3 + heightFactor * 0.7);
+				
+				// Blend skylight with existing light (don't override emissive)
+				light.rgb = max(light.rgb, skylightColor * skylightIntensity);
+				light.a = max(light.a, skylightIntensity * 0.15);
+			}
+		#endif
+		// ============ END SKYLIGHT INJECTION ============
+		
 	} else {
 		vec4 color = GetSpecialBlocklightColor(int(voxel));
+		color.rgb *= 4.0 * PT_EMISSIVE_I;
+		
+		#if defined OVERWORLD
+			int solidBlocksAbove = 0;
+			int maxTraceHeight = min(voxelVolumeSize.y - pos.y - 1, 32);
+			for (int i = 1; i <= maxTraceHeight; i++) {
+				ivec3 checkPos = pos + ivec3(0, i, 0);
+				if (checkPos.y >= voxelVolumeSize.y) break;
+				uint checkVoxel = texelFetch(voxel_sampler, checkPos, 0).x;
+				if (checkVoxel == 1u) {
+					solidBlocksAbove++;
+				}
+			}
+			
+			float daytimeFactor = 1.0 - nightFactor;
+			float coverFactor = clamp(float(solidBlocksAbove) / 3.0, 0.2, 1.0);
+			float skySuppress = (1.0 - coverFactor) * daytimeFactor * (1.0 - isEyeInCave);
+			color.rgb *= 1.0 - skySuppress;
+		#endif
+		
 		light = max(light, vec4(pow2(color.rgb), color.a));
 	}
 
