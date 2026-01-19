@@ -24,7 +24,7 @@ float GetNoiseCloudShadow(vec3 pos) {
     float baseNoise = Noise3D(tracePosM * 0.75 / CUMULUS_CLOUD_SIZE_MULT + offset + GlobalWindDirection * windSpeed * 0.05) * 12.0;
     baseNoise += Noise3D(tracePosM * 1.0 / CUMULUS_CLOUD_SIZE_MULT + offset + GlobalWindDirection * windSpeed * 0.05) * 6.0;
     
-    baseNoise /= 5.0 / CUMULUS_CLOUD_COVERAGE;
+    baseNoise /= 3.0 / CUMULUS_CLOUD_COVERAGE;
     baseNoise -= rainFactor;
     // baseNoise -= nightFactor * 0.2; // Optional: match cumulus.glsl if desired
 
