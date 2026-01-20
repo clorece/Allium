@@ -212,7 +212,7 @@ void main() {
 				
 				// Lower intensity at direct injection points
 				float heightFactor = float(pos.y) / float(voxelVolumeSize.y);
-				float skylightIntensity = 0.25 * (0.3 + heightFactor * 0.7);
+				float skylightIntensity = 0.15 * (0.3 + heightFactor * 0.7);
 				
 				// Blend skylight with existing light (don't override emissive)
 				light.rgb = max(light.rgb, skylightColor * skylightIntensity);
@@ -238,7 +238,7 @@ void main() {
 			}
 			
 			float daytimeFactor = 1.0 - nightFactor;
-			float coverFactor = clamp(float(solidBlocksAbove) / 3.0, 0.2, 1.0);
+			float coverFactor = clamp(float(solidBlocksAbove), 0.1, 1.0);
 			float skySuppress = (1.0 - coverFactor) * daytimeFactor * (1.0 - isEyeInCave);
 			color.rgb *= 1.0 - skySuppress;
 		#endif

@@ -15,8 +15,8 @@ void AddSpecialLightDetail(inout vec3 light, vec3 albedo, float emission) {
 //	vec3 fireSpecialLightColor = vec3(3.05, 0.13, 0.077); //3.05, 0.13, 0.077
 //	vec3 lavaSpecialLightColor = fireSpecialLightColor;
 //#else
-	vec3 fireSpecialLightColor = vec3(1.5, 0.9, 0.4) * 3.8;
-	vec3 lavaSpecialLightColor = vec3(3.0, 0.9, 0.2) * 3.0;
+	vec3 fireSpecialLightColor = vec3(1.5, 0.9, 0.4) * 2.0;
+	vec3 lavaSpecialLightColor = vec3(3.0, 0.9, 0.2) * 1.25;
 //#endif
 
 vec3 netherPortalSpecialLightColor = vec3(1.8, 0.4, 2.2) * 0.8;
@@ -53,7 +53,7 @@ vec4 GetSpecialBlocklightColor(int mat) {
 				} else {
 					if (mat == 8) return vec4(vec3(0.6, 1.3, 0.6) * 4.5, 0.0); // Verdant Froglight
 					if (mat == 9) return vec4(vec3(1.1, 0.5, 0.9) * 4.5, 0.0); // Pearlescent Froglight
-					if (mat == 10) return vec4(vec3(1.4, 0.9, 0.4) * 4.0, 0.0); // Glowstone
+					if (mat == 10) return vec4(vec3(1.3, 0.9, 0.4) * 3.7, 0.0); // Glowstone
 					if (mat == 11) return vec4(fireSpecialLightColor, 0.0); // Jack o'Lantern
 					if (mat == 12) return vec4(fireSpecialLightColor, 0.0); // Lantern
 					if (mat == 13) return vec4(lavaSpecialLightColor, 0.8); // Lava
@@ -67,12 +67,12 @@ vec4 GetSpecialBlocklightColor(int mat) {
 					if (mat == 18) return vec4(vec3(1.0, 1.25, 1.5) * 3.4, 0.0); // Sea Lantern
 					if (mat == 19) return vec4(vec3(3.0, 0.9, 0.2) * 3.0, 0.0); // Shroomlight
 				} else {
-					if (mat == 20) return vec4(vec3(1.4, 0.9, 0.4) * 3.4, 0.0); // Cave Vines:With Glow Berries
+					if (mat == 20) return vec4(vec3(1.25, 0.9, 0.4) * 2.8, 0.0); // Cave Vines:With Glow Berries
 					if (mat == 21) return vec4(fireSpecialLightColor * 0.7, 0.0); // Furnace:Lit
 					if (mat == 22) return vec4(fireSpecialLightColor * 0.7, 0.0); // Smoker:Lit
 					if (mat == 23) return vec4(fireSpecialLightColor * 0.7, 0.0); // Blast Furnace:Lit
 					if (mat == 24) return vec4(fireSpecialLightColor * 0.25 * candleColorMult, candleExtraLight); // Standard Candles:Lit
-					if (mat == 25) return vec4(netherPortalSpecialLightColor * 2.0, 0.4); // Nether Portal
+					if (mat == 25) return vec4(netherPortalSpecialLightColor * 1.5, 0.4); // Nether Portal
 				}
 			}
 		} else {
@@ -127,7 +127,7 @@ vec4 GetSpecialBlocklightColor(int mat) {
 				} else {
 					if (mat == 56) return vec4(vec3(1.7, 0.9, 0.4) * 2.0, 0.0); // Copper Bulb:DimmerOnes:Lit
 					if (mat == 57) return vec4(vec3(0.1, 0.3, 0.4) * 1.5, 0.0005); // Sculk++
-					if (mat == 58) return vec4(vec3(0.0, 1.4, 1.4) * 4.0, 0.15); // End Portal Frame:Active
+					if (mat == 58) return vec4(vec3(0.0, 1.4, 1.4) * 1.0, 0.15); // End Portal Frame:Active
 					if (mat == 59) return vec4(0.0); // Bedrock
 					if (mat == 60) return vec4(vec3(3.1, 1.1, 0.3) * 0.125, 0.0125); // Command Block
 					if (mat == 61) return vec4(vec3(3.0, 0.9, 0.2) * 0.125, 0.0125); // Warped Fungus, Crimson Fungus

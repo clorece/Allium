@@ -154,8 +154,8 @@ void main() {
         
         bool validReprojection = prevUV.x >= 0.0 && prevUV.x <= 1.0 && prevUV.y >= 0.0 && prevUV.y <= 1.0;
 
-        /*
-        if (validReprojection) {
+        
+        /*if (validReprojection) {
             // Note: colortex1 contains previous depth. 
             // If RENDER_SCALE is used, data is in [0, RENDER_SCALE].
             float prevDepth = texture2D(colortex1, prevUV * RENDER_SCALE).r;
@@ -168,10 +168,10 @@ void main() {
             if (abs(linearZ - prevLinearZ) * far > depthThreshold + 0.1) {
                 validReprojection = false;
             }
-        }
-        */
+        }*/
+        
 
-        //if (validReprojection) {
+        if (validReprojection) {
             vec3 historyGI = texture2D(colortex11, prevUV * RENDER_SCALE).rgb;
             vec3 historyEmissive = texture2D(colortex9, prevUV * RENDER_SCALE).rgb;
             float historyAO = texture2D(colortex9, prevUV * RENDER_SCALE).a;
@@ -180,6 +180,17 @@ void main() {
             float historyLuma = dot(historyEmissive, vec3(0.2126, 0.7152, 0.0722));
             
             float blendFactor = 1.0 - clamp(BLEND_WEIGHT * 50.0, 0.01, 0.5);
+
+            // Reduce blending based on camera velocity
+            float lViewPos = length(viewPos.xyz);
+            float velocity = length(cameraOffset) * max(16.0 - lViewPos / gbufferProjection[1][1], 3.0);
+            //blendFactor *= exp(-velocity) * 0.5 + 0.5;
+            
+            // Reduce blending if depth changed
+            float linearZ0 = GetLinearDepth(z0);
+            vec2 oppositePreCoord = texCoord - 2.0 * (prevUV - texCoord);
+            float linearZDif = abs(GetLinearDepth(texture2D(colortex1, oppositePreCoord).r) - linearZ0) * far;
+            //blendFactor *= max0(1.0 - linearZDif * 0.0001);
             
             // Firefly rejection: if current is much brighter than history, trust history more
             float emissiveBlend = blendFactor;
@@ -190,10 +201,10 @@ void main() {
             finalGI = mix(gi, historyGI, blendFactor);
             finalEmissive = mix(emissive, historyEmissive, emissiveBlend);
             ao.r = mix(ao.r, historyAO, blendFactor);
-        //} else {
-        //    finalGI = gi;
-        //    finalEmissive = emissive;
-        //}
+        } else {
+            finalGI = gi;
+            finalEmissive = emissive;
+        }
     #endif
 
     /* RENDERTARGETS: 9,11 */

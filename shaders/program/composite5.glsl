@@ -247,6 +247,63 @@ vec3 Tonemap_Reinhard(vec3 color) {
     return mix(vec3(TONEMAP_BLACK_POINT), vec3(1.0), result);
 }
 
+// AGX Tonemapper - maintains hue in bright areas better than ACES
+vec3 AGX_DefaultContrastApprox(vec3 x) {
+    vec3 x2 = x * x;
+    vec3 x4 = x2 * x2;
+    return + 15.5 * x4 * x2
+           - 40.14 * x4 * x
+           + 31.96 * x4
+           - 6.868 * x2 * x
+           + 0.4298 * x2
+           + 0.1191 * x
+           - 0.00232;
+}
+
+vec3 Tonemap_AGX(vec3 color) {
+    // Apply exposure
+    color *= TONEMAP_EXPOSURE;
+    
+    // AGX input transform (sRGB to AGX log space)
+    const mat3 agx_mat = mat3(
+        0.842479062253094, 0.0423282422610123, 0.0423756549057051,
+        0.0784335999999992, 0.878468636469772, 0.0784336,
+        0.0792237451477643, 0.0791661274605434, 0.879142973793104
+    );
+    
+    color = agx_mat * color;
+    
+    // Log2 space encoding
+    color = max(color, 1e-10);
+    color = log2(color);
+    color = (color - (-10.0)) / (6.5 - (-10.0)); // min/max exposure
+    color = clamp(color, 0.0, 1.0);
+    
+    // Apply sigmoid contrast
+    color = AGX_DefaultContrastApprox(color);
+    
+    // AGX output transform (AGX to sRGB)
+    const mat3 agx_mat_inv = mat3(
+        1.19687900512017, -0.0528968517574562, -0.0529716355144438,
+        -0.0980208811401368, 1.15190312990417, -0.0980434501171241,
+        -0.0990297440797205, -0.0989611768448433, 1.15107367264116
+    );
+    
+    color = agx_mat_inv * color;
+    
+    // Apply saturation adjustment
+    float lum = dot(color, vec3(0.2126, 0.7152, 0.0722));
+    color = mix(vec3(lum), color, TONEMAP_SATURATION);
+    
+    // Apply contrast
+    color = mix(vec3(0.5), color, TONEMAP_CONTRAST);
+    
+    // Apply gamma
+    color = pow(clamp(color, 0.0, 1.0), vec3(1.0 / TONEMAP_GAMMA));
+    
+    return mix(vec3(TONEMAP_BLACK_POINT), vec3(1.0), color);
+}
+
 #define clamp01(x) clamp(x, 0.0, 1.0)
 
 // thanks to Query's for their AWESOME LUTs
@@ -437,6 +494,8 @@ void main() {
         color = Tonemap_Reinhard(color);
     #elif TONEMAP_OPERATOR == 5
         DoBSLTonemap(color);
+    #elif TONEMAP_OPERATOR == 6
+        color = Tonemap_AGX(color);
     #else
         color = Tonemap_Hable(color); // Fallback to Hable
     #endif

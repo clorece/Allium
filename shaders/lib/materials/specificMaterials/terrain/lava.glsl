@@ -25,7 +25,7 @@
 
 noDirectionalShading = true;
 lmCoordM = vec2(0.0);
-emission = GetLuminance(color.rgb) * 5.0;
+emission = GetLuminance(color.rgb) * 1.0;
 
 maRecolor = vec3(clamp(pow2(pow2(pow2(smoothstep1(emission * 0.1)))), 0.12, 1.4) * 1.3) * vec3(1.0, vec2(0.5));
 

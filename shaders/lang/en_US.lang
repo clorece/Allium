@@ -127,6 +127,7 @@ value.TONEMAP_OPERATOR.2=Lottes
 value.TONEMAP_OPERATOR.3=Uchimura
 value.TONEMAP_OPERATOR.4=Reinhard-Jodie
 value.TONEMAP_OPERATOR.5=BSL (Legacy)
+value.TONEMAP_OPERATOR.6=AGX
 
 option.TONEMAP_EXPOSURE=Exposure
 option.TONEMAP_EXPOSURE.comment=Controls the overall brightness of the image before tonemapping. Higher values = brighter image.

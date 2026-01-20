@@ -652,7 +652,7 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
 
                 pathRadiance += pathThroughput * hitColor * directLightMask * blockLightMask;
                 
-                pathRadiance *= receiverShadowMask;
+                pathRadiance *= 0.5;
                 
             } else {
                 // Sky contribution - world-space via voxel ray tracing

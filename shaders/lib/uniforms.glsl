@@ -137,6 +137,7 @@ uniform vec3 previousCameraPositionFract;
 
 #if COLORED_LIGHTING_INTERNAL > 0
     uniform usampler3D voxel_sampler;
+    uniform usampler3D voxel_color_sampler;
     uniform sampler3D floodfill_sampler;
     uniform sampler3D floodfill_sampler_copy;
 #endif

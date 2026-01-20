@@ -63,7 +63,7 @@ void DoLighting(inout vec4 color, inout vec3 shadowMult, vec3 playerPos, vec3 vi
     #endif
 
     float lightmapY2 = pow2(lightmap.y);
-    float lightmapYM = pow(lightmap.y, 4.0);
+    float lightmapYM = pow(lightmap.y, 2.0);
     float subsurfaceHighlight = 0.0;
     float ambientMult = 1.0;
     vec3 lightColorM = lightColor * 1.2 * SUNLIGHT_AMOUNT;
