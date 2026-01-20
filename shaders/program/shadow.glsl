@@ -269,11 +269,15 @@ vec2 lmCoord;
 
 #if COLORED_LIGHTING_INTERNAL > 0
     writeonly uniform uimage3D voxel_img;
+    writeonly uniform uimage3D voxel_color_img;
+    // uniform sampler2D tex; // Already in uniforms.glsl
 
     #ifdef PUDDLE_VOXELIZATION
         writeonly uniform uimage2D puddle_img;
     #endif
 #endif
+
+
 
 //Common Functions//
 
@@ -334,7 +338,7 @@ void main() {
 
     #if COLORED_LIGHTING_INTERNAL > 0
         if (gl_VertexID % 4 == 0) {
-            UpdateVoxelMap(mat);
+            UpdateVoxelMap(mat, tex, texCoord, glColor);
             #ifdef PUDDLE_VOXELIZATION
                 UpdatePuddleVoxelMap(mat);
             #endif

@@ -408,7 +408,134 @@ vec3 RayDirection(vec3 normal, float dither, int i) {
         return result;
     }
 #endif
+
 // ============ END VOXEL-BASED WORLD SPACE LIGHTING ============
+
+//uniform usampler3D voxel_color_sampler;
+
+vec3 GetVoxelAlbedo(vec3 scenePos) {
+    vec3 voxelPos = SceneToVoxel(scenePos);
+    
+    if (!CheckInsideVoxelVolume(voxelPos)) return vec3(0.5);
+
+    uint packedColor = texelFetch(voxel_color_sampler, ivec3(voxelPos), 0).r;
+    
+    if (packedColor == 0u) return vec3(0.5); // Fallback
+    
+    float r = float(packedColor & 0xFFu) / 255.0;
+    float g = float((packedColor >> 8) & 0xFFu) / 255.0;
+    float b = float((packedColor >> 16) & 0xFFu) / 255.0;
+    
+    return vec3(r, g, b);
+}
+
+struct VoxelHitResult {
+    bool hit;
+    vec3 hitPos;
+    vec3 hitNormal;
+    uint voxelID;
+    vec3 light;
+};
+
+VoxelHitResult TraceVoxelHit(vec3 scenePos, vec3 rayDir, float maxDist) {
+    VoxelHitResult result;
+    result.hit = false;
+    result.hitPos = vec3(0.0);
+    result.hitNormal = vec3(0.0);
+    result.voxelID = 0u;
+    result.light = vec3(0.0);
+    
+    vec3 volumeSize = vec3(voxelVolumeSize);
+    vec3 voxelPos = SceneToVoxel(scenePos);
+    
+    // Check if starting position is inside volume
+    if (!CheckInsideVoxelVolume(voxelPos)) {
+        return result;
+    }
+    
+    // DDA Setup
+    vec3 rayDirSign = sign(rayDir);
+    vec3 rayDirAbs = abs(rayDir);
+    vec3 deltaDist = 1.0 / max(rayDirAbs, vec3(0.0001));
+    
+    ivec3 mapPos = ivec3(floor(voxelPos));
+    ivec3 step = ivec3(rayDirSign);
+    
+    vec3 sideDist = (rayDirSign * (vec3(mapPos) - voxelPos) + rayDirSign * 0.5 + 0.5) * deltaDist;
+    
+    int maxSteps = int(min(maxDist, 256.0));
+    vec3 mask = vec3(0.0);
+    
+    for (int i = 0; i < maxSteps; i++) {
+        // Check bounds
+        if (any(lessThan(mapPos, ivec3(0))) || any(greaterThanEqual(mapPos, ivec3(volumeSize)))) {
+            break;
+        }
+        
+        uint voxelData = texelFetch(voxel_sampler, mapPos, 0).r;
+        
+        // Hit any non-air block
+        if (voxelData > 0u) {
+            result.hit = true;
+            result.voxelID = voxelData;
+            
+            // Calculate exact hit position
+            // Distance to the wall we hit is the sideDist of the axis we *stepped* on, minus its delta
+            // Wait, sideDist is already advanced. We need the value *before* the last step.
+            // A simpler way for hitPos in cubes:
+            // The hit normal is -step * mask.
+            result.hitNormal = -vec3(step) * mask;
+            
+            // Reconstruct hit position: (original_pos + rayDir * distance)
+            // But getting precise distance from DDA is tricky if we don't track it cleanly.
+            // Let's use the plane intersection logic for the hit face.
+            // T = (plane - start) / dir
+            
+            // Actually, we can just use the center of the voxel face
+            // But for accurate shadows we want the surface point.
+            // Let's approximate: center of the voxel we hit? No, that causes self-shadowing issues.
+            // We want the face.
+            
+            // Recalculate distance based on the axis we hit
+            float dist = 0.0;
+            if (mask.x > 0.5) dist = (sideDist.x - deltaDist.x);
+            else if (mask.y > 0.5) dist = (sideDist.y - deltaDist.y);
+            else dist = (sideDist.z - deltaDist.z);
+            
+            result.hitPos = scenePos + rayDir * dist;
+            // Nudge slightly out to avoid self-intersection
+            result.hitPos += result.hitNormal * 0.001;
+            
+            break;
+        }
+        
+        // DDA step
+        mask = vec3(0.0);
+        if (sideDist.x < sideDist.y) {
+            if (sideDist.x < sideDist.z) {
+                sideDist.x += deltaDist.x;
+                mapPos.x += step.x;
+                mask.x = 1.0;
+            } else {
+                sideDist.z += deltaDist.z;
+                mapPos.z += step.z;
+                mask.z = 1.0;
+            }
+        } else {
+            if (sideDist.y < sideDist.z) {
+                sideDist.y += deltaDist.y;
+                mapPos.y += step.y;
+                mask.y = 1.0;
+            } else {
+                sideDist.z += deltaDist.z;
+                mapPos.z += step.z;
+                mask.z = 1.0;
+            }
+        }
+    }
+    
+    return result;
+}
 
 vec3 GetShadowPosition(vec3 tracePos, vec3 cameraPos) {
     vec3 worldPos = PlayerToShadow(tracePos - cameraPos);
@@ -420,9 +547,12 @@ vec3 GetShadowPosition(vec3 tracePos, vec3 cameraPos) {
 
 bool GetShadow(vec3 tracePos, vec3 cameraPos) {
     vec3 shadowPosition0 = GetShadowPosition(tracePos, cameraPos);
-    if (length(shadowPosition0.xy * 2.0 - 1.0) < 0.5) {
-        float shadowDepth = shadow2D(shadowtex0, shadowPosition0).z;
-        if (shadowDepth == 0.0) return true;
+    if (length(shadowPosition0.xy * 2.0 - 1.0) < 0.99) { // Ensure within bounds
+        float shadowDepth = shadow2D(shadowtex0, shadowPosition0).x;
+        // shadow2D with sampler2DShadow returns vec4 result in GLSL 1.20 (Iris default).
+        // .x contains the comparison result (0.0 or 1.0).
+        
+        if (shadowDepth < 0.01) return true; // Shadowed
     }
     return false;
 }
@@ -652,24 +782,94 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
 
                 pathRadiance += pathThroughput * hitColor * directLightMask * blockLightMask;
                 
-                pathRadiance *= 0.5;
+                pathRadiance *= 0.25;
                 
             } else {
                 // Sky contribution - world-space via voxel ray tracing
                 vec3 worldRayDir = mat3(gbufferModelViewInverse) * rayDir;
+                vec3 currentScenePos = (gbufferModelViewInverse * vec4(currentPos, 1.0)).xyz;
                 
                 #ifdef PT_USE_VOXEL_LIGHT
-                    // Trace through voxel grid for world-space lighting
-                    vec3 currentScenePos = (gbufferModelViewInverse * vec4(currentPos, 1.0)).xyz;
+                    // 0. Restore VXPT - Volumetric Accumulation (Colored Lights + Skylight)
                     VoxelRayResult voxelTrace = TraceVoxelRay(currentScenePos, worldRayDir, 32.0, dither);
                     
                     // Add accumulated light from voxel volume (colored light + skylight)
+                    
                     pathRadiance += pathThroughput * voxelTrace.light * 0.1;
                     #ifdef NETHER
                         pathRadiance *= 0.25;
                     #endif
+
+                    // 1. Try to hit a voxel surface first (Hard Voxel Trace)
+                    VoxelHitResult voxelHit = TraceVoxelHit(currentScenePos, worldRayDir, shadowDistance);
                     
-                    if (voxelTrace.hitSky) {
+                    if (voxelHit.hit) {
+                        // We hit a voxel world-space! Calculate lighting for it.
+                        
+                        // A. Direct sunlight using Shadow Map
+                        vec3 hitWorldPos = voxelHit.hitPos + cameraPosition;
+                        vec3 shadowPos = GetShadowPosition(hitWorldPos, cameraPosition);
+                        
+                        bool inShadow = true;
+                        
+                        if (length(shadowPos.xy * 2.0 - 1.0) < 0.99) {
+                            float shadowVis = shadow2D(shadowtex0, shadowPos).x; // Shadow Depth Check
+                            if (shadowVis > 0.01) {
+                                inShadow = false;
+                            }
+                        }
+                        
+                        // Sample Voxel Albedo (Stable, stored in 3D grid)
+                        // Sample slightly inside the block to get its color
+                        vec3 albedoPos = voxelHit.hitPos - voxelHit.hitNormal * 0.05;
+                        vec3 sunAlbedo = GetVoxelAlbedo(albedoPos) * 10.0 * max(1.0 - eyeBrightnessSmooth.y, 0.1);
+                        
+                        // Use calculated sunAlbedo for tinting the heavy fallback palette logic
+                        // (If we have stored color, we prefer it over manual palette)
+                        // Actually, if GetVoxelAlbedo returns valid color, use it.
+                        
+                        vec3 directLight = vec3(0.0);
+                        vec3 sunDir = mat3(gbufferModelViewInverse) * sunVec;
+                        
+                        if (!inShadow) {
+                            float hitNdotL = max(dot(voxelHit.hitNormal, sunDir), 0.0);
+                            directLight = lightColor * hitNdotL * (1.0 - rainFactor * 0.8) * sunAlbedo; 
+                        }
+                        
+                        // B. Indirect/Ambient from LPV
+                        // Sample LPV at the face we hit (adjacent air block)
+                        vec3 samplePos = voxelHit.hitPos + voxelHit.hitNormal * 0.5;
+                        vec3 voxelPos = SceneToVoxel(samplePos);
+                        vec3 normPos = voxelPos / vec3(voxelVolumeSize);
+                        vec4 lpvLight = GetLightVolume(normPos);
+                        
+                        // Use stored Voxel Color for Indirect Bounce too! 
+                        // Instead of the grey/palette logic below.
+                        vec3 voxelAlbedo = sunAlbedo; // Already retrieved
+                        
+                        // Keep palette for glass ONLY if packing failed? No, packing works for glass.
+                        // I will keep emission logic.
+                        
+                        //vec3 emission = vec3(0.0);
+                        /*if (voxelHit.voxelID > 1u && voxelHit.voxelID < 200u) {
+                             // Emission blocks (Torches, etc) might not have valid Albedo in Texture? 
+                             // (Textures often white/transparent for particles).
+                             // We trust stored color OR use emission override.
+                             // Actually emission adds to radiance. Albedo reflects light.
+                            vec4 blockLight = GetSpecialBlocklightColor(int(voxelHit.voxelID));
+                            emission = blockLight.rgb * PT_EMISSIVE_I;
+                        }*/
+                        
+                        // Combine: Direct (Sun * Albedo) + Indirect (LPV * Albedo) + Emission
+                        vec3 bounceColor = directLight + (lpvLight.rgb * voxelAlbedo) * 0.1;
+                        
+                        pathRadiance += pathThroughput * bounceColor;
+                        
+                    } else {
+                        // 2. If no solid hit, assume sky (or we marched out of volume)
+                        // Use the accumulation trace for "fog" or just sky
+                        
+                        // Re-use logic for sky hit
                         float groundOcclusion = exp(-max(0.0, -worldRayDir.y) * 9.87);
                         vec3 sampledSky = ambientColor * 0.01;
                         vec3 skyContribution = sampledSky * max(worldRayDir.y, 0.0) * occlusionFactor * groundOcclusion;
@@ -677,6 +877,7 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
                         pathRadiance += pathThroughput * skyContribution;
                         pathRadiance += pathThroughput * MINIMUM_AMBIENT * (groundOcclusion * 0.5 + 0.5);
                     }
+                    
                 #else
                     float groundOcclusion = exp(-max(0.0, -worldRayDir.y) * 9.87);
                     vec3 sampledSky = ambientColor * 0.01 * min(2.0 * skyLightFactor, 1.0) - (nightFactor * 0.25);
@@ -696,7 +897,7 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
         float aoDither = fract(dither + float(i) * PHI_INV);
         
         // Screen-space AO from ray marching
-        float screenSpaceAO = 0.0;
+        /*float screenSpaceAO = 0.0;
         RayHit firstHit = MarchRay(startPos, RayDirection(normalMR, dither, i), depthtex, screenEdge, aoDither);
         if (firstHit.hit) {
             float aoRadius = AO_RADIUS;
@@ -704,16 +905,17 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
             curve = pow(curve, 2.0);
             screenSpaceAO = curve * AO_I * 1.5 * max(skyLightFactor, 0.1) - (nightFactor * 1.5 + invNoonFactor * 1.0);
         }
+        */
         
         #ifdef PT_USE_VOXEL_LIGHT
             // World-space voxel AO
             vec3 worldNormalAO = mat3(gbufferModelViewInverse) * normalMR;
             float voxelAO = GetVoxelAO(startWorldPos, worldNormalAO, aoDither) * AO_I * max(skyLightFactor, 0.1);
             // Combine: use max of both + additional voxel contribution
-            occlusion += max(screenSpaceAO, voxelAO * 0.7) + voxelAO * 0.3;
-            //occlusion += voxelAO;
+            //occlusion += max(screenSpaceAO, voxelAO * 0.7) + voxelAO * 0.3;
+            occlusion += voxelAO;
         #else
-            occlusion += screenSpaceAO;
+            //occlusion += screenSpaceAO;
         #endif
     }
     

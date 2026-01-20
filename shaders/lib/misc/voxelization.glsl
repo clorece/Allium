@@ -297,7 +297,7 @@
     }
 
     #if defined SHADOW && defined VERTEX_SHADER
-        void UpdateVoxelMap(int mat) {
+        void UpdateVoxelMap(int mat, sampler2D tex, vec2 texCoord, vec4 color) {
             if (mat == 32000 // Water
             || mat < 30000 && mat % 4 == 1 // Non-solid terrain
             || mat < 10000 // Block entities or unknown blocks that we treat as non-solid
@@ -318,6 +318,14 @@
                 int voxelData = GetVoxelIDs(mat);
                 
                 imageStore(voxel_img, ivec3(voxelPos), uvec4(voxelData, 0u, 0u, 0u));
+                
+                // Store Voxel Color
+                vec4 albedo = texture(tex, texCoord) * color;
+                uint r = uint(albedo.r * 255.0);
+                uint g = uint(albedo.g * 255.0);
+                uint b = uint(albedo.b * 255.0);
+                uint packedColor = r | (g << 8) | (b << 16);
+                imageStore(voxel_color_img, ivec3(voxelPos), uvec4(packedColor, 0u, 0u, 0u));
             }
         }
     #endif

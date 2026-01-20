@@ -5,11 +5,11 @@
 //Common//
 #include "/lib/common.glsl"
 
-#define OVERWORLD_LUT                4          //[0 1 2 3 4 5 6 7 8 9]
+#define OVERWORLD_LUT                2          //[0 1 2 3 4 5 6 7 8 9]
 #define NETHER_LUT                2          //[0 1 2 3 4 5 6 7 8 9]
 #define END_LUT                 1          //[0 1 2 3 4 5 6 7 8 9]
 
-#define OVERWORLD_LUT_I            0.2          //[0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0]
+#define OVERWORLD_LUT_I            1.0          //[0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0]
 #define NETHER_LUT_I               1.0          //[0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0]
 #define END_LUT_I                  1.0          //[0.0 0.1 0.2 0.3 0.4 0.5 0.6 0.7 0.8 0.9 1.0]
 
