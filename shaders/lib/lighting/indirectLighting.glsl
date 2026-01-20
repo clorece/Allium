@@ -665,6 +665,9 @@ vec4 GetGI(inout vec3 occlusion, inout vec3 emissiveOut, vec3 normalM, vec3 view
                     
                     // Add accumulated light from voxel volume (colored light + skylight)
                     pathRadiance += pathThroughput * voxelTrace.light * 0.1;
+                    #ifdef NETHER
+                        pathRadiance *= 0.25;
+                    #endif
                     
                     if (voxelTrace.hitSky) {
                         float groundOcclusion = exp(-max(0.0, -worldRayDir.y) * 9.87);

@@ -98,7 +98,7 @@
 
     #elif defined NETHER
         vec3 lightColor   = vec3(0.0);
-        vec3 ambientColor = (netherColor + 2.5 * lavaLightColor) * 1.5 * (0.9 + 0.45 * vsBrightness);
+        vec3 ambientColor = (netherColor + 2.5 * lavaLightColor) * 0.5 * (0.9 + 0.45 * vsBrightness);
     #elif defined END
         vec3 endLightColor = vec3(1.0, 1.0, 1.0) * 1.5;
         float endLightBalancer = 0.2 * vsBrightness;
