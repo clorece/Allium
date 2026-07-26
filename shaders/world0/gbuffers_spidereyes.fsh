@@ -1,7 +1,4 @@
-#version 130
-
-#define FRAGMENT_SHADER
-#define OVERWORLD
-#define GBUFFERS_SPIDEREYES
-
-#include "/program/gbuffers_spidereyes.glsl"
+#version 430 compatibility
+#define FRAGMENT
+#include "/lib/uniforms.glsl"
+#include "/program/gbuffers/spidereyes.glsl"

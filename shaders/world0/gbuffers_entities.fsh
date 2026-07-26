@@ -1,7 +1,7 @@
-#version 130
+#version 430 compatibility
+#define FRAGMENT
+#include "/lib/uniforms.glsl"
 
-#define FRAGMENT_SHADER
-#define OVERWORLD
-#define GBUFFERS_ENTITIES
+/* DRAWBUFFERS:012 */
 
-#include "/program/gbuffers_entities.glsl"
+#include "/program/gbuffers/entities.glsl"

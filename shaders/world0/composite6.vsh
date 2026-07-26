@@ -1,7 +1,4 @@
-#version 130
-
-#define VERTEX_SHADER
-#define OVERWORLD
-#define COMPOSITE6
-
-#include "/program/composite6.glsl"
+#version 430 compatibility
+#define VERTEX
+#include "/lib/uniforms.glsl"
+#include "/program/composite/c5_lens.glsl"

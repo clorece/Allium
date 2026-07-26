@@ -1,72 +1,39 @@
-/*----------------------------------------------------------------------------------------------
-        _____                                                                    _____
-        ( ___ )                                                                  ( ___ )
-        |   |~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~|   |
-        |   | ██╗   ██╗███╗   ██╗██╗███████╗ ██████╗ ██████╗ ███╗   ███╗███████╗ |   |
-        |   | ██║   ██║████╗  ██║██║██╔════╝██╔═══██╗██╔══██╗████╗ ████║██╔════╝ |   |
-        |   | ██║   ██║██╔██╗ ██║██║█████╗  ██║   ██║██████╔╝██╔████╔██║███████╗ |   |
-        |   | ██║   ██║██║╚██╗██║██║██╔══╝  ██║   ██║██╔══██╗██║╚██╔╝██║╚════██║ |   |
-        |   | ╚██████╔╝██║ ╚████║██║██║     ╚██████╔╝██║  ██║██║ ╚═╝ ██║███████║ |   |
-        |   |  ╚═════╝ ╚═╝  ╚═══╝╚═╝╚═╝      ╚═════╝ ╚═╝  ╚═╝╚═╝     ╚═╝╚══════╝ |   |
-        |___|~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~|___|
-        (_____)                              (thanks to isuewo and SpacEagle17)  (_____)
-
----------------------------------------------------------------------------------------------*/
+#ifndef UNIFORMS_GLSL_INCLUDED
+#define UNIFORMS_GLSL_INCLUDED
+uniform float aspectRatio;
+uniform float far;
+uniform float frameTime;
+uniform float frameTimeCounter;
+uniform float near;
+uniform float rainStrength;
+uniform float viewHeight;
+uniform float viewWidth;
 
 uniform int blockEntityId;
-uniform int currentRenderedItemId;
 uniform int entityId;
 uniform int frameCounter;
-uniform int heldBlockLightValue;
-uniform int heldBlockLightValue2;
-uniform int heldItemId;
-uniform int heldItemId2;
 uniform int isEyeInWater;
-uniform int moonPhase;
 uniform int worldTime;
 uniform int worldDay;
 
-uniform float aspectRatio;
-uniform float blindness;
-uniform float darknessFactor;
-uniform float darknessLightFactor;
-uniform float maxBlindnessDarkness;
-uniform float eyeAltitude;
-uniform float frameTime;
-uniform float frameTimeCounter;
-uniform float far;
-uniform float near;
-uniform float nightVision;
-uniform float rainStrength;
-uniform float screenBrightness;
-uniform float viewHeight;
-uniform float viewWidth;
-uniform float wetness;
-uniform float sunAngle;
-uniform float playerMood;
-
-uniform ivec2 atlasSize;
-uniform ivec2 eyeBrightness;
 uniform ivec2 eyeBrightnessSmooth;
-
-uniform vec3 cameraPosition;
-uniform vec3 sunPosition;
-uniform vec3 fogColor;
-uniform vec3 previousCameraPosition;
-uniform vec3 skyColor;
-uniform vec3 relativeEyePosition;
-
-uniform vec4 entityColor;
-uniform vec4 lightningBoltPosition;
 
 uniform mat4 gbufferModelView;
 uniform mat4 gbufferModelViewInverse;
 uniform mat4 gbufferPreviousModelView;
 uniform mat4 gbufferPreviousProjection;
+uniform mat4 gbufferProjection;
+uniform mat4 gbufferProjectionInverse;
 uniform mat4 shadowModelView;
 uniform mat4 shadowModelViewInverse;
 uniform mat4 shadowProjection;
 uniform mat4 shadowProjectionInverse;
+
+uniform vec3 cameraPosition;
+uniform vec3 moonPosition;
+uniform vec3 previousCameraPosition;
+uniform vec3 sunPosition;
+uniform vec3 upPosition;
 
 uniform sampler2D colortex0;
 uniform sampler2D colortex1;
@@ -75,99 +42,42 @@ uniform sampler2D colortex3;
 uniform sampler2D colortex4;
 uniform sampler2D colortex5;
 uniform sampler2D colortex6;
-uniform sampler2D colortex7;
+uniform sampler2D colortex7; // PBR material G-buffer (.rgb metal albedo/F0, .a smoothness)
 uniform sampler2D colortex8;
 uniform sampler2D colortex9;
 uniform sampler2D colortex10;
 uniform sampler2D colortex11;
-uniform sampler2D colortex12;
-uniform sampler2D colortex13;
+uniform sampler2D colortex12; // atmosphere LUT pack (T + MS + Sky-View), 256×256 RGBA16F
+uniform sampler2D colortex13; // cloud shadow map, 512×512 RGBA16F (.r = cloud transmittance from sun)
 uniform sampler2D colortex14;
 uniform sampler2D colortex15;
 uniform sampler2D depthtex0;
 uniform sampler2D depthtex1;
 uniform sampler2D depthtex2;
-uniform sampler2D gaux1;
-uniform sampler2D gaux2;
-uniform sampler2D gaux4;
-uniform sampler2D normals;
 uniform sampler2D noisetex;
-uniform sampler2D specular;
-uniform sampler2D tex;
-uniform ivec3 cameraPositionInt;
-uniform ivec3 previousCameraPositionInt;
-uniform vec3 cameraPositionFract;
-uniform vec3 previousCameraPositionFract;
+uniform sampler2D shadowcolor0;
+uniform sampler2D shadowtex0;
+uniform sampler2D shadowtex1;
+uniform sampler2D texture;
 
-#ifdef IS_IRIS
-    uniform int renderStage;
-#endif
+// --- Distant Horizons -------------------------------------------------------
+// DH uniforms are NOT declared here: uniforms.glsl is included by the dh_terrain/
+// dh_water programs, and Iris INJECTS dhProjection/dhProjectionInverse/
+// dhPreviousProjection/dhNearPlane/dhFarPlane/dhRenderDistance/dhMaterialId into
+// those LOD programs — re-declaring them collides ("redefinition"). The deferred
+// passes that need to SAMPLE the DH buffers (d7_composite, d8_fog_sky) declare
+// `uniform sampler2D dhDepthTex0;` and `uniform mat4 dhProjectionInverse;`
+// locally instead (Iris binds them there; inert = depth 1.0 when DH is off).
 
-//#if SHADOW_QUALITY > -1 || defined LIGHTSHAFTS_ACTIVE || defined FF_BLOCKLIGHT
-    uniform sampler2D shadowcolor;
-    uniform sampler2D shadowcolor0;
-    uniform sampler2D shadowcolor1;
-    uniform sampler2D shadowcolor2; // vec4(vec3(shadow normals), float(shadow depth))
-    uniform sampler2D shadowcolor3; // vec4(rsm flux, 0.0)
+uniform usampler3D voxelSampler; // fine voxel grid, dedicated 3D image (see image.voxelImg in shaders.properties)
+uniform usampler3D brickSampler;      // 8³-block occupancy (64×16×64), written by the shadow pass
+uniform usampler3D superBrickSampler; // 64³-block occupancy (8×2×8), written by the shadow pass
 
-    uniform sampler2DShadow shadowtex1;
+// NOTE: do NOT add option-gated (#ifdef) uniforms here. The world0/*.fsh wrappers
+// include this file before the program pulls in options.glsl, so any #ifdef on an
+// options macro is evaluated before the macro exists, and the include guard then
+// blocks the re-include. The unconditional samplers above are fine.
+// (The former blueNoise/RESTIR_BLUE_NOISE note referred to lib/pt/restir.glsl,
+// which was removed with the world-space path tracer.)
 
-    #ifdef COMPOSITE || DEFERRED1
-        uniform sampler2D shadowtex0;
-    #else
-        uniform sampler2DShadow shadowtex0;
-    #endif
-    uniform sampler2D shadowtex2;
-//#endif
-
-#if !defined DH_TERRAIN && !defined DH_WATER
-    uniform mat4 gbufferProjection;
-    uniform mat4 gbufferProjectionInverse;
-#endif
-
-#ifdef DISTANT_HORIZONS
-    uniform int dhRenderDistance;
-
-    uniform mat4 dhProjection;
-    uniform mat4 dhProjectionInverse;
-    
-    uniform sampler2D dhDepthTex;
-    uniform sampler2D dhDepthTex1;
-#endif
-
-#if COLORED_LIGHTING_INTERNAL > 0
-    uniform usampler3D voxel_sampler;
-    uniform usampler3D voxel_color_sampler;
-    uniform sampler3D floodfill_sampler;
-    uniform sampler3D floodfill_sampler_copy;
-#endif
-
-#ifdef PUDDLE_VOXELIZATION
-    uniform usampler2D puddle_sampler;
-#endif
-
-/*-----------------------------------------------------------------------------
-  ___ _   _ ___ _____ ___  __  __   _   _ _  _ ___ ___ ___  ___ __  __ ___
- / __| | | / __|_   _/ _ \|  \/  | | | | | \| |_ _| __/ _ \| _ \  \/  / __|
-| (__| |_| \__ \ | || (_) | |\/| | | |_| | .` || || _| (_) |   / |\/| \__ \
- \___|\___/|___/ |_| \___/|_|  |_|  \___/|_|\_|___|_| \___/|_|_\_|  |_|___/
-
------------------------------------------------------------------------------*/
-
-uniform float framemod8;
-uniform float isEyeInCave;
-uniform float inDry;
-uniform float inRainy;
-uniform float inSnowy;
-uniform float velocity;
-uniform float starter;
-uniform float frameTimeSmooth;
-uniform float eyeBrightnessM;
-uniform float eyeBrightnessM2;
-uniform float rainFactor;
-uniform float inBasaltDeltas;
-uniform float inCrimsonForest;
-uniform float inNetherWastes;
-uniform float inSoulValley;
-uniform float inWarpedForest;
-uniform float inPaleGarden;
+#endif // UNIFORMS_GLSL_INCLUDED

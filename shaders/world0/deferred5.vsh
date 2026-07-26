@@ -1,7 +1,4 @@
-#version 130
-
-#define VERTEX_SHADER
-#define OVERWORLD
-#define DEFERRED5
-
-#include "/program/deferred5.glsl"
+#version 430 compatibility
+#define VERTEX
+#include "/lib/uniforms.glsl"
+#include "/program/deferred/d2_denoise.glsl"

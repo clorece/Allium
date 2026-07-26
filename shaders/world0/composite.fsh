@@ -1,7 +1,7 @@
-#version 130
+#version 430 compatibility
+#define FRAGMENT
+#include "/lib/uniforms.glsl"
 
-#define FRAGMENT_SHADER
-#define OVERWORLD
-#define COMPOSITE
+/* DRAWBUFFERS:0 */
 
-#include "/program/composite.glsl"
+#include "/program/composite/c_water.glsl"

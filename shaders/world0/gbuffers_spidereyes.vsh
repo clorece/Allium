@@ -1,7 +1,4 @@
-#version 130
-
-#define VERTEX_SHADER
-#define OVERWORLD
-#define GBUFFERS_SPIDEREYES
-
-#include "/program/gbuffers_spidereyes.glsl"
+#version 430 compatibility
+#define VERTEX
+#include "/lib/uniforms.glsl"
+#include "/program/gbuffers/spidereyes.glsl"

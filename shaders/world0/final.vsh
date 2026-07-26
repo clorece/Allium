@@ -1,7 +1,4 @@
-#version 130
-
-#define VERTEX_SHADER
-#define OVERWORLD
-#define FINAL
-
-#include "/program/final.glsl"
+#version 430 compatibility
+#define VERTEX
+#include "/lib/uniforms.glsl"
+#include "/program/composite/final.glsl"

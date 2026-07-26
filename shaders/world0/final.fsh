@@ -1,7 +1,4 @@
-#version 130
-
-#define FRAGMENT_SHADER
-#define OVERWORLD
-#define FINAL
-
-#include "/program/final.glsl"
+#version 430 compatibility
+#define FRAGMENT
+#include "/lib/uniforms.glsl"
+#include "/program/composite/final.glsl"

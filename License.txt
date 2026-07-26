@@ -1,92 +1,203 @@
-Complementary License Agreement 1.5
-===================================
+SERIE SHADERPACK LICENSE 1.0
+=============================
 
-0. Terminology
+Effective date: June 19, 2026
+Copyright (c) 2026 Serie contributors
+
+SPDX-License-Identifier: LicenseRef-Serie-1.0
+
+This is a custom source-available license. It is not an open-source license.
+
+1. Definitions
 --------------
-  0.1. "The Pack" and/or "This Pack" means the software package that this
-       specific license file you are reading from is found in.
 
-  0.2. "Normal Usage" means usage of The Pack as intended for the general
-       public. This includes most usage, but the following usages are
-       definitely NOT considered Normal Usage:
-         a. Redistributing (parts of) The Pack
-         b. Modifying code of The Pack
+1.1. "Licensed Material" means the Serie shaderpack files distributed with
+     this license, but only to the extent that the copyright holders have the
+     right to license them. It excludes Third-Party Material and any file that
+     states that different terms apply.
 
-  0.3. "User" and/or "Users" means people that are using The Pack under our
-       definition of Normal Usage.
+1.2. "Licensor" means each copyright holder granting rights in that holder's
+     contribution to the Licensed Material.
 
-  0.4. "Modpack" means a modification package made for the video
-       game "Minecraft: Java Edition".
+1.3. "You" means the individual or legal entity exercising rights under this
+     license.
 
-  0.5. "Modified Pack" means a software package that consists of The Pack but
-       with the code intentionally being changed to differ from The Pack.
+1.4. "Source Code" means the preferred form of the Licensed Material for
+     reading and making changes, including shader source, configuration,
+     mappings, and required build or packaging files.
 
-  0.6. "Original Pack" means one of two things:
-         a. If "This Pack" is an original Complementary Development product,
-            meaning that this specific license file you are reading from is
-            found inside an original Complementary Development product, then
-            "Original Pack" directly means the same thing as "This Pack".
-         b. But if "This Pack" is not an original Complementary Development
-            product, meaning that this specific license file you are reading
-            from is found inside a pack that was created using the grant
-            detailed at section "1.3", then "Original Pack" refers to the
-            pack created by Complementary Development that must be mentioned
-            in the description page(s) of This Pack.
+1.5. "Modpack" means a collection of Minecraft mods, resource packs,
+     shaderpacks, configuration, or related files distributed together for
+     players to install and use.
 
-1. Grants
----------
-  1.1. All Users are free to use This Pack for Normal Usage. This isn't
-       limited to, but includes:
-         a. Using The Pack for gameplay
-         b. Using The Pack for content creation
+1.6. "Modified Pack" means a shaderpack that contains a modified version of,
+     or a substantial portion derived from, the Licensed Material.
 
-  1.2. This Pack is allowed to be redistributed inside a Modpack as long as
-       the following conditions are met:
-         a. This Pack must be visibly credited in the Modpack's description
-            page(s).
-         b. The author of the Modpack must acknowledge that any problems that
-            may arise from using This Pack in their Modpack is entirely under
-            the responsibility of the author of the Modpack.
+1.7. "Official Project Page" means:
+     https://github.com/clorece/Serie
 
-  1.3. This Pack is allowed to be redistributed as a Modified Pack as long as
-       the following conditions are met:
-         a. The Original Pack must be visibly credited in the description
-            page(s) of the Modified Pack, with a link to the official
-            Complementary Development website.
-         b. This license file must still be left inside the Modified Pack
-            without any changes being made to it, and it must be updated to
-            the latest one found in the latest version of the Original Pack
-            every time the Modified Pack gets updated to make more use of the
-            code from the Original Pack.
-         c. The Modified Pack must not have the word "Complementary" in its
-            name, and there should be at least 3 character difference between
-            the name of the Modified Pack and the Original Pack. Adding or
-            removing non-alphabetic characters or the removal of
-            "Complementary" does not count as a character difference.
-         d. The Modified Pack must look noticeably different from the
-            Original Pack in multiple common gameplay scenarios that must
-            include daytime overworld visuals, regardless of the setting or
-            variable changes in the Modified Pack and/or the Original Pack.
+1.8. "Third-Party Material" means any portion identified in
+     THIRD_PARTY_NOTICES.md, or otherwise marked in the Source Code, as having
+     originated from another copyright holder.
 
-2. Denied Cases
----------------
-  2.1. Any usage or redistribution of any part of This Pack that isn't
-       explicitly covered in the "Grants" section of this license should be
-       treated as "All Rights Reserved". Only exceptions are the files that
-       contain a notice that they are covered by a different license.
+2. Acceptance
+-------------
 
-  2.2. This agreement only applies to the version of This Pack that this exact
-       file can be found in. This agreement is not valid for future or past
-       versions of The Pack unless they contain the exact same agreement.
+You accept this license by copying, modifying, or distributing the Licensed
+Material. If You do not accept it, You may still view the Source Code and use
+an unmodified copy for ordinary gameplay to the extent permitted by law, but
+You receive no additional permission under this license.
 
-3. License Infringement
+3. Permissions
+--------------
+
+Subject to every condition in this license, the Licensor grants You a
+worldwide, royalty-free, non-exclusive, non-transferable copyright license to
+do the following:
+
+3.1. Use
+
+You may use the Licensed Material for gameplay, testing, education, research,
+and other lawful purposes. You may make private modifications that You do not
+distribute.
+
+3.2. Screenshots, video, and streaming
+
+You may create, publish, and monetize screenshots, videos, livestreams, and
+other audiovisual works made using the Licensed Material. Attribution is
+appreciated but is not required for this kind of content.
+
+3.3. Modpacks
+
+You may include and distribute an unmodified copy of the Licensed Material in
+a Modpack if all of the following are true:
+
+  a. The Modpack's public description visibly credits "Serie" and links to
+     the Official Project Page.
+  b. License.txt and THIRD_PARTY_NOTICES.md are included unchanged with the
+     shaderpack.
+  c. The Modpack does not claim that Serie's maintainers endorse, maintain,
+     or provide support for the Modpack.
+  d. Users can obtain the Modpack without paying for access. Ordinary platform
+     advertising revenue and voluntary donations are allowed when they do not
+     restrict access or provide exclusive access to the shaderpack.
+
+3.4. Modified Packs and forks
+
+You may create and distribute a Modified Pack if all of the following are
+true:
+
+  a. The Modified Pack contains substantive code, feature, or visual changes.
+     Changes limited to settings, constants, filenames, packaging, or branding
+     are not sufficient. Its visuals must be readily distinguishable from
+     Serie in ordinary daytime Overworld gameplay.
+  b. The Modified Pack has its own name. Its product name must not contain
+     "Serie" or be confusingly similar to "Serie". The phrase "based on
+     Serie" or "fork of Serie" may be used truthfully in its description.
+  c. The public description prominently credits Serie, links to the Official
+     Project Page, and clearly summarizes the modifications.
+  d. License.txt and THIRD_PARTY_NOTICES.md are included unchanged.
+  e. All files copied from or derived from the Licensed Material remain under
+     this license. Independent additions may use other terms only when they
+     are clearly identified and those terms do not restrict the rights granted
+     here in the Serie-derived files.
+  f. Complete Source Code for the Modified Pack is provided with the download
+     or through a stable, public link displayed next to the download.
+  g. Access to the Modified Pack and its Source Code is free of charge.
+     Ordinary platform advertising revenue and voluntary donations are
+     allowed when they do not restrict or prioritize access.
+  h. The Modified Pack does not imply official status, endorsement, or support
+     by Serie's maintainers.
+
+3.5. Contributions and discussion
+
+You may publish reasonable excerpts, patches, and diffs for review, education,
+bug reports, or contribution to Serie. Preserve any copyright, attribution,
+and license notices contained in the excerpt. This permission does not allow
+repackaging substantially all of Serie outside Sections 3.3 or 3.4.
+
+4. Restrictions and reserved rights
+-----------------------------------
+
+4.1. You may not sell, rent, sublicense, or place access to the Licensed
+     Material or a Modified Pack behind a purchase, subscription, paid tier,
+     or other required payment.
+
+4.2. You may not redistribute an unmodified or substantially unmodified copy
+     of Serie as a standalone shaderpack. This does not prohibit distribution
+     through an official mirror authorized in writing by the Licensor or
+     inclusion in a qualifying Modpack under Section 3.3.
+
+4.3. You may not remove, alter, obscure, or misrepresent required copyright,
+     license, attribution, modification, or third-party notices.
+
+4.4. You may not impose terms or technical measures that prevent recipients
+     from exercising the rights this license grants in Serie-derived files.
+
+4.5. No trademark, service mark, trade name, logo, patent, or other right is
+     granted except for the limited copyright permissions stated here. Fair
+     and truthful references required by Sections 3.3 and 3.4 are allowed.
+
+4.6. Any use not expressly permitted by this license is reserved by the
+     applicable copyright holder.
+
+5. Third-party material
 -----------------------
-  3.1. By using This Pack for any purpose, you agree that Complementary
-       Development has the right to take action against you in the case of a
-       license infringement, regardless of This Pack being the Original Pack
-       or not.
 
-  3.2. Complementary Development reserves its rights to not take action
-       against cases that it deems harmless. For this reason, cases that
-       Complementary Development did not take action against in the past
-       cannot be used as an excuse to ignore this agreement.
+This license does not replace or expand permissions for Third-Party Material.
+You must follow the original terms and preserve the notices described in
+THIRD_PARTY_NOTICES.md and in the relevant Source Code. If those terms conflict
+with this license, the original terms control only for the affected
+Third-Party Material.
+
+6. Termination and cure
+-----------------------
+
+6.1. Your rights under this license terminate automatically if You violate
+     it.
+
+6.2. Your rights are reinstated if You correct the violation within 30 days
+     after discovering it or receiving written notice of it, provided this is
+     Your first violation of this license. Repeated or uncured violations
+     require express written reinstatement from the Licensor.
+
+6.3. Termination does not end licenses already received by compliant
+     recipients of copies You previously distributed.
+
+7. License versions and exceptions
+----------------------------------
+
+7.1. This license applies only to versions of the Licensed Material that
+     include it. A later Serie release may use different terms; new terms do
+     not retroactively change rights already granted for an earlier release.
+
+7.2. Only the applicable Licensor may grant an exception to these terms, and
+     an exception must be in writing. An exception for one person, project, or
+     use does not waive these terms for anyone else.
+
+8. Disclaimer of warranty
+-------------------------
+
+TO THE MAXIMUM EXTENT PERMITTED BY LAW, THE LICENSED MATERIAL IS PROVIDED
+"AS IS" AND WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING
+WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE, AND
+NON-INFRINGEMENT. YOU ARE RESPONSIBLE FOR DETERMINING WHETHER YOUR USE AND
+DISTRIBUTION COMPLY WITH THIS LICENSE AND APPLICABLE LAW.
+
+9. Limitation of liability
+--------------------------
+
+TO THE MAXIMUM EXTENT PERMITTED BY LAW, NO LICENSOR OR CONTRIBUTOR WILL BE
+LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+CONSEQUENTIAL DAMAGES ARISING FROM THE LICENSED MATERIAL OR THIS LICENSE,
+EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGES.
+
+10. General
+-----------
+
+If any provision of this license is held unenforceable, it will be limited or
+removed only to the minimum extent necessary, and the remaining provisions
+will continue in effect. A failure to enforce a provision is not a waiver of
+the right to enforce it later. This license does not limit rights You already
+have under applicable law, such as applicable exceptions and limitations to
+copyright.

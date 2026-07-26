@@ -1,7 +1,4 @@
-#version 130
-
-#define FRAGMENT_SHADER
-#define OVERWORLD
-#define COMPOSITE4
-
-#include "/program/composite4.glsl"
+#version 430 compatibility
+#define FRAGMENT
+#include "/lib/uniforms.glsl"
+#include "/program/composite/c3_dof.glsl"

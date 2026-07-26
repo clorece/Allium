@@ -1,7 +1,7 @@
-#version 130
+#version 430 compatibility
+#define FRAGMENT
+#include "/lib/uniforms.glsl"
 
-#define FRAGMENT_SHADER
-#define OVERWORLD
-#define GBUFFERS_WATER
+/* DRAWBUFFERS:12 */
 
-#include "/program/gbuffers_water.glsl"
+#include "/program/gbuffers/water.glsl"

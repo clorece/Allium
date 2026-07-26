@@ -1,7 +1,7 @@
-#version 130
+#version 430 compatibility
+#define FRAGMENT
+#include "/lib/uniforms.glsl"
 
-#define FRAGMENT_SHADER
-#define OVERWORLD
-#define COMPOSITE3
+/* DRAWBUFFERS:3 */
 
-#include "/program/composite3.glsl"
+#include "/program/composite/c2_bloom_finalize.glsl"

@@ -1,57 +1,86 @@
-# Allium Shaders
+# Serie
 
-<img width="2560" height="1080" alt="Allium Banner" src="https://github.com/user-attachments/assets/d821f623-32a1-474d-bc23-5dc2f2faeec5" />
+<img width="2560" height="1080" alt="serie banner" src="https://github.com/user-attachments/assets/60049c40-793d-4a7d-8fea-417b10494cce" />
 
-Allium is an edit of Complementary Unbound focused on bringing my creative vision to life. Emphasizing the beauty in colors and effects, all while staying as performant as it can be. With Allium, I hope to deliver a unique style and aesthetic that pushes my creativity to it's limits.
+Serie is the path-traced successor to allium and will serve as the base rewrite for allium's upcoming versions.
 
-v2.0 has received a massive overhaul on it's overall look, feel and atmospherics. Even though this shader is fairly young and hasn't received much updates, I began to feel as if the appearance was not going in a direction that I had originally intended. So I've spent the past couple of months revisioning what Allium should be, and what should have been. Although it's not perfect, I have been fairly happy with how it has turned out and wanted to share it with you all. Cheers! :)
+### IMPORTANT
+> Serie is under active development. Expect settings, buffer layouts, and visual behavior to change between builds, as well as bugs!
 
-### Huge Thanks
-- Emin for using Complementary as the base shader
-- Query for their wonderful LUT code
+## Requirements
 
-### DISCLAIMER
-This shaderpack includes code that was generated or assisted by Artificial Intelligence. While all code has been tested for functionality and performance, users should be aware that parts of the logic (e.g., GLSL functions or noise algorithms) were created with the help of generative AI tools.
+- Minecraft Java Edition
+- A recent version of [Iris Shaders](https://irisshaders.dev/)
+- A GPU and driver with OpenGL 4.3 support
+- Iris custom-image support (required by the voxel and irradiance-cache volumes)
+- Distant Horizons is optional
 
-## Beta & Release Versions
-### Beta
-Beta versions are the most recent builds and are released regularly for public testing. If you encounter any issues, please report them.
+Serie is developed for Iris. OptiFine is NOT supported.
 
-Note: This shader is currently in its alpha phase, so there are no in-development builds available at the moment.
+## Current features
+- Path-traced lighting
+- Atmospheric scattering
+- Volumetric light shafts
+- Volumetric cumulus clouds
+- A separate volumetric altocumulus layer
+- Water parallax and vertex displacement
+- Screen-space refraction and reflection
+- Generated normals and refraction handling for glass and ice
+- Distant Horizons Support (working on voxy soon)
+- Integrated PBR (LabPBR not yet available)
+- Temporal anti-aliasing and temporal upscaling
+- Bloom
+- Automatic exposure
+- Multiple tone-mapping operators
 
-### How to Download the Latest Beta Version (when available):
-Click the green "Code" button near the top right of this page.
+## Installation
 
-Select "Download ZIP".
+### Release build
 
-Once downloaded, install the ZIP file as you would any shader pack—no need to extract or decompress it.
+1. Download a ZIP from the repository's [Releases page](https://github.com/clorece/Serie/releases).
+2. Place the ZIP in your Minecraft `shaderpacks` directory.
+3. Open Minecraft with Iris installed.
+4. Select Serie from **Options → Video Settings → Shader Packs**.
 
-### Release
-Releases are stable, polished versions that result from thorough testing and iteration during the in-development phase. These builds are intended for general use and offer the best balance of visuals, performance, and reliability.
+Do not extract a release ZIP unless its outer archive contains another shaderpack folder or ZIP.
 
-Release Versions are located to the right of the Github.
+### Latest repository build
 
-## Bug Reporting
-If you happen to find any bugs, please report them on the [Github Page](https://github.com/clorece/Allium) by:
-### 1. Create a New Issue
-- Go to the Issues section and click on "New Issue".
+1. Select **Code → Download ZIP** on the [GitHub repository](https://github.com/clorece/Serie). (or git clone)
+2. Extract the downloaded repository archive.
+3. Place the folder containing `shaders/`, `README.md`, and `License.txt` in your `shaderpacks` directory.
 
-### 2. Provide a Clear Title and Description
-- Summarize the problem in the title.
-- In the description, include as much detail as possible.
+Repository builds contain the newest changes and may be less stable than releases.
 
-### 3. Attach Relevant Media and Logs
-- Include screenshots or, if applicable, videos to illustrate the issue.
-- Upload log files if applicable.
+## Reporting bugs
+
+Please open an issue on the [GitHub Issues page](https://github.com/clorece/Serie/issues) and include:
+
+- A concise description of the problem
+- Steps and a location/scene that reproduce it
+- Minecraft, Iris, loader, and mod versions
+- GPU model and driver version
+- The active Serie settings or an exported shader configuration
+- Screenshots or video when the issue is visual
+- `latest.log` when the pack fails to load or reports a shader compilation error
+
+Before reporting a visual artifact, test once with default settings and confirm whether Distant Horizons or another rendering mod is involved.
+
+## Development status
+
+The repository branch is the active development version. Stable builds, when available, are published through [GitHub Releases](https://github.com/clorece/Serie/releases).
+
+Contributions and focused bug reports are welcome. When changing shader code, test at multiple render scales, during camera motion, at day/night transitions, underwater, and with Distant Horizons both enabled and disabled.
 
 ## Screenshots
-<img width="2560" height="1440" alt="2025-12-16_19 01 43" src="https://github.com/user-attachments/assets/b70dbab3-6220-46c4-99d7-91df8239c1bd" />
-<img width="2560" height="1440" alt="2025-12-16_18 54 15" src="https://github.com/user-attachments/assets/08f784b5-722f-456c-a47d-9d7c2b6ac2bc" />
-<img width="2560" height="1440" alt="2025-12-16_18 52 52" src="https://github.com/user-attachments/assets/7c3ebfbe-0a07-4232-90be-2c759f7e3c35" />
-<img width="2560" height="1440" alt="2025-12-16_18 46 51" src="https://github.com/user-attachments/assets/8d00e756-63e2-4645-829e-f12fd6242c0d" />
-<img width="2560" height="1440" alt="2025-12-16_19 05 45" src="https://github.com/user-attachments/assets/073621f3-ef81-46b9-b9cf-ddcb9a7427e0" />
-<img width="2560" height="1440" alt="2025-12-16_19 06 41" src="https://github.com/user-attachments/assets/50d3fc1b-b647-4b42-a9ec-f5becf2e95b8" />
-<img width="2560" height="1440" alt="2025-12-16_19 10 21" src="https://github.com/user-attachments/assets/d72bc2fe-907e-48e9-901b-c0d95e4cb111" />
-<img width="2560" height="1440" alt="2025-12-16_19 10 30" src="https://github.com/user-attachments/assets/41d701b1-4354-4476-b40d-02fca12f0b49" />
-<img width="2560" height="1440" alt="2025-12-16_19 11 01" src="https://github.com/user-attachments/assets/d89280c9-5ea3-4757-b64a-07635a8c515a" />
-
+<img width="2560" height="1440" alt="2026-06-19_13 55 20" src="https://github.com/user-attachments/assets/c5de53a7-d9fe-4a82-b652-b6dc1c2ca5c7" />
+<img width="2560" height="1440" alt="2026-06-19_04 58 09" src="https://github.com/user-attachments/assets/37a48d60-00c4-444c-8c04-c11b16e80760" />
+<img width="2560" height="1440" alt="2026-06-19_04 46 41" src="https://github.com/user-attachments/assets/4a92a336-9fc4-43b3-9897-d81013de431b" />
+<img width="2560" height="1440" alt="2026-06-15_20 24 07" src="https://github.com/user-attachments/assets/11e3fe64-94a2-4df5-ab9c-6779996f429b" />
+<img width="2560" height="1440" alt="2026-06-15_20 24 01" src="https://github.com/user-attachments/assets/7e4b3cda-d5a6-4fac-942b-923027e40ac3" />
+<img width="2560" height="1440" alt="2026-06-15_20 23 25" src="https://github.com/user-attachments/assets/33f6534d-ae84-47de-8b7c-375bc73fbac8" />
+<img width="2560" height="1440" alt="2026-06-15_20 22 57" src="https://github.com/user-attachments/assets/d4547eca-447c-4d3a-8f26-a443ae8ce56d" />
+<img width="2560" height="1440" alt="2026-06-15_20 15 27" src="https://github.com/user-attachments/assets/0f248606-44e1-4a70-937e-2e266029b5c7" />
+<img width="2560" height="1440" alt="2026-06-15_20 06 11" src="https://github.com/user-attachments/assets/f1fcd585-3402-4b2a-b2bb-2dfe5a52cadb" />
+<img width="2560" height="1440" alt="2026-06-15_20 05 13" src="https://github.com/user-attachments/assets/0a594301-648f-49ef-ab48-20a544b7c61e" />
+<img width="2560" height="1440" alt="2026-06-15_20 04 36" src="https://github.com/user-attachments/assets/a2e21c27-988f-443a-9305-c127d82f72ce" />

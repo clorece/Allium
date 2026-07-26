@@ -1,7 +1,5 @@
-#version 130
+#version 430 compatibility
+#define FRAGMENT
+#include "/lib/uniforms.glsl"
 
-#define FRAGMENT_SHADER
-#define OVERWORLD
-#define DEFERRED6
-
-#include "/program/deferred6.glsl"
+#include "/program/deferred/d3_denoise.glsl"
